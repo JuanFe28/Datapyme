@@ -1,0 +1,23 @@
+{% extends 'base.html' %}{% block content %}<div class="page-heading"><div><span class="eyebrow accent-label">OBJETIVO 01 · PRESELECCIÓN</span><h1>Empresas</h1><p>Verifica la población objetivo antes de comenzar el trabajo de campo.</p></div><a class="btn btn-primary" href="/empresas/nueva"><i data-lucide="plus"></i> Registrar empresa</a></div>
+{% if registration_url is defined %}
+<div class="panel-card" style="margin-bottom: 20px; padding: 18px 22px; border: 1.5px solid #149d87; background: #f2faf8; border-radius: 12px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <span class="pill pill-green" style="font-weight: 700; margin-bottom: 4px;"><i data-lucide="share-2"></i> ENLACE PÚBLICO PARA EMPRESARIOS</span>
+      <h3 style="font-size: 15px; margin: 4px 0 2px; color: #12384a;">Invitar a empresas a registrarse y hacer la encuesta</h3>
+      <p style="font-size: 13px; color: #4b6375; margin: 0; line-height: 1.4;">
+        Envía este enlace para que cualquier empresa de Bucaramanga se registre ella misma e inicie su diagnóstico de inmediato.
+      </p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <a class="btn btn-outline" href="{{registration_url}}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Abrir formulario</a>
+      <button type="button" class="btn btn-outline" onclick="navigator.clipboard.writeText('{{registration_url}}'); alert('¡Enlace copiado al portapapeles!');"><i data-lucide="copy"></i> Copiar enlace</button>
+      <a class="btn btn-primary" style="background: #25D366; border-color: #25D366;" href="https://api.whatsapp.com/send?text={{whatsapp_reg_message|urlencode}}" target="_blank" rel="noopener"><i data-lucide="message-circle"></i> Compartir por WhatsApp</a>
+    </div>
+  </div>
+  <div style="margin-top: 10px; background: #ffffff; padding: 8px 12px; border-radius: 6px; border: 1px solid #d0e7e1; word-break: break-all; font-family: monospace; font-size: 12px; color: #0f766e;">
+    {{registration_url}}
+  </div>
+</div>
+{% endif %}
+{% include 'filters.html' %}<section class="panel-card table-card"><div class="table-toolbar"><strong>{{companies|length}} registros encontrados</strong>{% if user.role=='admin' %}<a class="text-link" href="/exportar/empresas?{{filter_query}}">Descargar CSV filtrado</a>{% endif %}</div>{% if companies %}<div class="table-scroll"><table class="data-table"><thead><tr><th>EMPRESA</th><th>ACTIVIDAD</th><th>TAMAÑO</th><th>CRITERIOS</th><th>RESPUESTAS</th><th>ACCIÓN</th></tr></thead><tbody>{% for c in companies %}<tr><td><strong class="table-title">{{c.name}}</strong><small>{{c.code}} · {{c.barrio}}</small></td><td>{{c.activity}}</td><td>{{c.size}}</td><td><span class="pill {{'pill-green' if c.eligible else 'pill-yellow'}}">{{'Elegible verificada' if c.eligible else ('Fuera de población' if c.eligibility_status=='fuera' else 'Pendiente de verificación')}}</span><small>{{c.operating_status}}</small></td><td>{{c.responses|length}}</td><td><a class="text-link" href="/empresas/{{c.id}}/editar">Abrir ficha</a></td></tr>{% endfor %}</tbody></table></div>{% else %}<div class="empty-state"><i data-lucide="building-2"></i><h3>No hay empresas para estos filtros</h3><p>Registra una candidata real o ajusta los filtros de búsqueda.</p><a class="btn btn-primary" href="/empresas/nueva">Registrar empresa</a></div>{% endif %}</section><div class="info-bar"><i data-lucide="info"></i><p>La fuente debe sustentar la clasificación empresarial. Las microempresas, grandes empresas y candidatas sin verificar se distinguen de las pequeñas y medianas comerciales elegibles.</p></div>{% endblock %}

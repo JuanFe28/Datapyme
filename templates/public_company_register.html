@@ -1,0 +1,185 @@
+{% extends 'base.html' %}
+{% block content %}{{ self.auth() }}{% endblock %}
+{% block auth %}
+<div style="max-width: 780px; margin: 0 auto; padding: 24px 16px 60px;">
+  <!-- Encabezado Institucional -->
+  <header style="text-align: center; margin-bottom: 22px;">
+    <div style="display: inline-flex; align-items: center; gap: 8px; background: #e6f7f3; color: #159a88; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 1px; margin-bottom: 12px;">
+      <span class="brand-mark" style="width: 20px; height: 20px; font-size: 12px; border-radius: 6px; box-shadow: none;">▥</span>
+      UNIDADES TECNOLÓGICAS DE SANTANDER · UTS
+    </div>
+    <h1 style="font-size: clamp(22px, 4vw, 30px); font-weight: 800; color: #12384a; margin: 0 0 8px; line-height: 1.25;">
+      Estudio de Mercado Datapyme
+    </h1>
+    <p style="color: #536b7e; font-size: 14px; max-width: 620px; margin: 0 auto; line-height: 1.5;">
+      Investigación académica sobre gestión de ventas e inventarios en el comercio de Bucaramanga (F-DC-124 · UTS).
+    </p>
+  </header>
+
+  <!-- Indicador visual de 2 pasos -->
+  <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 22px; gap: 8px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 8px; background: #eef8f5; border: 1.5px solid #149d87; padding: 6px 14px; border-radius: 20px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #149d87; color: #fff; font-weight: 800; font-size: 12px;">1</span>
+      <span style="font-size: 13px; font-weight: 700; color: #12384a;">Paso 1: Datos de la Empresa</span>
+    </div>
+    <span style="color: #9cb1c0; font-size: 18px;">→</span>
+    <div style="display: flex; align-items: center; gap: 8px; background: #f4f7f9; border: 1px solid #d6e2ea; padding: 6px 14px; border-radius: 20px; opacity: 0.85;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; border-radius: 50%; background: #d6e2ea; color: #536b7e; font-weight: 700; font-size: 12px;">2</span>
+      <span style="font-size: 13px; font-weight: 600; color: #627b8c;">Paso 2: Encuesta de Mercado (19 preguntas)</span>
+    </div>
+  </div>
+
+  {% if errors %}
+  <div class="notice notice-error" role="alert" style="margin-bottom: 22px;">
+    <div>
+      <strong>Por favor corrige los siguientes puntos:</strong>
+      <ul style="margin: 6px 0 0; padding-left: 20px; font-size: 13px;">
+        {% for key, message in errors.items() %}
+        <li>{{message}}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Formulario Paso 1 -->
+  <form method="post" action="/registro-empresa" class="panel-card form-card" style="box-shadow: 0 10px 30px rgba(18,56,74,0.06); padding: 26px 22px;">
+    <!-- Trampa Honeypot anti-bots (Invisible) -->
+    <div style="display:none; position:absolute; left:-9999px;" aria-hidden="true">
+      <label>No complete este campo<input type="text" name="website_url" tabindex="-1" autocomplete="off"></label>
+    </div>
+
+    <!-- Sección 01: Identificación de la Empresa -->
+    <div class="form-section-title">
+      <span class="section-number">01</span>
+      <div>
+        <h3>Datos de su Negocio o Empresa</h3>
+        <p>Información básica para identificar su establecimiento comercial.</p>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <label class="form-field wide">
+        Nombre comercial del negocio o razón social *
+        <input name="name" maxlength="180" value="{{values.get('name', '')}}" required placeholder="Ej: Distribuidora Santander, Calzado Bucaramanga, Ferretería Central" autocomplete="organization">
+        {% if 'name' in errors %}<small class="field-error">{{errors['name']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field">
+        Barrio o sector en Bucaramanga *
+        <input name="barrio" maxlength="120" value="{{values.get('barrio', '')}}" required placeholder="Ej: Centro, Cabecera, San Francisco, Provenza">
+        {% if 'barrio' in errors %}<small class="field-error">{{errors['barrio']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field">
+        Municipio / Ciudad *
+        <select name="city" required>
+          {% for opt in choices['city'] %}
+          <option value="{{opt}}" {{'selected' if values.get('city', 'Bucaramanga')==opt}}>{{opt}}</option>
+          {% endfor %}
+        </select>
+        {% if 'city' in errors %}<small class="field-error">{{errors['city']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field">
+        Actividad comercial principal *
+        <select name="activity" required>
+          {% for opt in choices['activity'] %}
+          <option value="{{opt}}" {{'selected' if values.get('activity', 'Comercio minorista')==opt}}>{{opt}}</option>
+          {% endfor %}
+        </select>
+        {% if 'activity' in errors %}<small class="field-error">{{errors['activity']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field">
+        Tamaño aproximado de la empresa *
+        <select name="size" required>
+          {% for opt in choices.get('size_options', [{'value': 'Pequeña', 'label': 'Pequeña empresa (incluye micro y pequeño comercio)'}, {'value': 'Mediana', 'label': 'Mediana empresa'}]) %}
+          <option value="{{opt.value}}" {{'selected' if values.get('size') in (opt.value, 'Microempresa' if opt.value=='Pequeña' else '')}}>{{opt.label}}</option>
+          {% endfor %}
+        </select>
+        <small style="color: #64748b; font-size: 12px; margin-top: 4px; display: block;">Segmento objetivo del estudio F-DC-124 (Mipymes comerciales).</small>
+        {% if 'size' in errors %}<small class="field-error">{{errors['size']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field wide">
+        ¿Actualmente llevan registros de ventas e inventarios? *
+        <select name="has_records" required>
+          {% for opt in choices['has_records'] %}
+          <option value="{{opt}}" {{'selected' if values.get('has_records', 'Sí, ambos')==opt}}>{{opt}}</option>
+          {% endfor %}
+        </select>
+        {% if 'has_records' in errors %}<small class="field-error">{{errors['has_records']}}</small>{% endif %}
+      </label>
+    </div>
+
+    <!-- Sección 02: Contacto -->
+    <div class="form-section-title gap-top">
+      <span class="section-number">02</span>
+      <div>
+        <h3>Persona de Contacto</h3>
+        <p>Datos de quien coordina o responde la encuesta.</p>
+      </div>
+    </div>
+
+    <div class="form-grid">
+      <label class="form-field">
+        Cargo en la empresa *
+        <select name="respondent_role" required>
+          {% for opt in choices['respondent_role'] %}
+          <option value="{{opt}}" {{'selected' if values.get('respondent_role', 'Propietario o socio')==opt}}>{{opt}}</option>
+          {% endfor %}
+        </select>
+        {% if 'respondent_role' in errors %}<small class="field-error">{{errors['respondent_role']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field">
+        Nombre de la persona de contacto
+        <input name="contact_name" maxlength="120" value="{{values.get('contact_name', '')}}" placeholder="Ej: Carlos Gómez" autocomplete="name">
+        {% if 'contact_name' in errors %}<small class="field-error">{{errors['contact_name']}}</small>{% endif %}
+      </label>
+
+      <label class="form-field wide">
+        Teléfono, WhatsApp o correo de contacto *
+        <input name="contact_detail" maxlength="250" value="{{values.get('contact_detail', '')}}" required placeholder="Ej: 315 123 4567 / contacto@empresa.com">
+        <small>Utilizado exclusivamente para coordinar el estudio académico de las UTS.</small>
+        {% if 'contact_detail' in errors %}<small class="field-error">{{errors['contact_detail']}}</small>{% endif %}
+      </label>
+    </div>
+
+    <!-- Sección 03: Consentimiento Informado (Ley 1581 de 2012) -->
+    <div class="form-section-title gap-top">
+      <span class="section-number">03</span>
+      <div>
+        <h3>Consentimiento Informado (Ley 1581 de 2012)</h3>
+        <p>Garantía de confidencialidad, reserva estadística y fines exclusivamente académicos.</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <label class="consent-field wide" style="cursor: pointer; background: #f8fcfa; border-color: #d1eae2; padding: 16px; border-radius: 10px; display: flex; gap: 12px; align-items: flex-start;">
+        <input type="checkbox" name="consent" value="yes" {{'checked' if values.get('consent')=='yes'}} required style="margin-top: 4px; width: 20px; height: 20px; flex-shrink: 0; accent-color: #149d87;">
+        <span style="font-size: 13.5px; color: #2e4758; line-height: 1.6;">
+          <strong>Autorizo de manera voluntaria:</strong> Autorizo de manera voluntaria el tratamiento de esta información con fines exclusivamente académicos para el proyecto de grado Datapyme de las Unidades Tecnológicas de Santander (UTS), conforme a la Ley 1581 de 2012. Comprendo que mis respuestas son confidenciales, se analizarán de forma anónima/agregada, no se solicitan datos sensibles y puedo retirarme o abstenerme de responder en cualquier momento.
+        </span>
+      </label>
+      {% if 'consent' in errors %}
+      <p class="field-error" style="margin-top: 6px;">{{errors['consent']}}</p>
+      {% endif %}
+    </div>
+
+    <!-- Botón de Envío -->
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; justify-content: flex-end; margin-top: 20px; border-top: 1px solid #eef2f5; padding-top: 20px;">
+      <a href="/login" class="btn btn-outline" style="padding: 12px 18px;">Cancelar</a>
+      <button class="btn btn-primary" type="submit" style="padding: 14px 26px; font-size: 15px; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+        Continuar al Paso 2: Responder Encuesta <i data-lucide="arrow-right"></i>
+      </button>
+    </div>
+  </form>
+
+  <footer style="margin-top: 36px; text-align: center; font-size: 12px; color: #879ca8;">
+    <span>Unidades Tecnológicas de Santander · Facultad de Ciencias Socioeconómicas y Empresariales</span><br>
+    <span>Proyecto de Grado Datapyme · F-DC-124 · Bucaramanga, Santander</span>
+  </footer>
+</div>
+{% endblock %}

@@ -1,0 +1,3 @@
+{% extends 'base.html' %}
+{% block content %}<div class="empty-state panel-card"><span class="eyebrow">SOLICITUD {{code}}</span><h1>No se pudo guardar la solicitud</h1><p>{{message}}</p><a class="btn btn-primary" href="/">Volver al panel</a><button class="btn btn-outline" type="button" data-go-back>Volver al formulario</button></div>{% endblock %}
+{% block auth %}<div class="login-main full-height"><div class="panel-card form-card"><h1>Revisar solicitud · {{code}}</h1><p>{{message}}</p><a class="btn btn-primary" href="/login">Ir al acceso</a></div></div>{% endblock %}

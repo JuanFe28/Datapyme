@@ -1,0 +1,9 @@
+<form method="get" class="panel-card filters" aria-label="Filtros de investigación">
+<label>Buscar<input name="q" value="{{filters.q}}" placeholder="Nombre, código o barrio"></label>
+<label>Tamaño<select name="size"><option value="">Todos</option>{% for v in ['Desconocida','Microempresa','Pequeña','Mediana','Grande'] %}<option {{'selected' if filters.size==v}}>{{v}}</option>{% endfor %}</select></label>
+<label>Actividad<select name="activity"><option value="">Todas</option>{% for v in ['Comercio minorista','Comercio mayorista','Servicios','Manufactura','Otra / verificar'] %}<option {{'selected' if filters.activity==v}}>{{v}}</option>{% endfor %}</select></label>
+<label>Elegibilidad<select name="eligibility"><option value="">Todas</option>{% for v,label in [('elegible','Elegible'),('pendiente','Pendiente'),('fuera','Fuera de población')] %}<option value="{{v}}" {{'selected' if filters.eligibility==v}}>{{label}}</option>{% endfor %}</select></label>
+<label>Desde<input type="date" name="from_date" value="{{filters.from_date}}"></label><label>Hasta<input type="date" name="to_date" value="{{filters.to_date}}"></label>
+{% if active=='empresas' %}<label>Ordenar<select name="sort">{% for v,label in [('recent','Más recientes'),('name','Nombre A–Z'),('size','Tamaño')] %}<option value="{{v}}" {{'selected' if filters.sort==v}}>{{label}}</option>{% endfor %}</select></label>{% endif %}
+<button class="btn btn-primary" type="submit">Aplicar filtros</button><a class="text-link" href="{{request.url.path}}">Limpiar</a>
+</form>

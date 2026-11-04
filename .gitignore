@@ -1,0 +1,16 @@
+.env
+*.db
+*.sqlite*
+__pycache__/
+.pytest_cache/
+.venv/
+*.pyc
+.local/
+tmp/
+dist/
+.env.*
+!.env.example
+.coverage
+htmlcov/
+USO_PRIVADO_EQUIPO.txt
+.github/

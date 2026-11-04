@@ -1,0 +1,62 @@
+{% extends 'base.html' %}{% block content %}{% set c=company if company is defined else {} %}
+<div class="page-heading"><div><a class="back-link" href="/empresas">← Volver a empresas</a><h1>{{'Editar empresa' if company is defined else 'Registrar empresa'}}</h1><p>Ficha de identificación y verificación de la población objetivo.</p></div></div>
+{% if company is defined and company.id and survey_url is defined %}
+<div class="panel-card" style="margin-bottom: 24px; padding: 22px 26px; border: 1.5px solid #149d87; background: #f2faf8; border-radius: 14px;">
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 14px;">
+    <div>
+      <span class="pill pill-green" style="font-weight: 700; margin-bottom: 6px;"><i data-lucide="send"></i> ENLACE SEGURO PARA EL EMPRESARIO</span>
+      <h3 style="font-size: 16px; margin: 6px 0 4px; color: #12384a;">Encuesta de Estudio de Mercado (Token Individual)</h3>
+      <p style="font-size: 13px; color: #4b6375; margin: 0; max-width: 650px; line-height: 1.5;">
+        {% if existing_survey %}
+          <strong style="color: #0c8263;">✓ Esta empresa ya respondió la encuesta</strong> el {{existing_survey.created_at|localdate}} (Código: <code>{{existing_survey.participant_code}}</code>).
+          <a class="text-link" href="/respuestas/{{existing_survey.id}}" style="margin-left: 8px;">Ver respuestas registradas →</a>
+        {% else %}
+          Envía este enlace seguro y único al empresario para que responda la encuesta desde su celular o computador. Sus respuestas se vincularán directamente a esta ficha.
+        {% endif %}
+      </p>
+    </div>
+    {% if not existing_survey %}
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <a class="btn btn-outline" href="{{survey_url}}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Abrir encuesta</a>
+      <button type="button" class="btn btn-outline" onclick="navigator.clipboard.writeText('{{survey_url}}'); alert('¡Enlace copiado al portapapeles!');"><i data-lucide="copy"></i> Copiar enlace</button>
+      <a class="btn btn-primary" style="background: #25D366; border-color: #25D366;" href="https://api.whatsapp.com/send?text={{whatsapp_message|urlencode}}" target="_blank" rel="noopener"><i data-lucide="message-circle"></i> Enviar por WhatsApp</a>
+    </div>
+    {% endif %}
+  </div>
+  {% if not existing_survey %}
+  <div style="margin-top: 14px; background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #d0e7e1; word-break: break-all; font-family: monospace; font-size: 12.5px; color: #0f766e;">
+    {{survey_url}}
+  </div>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if (company is not defined or not company.id) and registration_url is defined %}
+<div class="panel-card" style="margin-bottom: 24px; padding: 18px 22px; border: 1.5px solid #149d87; background: #f2faf8; border-radius: 14px;">
+  <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 12px;">
+    <div>
+      <span class="pill pill-green" style="font-weight: 700; margin-bottom: 4px;"><i data-lucide="sparkles"></i> ¿PREFIERES QUE LA EMPRESA SE AUTOREGISTRE?</span>
+      <h3 style="font-size: 15px; margin: 4px 0 2px; color: #12384a;">Enlace público de autoregistro empresarial</h3>
+      <p style="font-size: 13px; color: #4b6375; margin: 0; max-width: 650px; line-height: 1.4;">
+        En lugar de ingresar los datos manualmente, puedes enviar este enlace al empresario para que complete sus datos y responda la encuesta de una vez:
+      </p>
+    </div>
+    <div style="display: flex; gap: 8px; flex-wrap: wrap; align-items: center;">
+      <a class="btn btn-outline" href="{{registration_url}}" target="_blank" rel="noopener"><i data-lucide="external-link"></i> Abrir formulario</a>
+      <button type="button" class="btn btn-outline" onclick="navigator.clipboard.writeText('{{registration_url}}'); alert('¡Enlace copiado al portapapeles!');"><i data-lucide="copy"></i> Copiar enlace</button>
+      <a class="btn btn-primary" style="background: #25D366; border-color: #25D366;" href="https://api.whatsapp.com/send?text={{whatsapp_reg_message|urlencode}}" target="_blank" rel="noopener"><i data-lucide="message-circle"></i> Compartir por WhatsApp</a>
+    </div>
+  </div>
+  <div style="margin-top: 10px; background: #ffffff; padding: 8px 12px; border-radius: 6px; border: 1px solid #d0e7e1; word-break: break-all; font-family: monospace; font-size: 12px; color: #0f766e;">
+    {{registration_url}}
+  </div>
+</div>
+{% endif %}
+
+<div class="form-layout"><form method="post" class="panel-card form-card"><input type="hidden" name="csrf_token" value="{{csrf}}"><div class="form-section-title"><span class="section-number">01</span><div><h3>Identificación comercial</h3><p>Nombre y barrio permiten detectar posibles duplicados.</p></div></div><div class="form-grid">
+{% for name,label,limit in [('name','Nombre comercial',180),('barrio','Barrio o sector',120),('ciiu','Código CIIU (opcional)',20)] %}<label class="form-field {{'wide' if name=='name'}}">{{label}}<input name="{{name}}" value="{{c[name] or ''}}" maxlength="{{limit}}" {{'required' if name!='ciiu'}}></label>{% endfor %}
+{% for name,label in [('city','Municipio'),('activity','Actividad económica'),('size','Tamaño empresarial'),('verification_status','Verificación de clasificación'),('operating_status','Estado de actividad'),('has_records','Registros de ventas e inventarios'),('respondent_role','Cargo de la persona idónea para responder'),('willing','Disposición voluntaria de participación')] %}<label class="form-field">{{label}}<select name="{{name}}" required><option value="">Seleccionar…</option>{% for option in choices[name] %}<option value="{{option}}" {{'selected' if c[name]==option}}>{{option|replace('pendiente','Pendiente')|replace('verificada','Verificada')|replace('inactiva','Inactiva')|replace('activa','Activa')}}</option>{% endfor %}</select></label>{% endfor %}
+<label class="form-field wide">Fuente de verificación del tamaño y actividad<input name="source" maxlength="90" value="{{c.source or ''}}" placeholder="Referencia del registro, documento o consulta realizada"><small>Obligatoria para ser elegible. Registrar el tamaño sin fuente no verifica la empresa.</small></label><label class="form-field wide">Observaciones de selección<textarea name="notes" maxlength="4000" rows="3">{{c.notes or ''}}</textarea></label></div>
+{% if user.role=='admin' %}<div class="form-section-title gap-top"><span class="section-number">02</span><div><h3>Contacto privado (opcional)</h3><p>Solo administradores. Registra únicamente datos autorizados y necesarios.</p></div></div><div class="form-grid"><label class="form-field">Responsable de contacto<input name="contact_name" maxlength="120" value="{{c.contact.name if c.contact else ''}}"></label><label class="form-field">Medio de contacto autorizado<input name="contact_detail" maxlength="250" value="{{c.contact.detail if c.contact else ''}}"></label></div>{% endif %}
+<div class="form-actions"><a class="btn btn-outline" href="/empresas">Volver</a><button class="btn btn-primary" type="submit">Guardar ficha</button></div></form><aside class="aside-help"><div class="panel-card help-panel"><i data-lucide="shield-check"></i><h3>Criterios de elegibilidad</h3><ul><li>Pequeña o mediana empresa comercial de Bucaramanga.</li><li>Clasificación verificada y fuente documentada.</li><li>Actividad vigente y registros de ventas e inventarios.</li><li>Informante idóneo y participación voluntaria.</li></ul><p>La selección y el tamaño de muestra requieren justificación metodológica.</p></div></aside></div>
+{% if history is defined %}<section class="panel-card detail-panel gap-top"><h2>Historial de la ficha</h2>{% for event in history %}<details><summary>{{event.created_at.strftime('%d/%m/%Y %H:%M')}} UTC · {{event.actor}} · {{event.action}}</summary><pre class="audit-json">{{event.changes|tojson(indent=2)}}</pre></details>{% else %}<p>Sin cambios documentados todavía.</p>{% endfor %}</section>{% endif %}{% endblock %}

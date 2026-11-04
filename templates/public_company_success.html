@@ -1,0 +1,92 @@
+{% extends 'base.html' %}
+{% block content %}{{ self.auth() }}{% endblock %}
+{% block auth %}
+<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;">
+  <div class="panel-card" style="max-width: 640px; width: 100%; padding: 36px 26px; text-align: center; box-shadow: 0 15px 35px rgba(18,56,74,0.08); border-radius: 18px;">
+    
+    <!-- Indicador de 2 pasos -->
+    <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 22px; gap: 8px; flex-wrap: wrap;">
+      <div style="display: flex; align-items: center; gap: 6px; background: #eef8f5; border: 1.5px solid #149d87; padding: 5px 12px; border-radius: 20px;">
+        <span style="color: #149d87; font-weight: 800; font-size: 13px;">✓</span>
+        <span style="font-size: 12.5px; font-weight: 700; color: #12384a;">Paso 1: Empresa Registrada</span>
+      </div>
+      <span style="color: #9cb1c0; font-size: 16px;">→</span>
+      <div style="display: flex; align-items: center; gap: 6px; background: #fff5e6; border: 1.5px solid #f59e0b; padding: 5px 12px; border-radius: 20px;">
+        <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #f59e0b; color: #fff; font-weight: 700; font-size: 11px;">2</span>
+        <span style="font-size: 12.5px; font-weight: 700; color: #92400e;">Paso 2: Encuesta de Mercado (19 preguntas)</span>
+      </div>
+    </div>
+
+    <div style="width: 64px; height: 64px; border-radius: 50%; background: #e2f7ef; color: #159275; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 16px;">
+      <i data-lucide="check-circle-2" style="width: 36px; height: 36px;"></i>
+    </div>
+    
+    {% if is_already_registered %}
+    <span class="pill pill-green" style="font-size: 11px; margin-bottom: 8px; font-weight: 700;">
+      <i data-lucide="info"></i> EMPRESA YA REGISTRADA PREVIAMENTE
+    </span>
+    <h1 style="font-size: 23px; color: #12384a; margin: 6px 0 8px; font-weight: 800;">
+      ¡Su empresa ya está en Datapyme!
+    </h1>
+    <p style="color: #536b7e; font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
+      <strong>{{company.name}}</strong> ya se encuentra en nuestro sistema. Continúe con el Paso 2 para responder la encuesta académica.
+    </p>
+    {% else %}
+    <span class="pill pill-green" style="font-size: 11px; margin-bottom: 8px; font-weight: 700;">
+      <i data-lucide="check"></i> PASO 1 COMPLETADO EXITOSAMENTE
+    </span>
+    <h1 style="font-size: 23px; color: #12384a; margin: 6px 0 8px; font-weight: 800;">
+      ¡Bienvenido al Proyecto Datapyme!
+    </h1>
+    <p style="color: #536b7e; font-size: 14px; line-height: 1.5; margin: 0 0 18px;">
+      Los datos de <strong>{{company.name}}</strong> han sido registrados correctamente para la investigación de las <strong>Unidades Tecnológicas de Santander (UTS)</strong>.
+    </p>
+    {% endif %}
+
+    <!-- Ficha informativa de la empresa -->
+    <div style="background: #f4f8fb; border: 1px solid #e1ebf2; border-radius: 10px; padding: 12px 16px; margin-bottom: 20px; text-align: left; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <small style="color: #7b8e9d; font-size: 10.5px; display: block; text-transform: uppercase; font-weight: 700;">Código Asignado</small>
+        <code style="font-size: 14px; color: #12384a; font-weight: 700;">{{company.code}}</code>
+      </div>
+      <div style="text-align: right;">
+        <span style="font-size: 12px; font-weight: 600; color: #2e4758; display: block;">{{company.barrio}} · {{company.city}}</span>
+        <span style="font-size: 11px; color: #6e8697;">{{company.activity}}</span>
+      </div>
+    </div>
+
+    <!-- Bloque de Acción Principal: Paso 2 -->
+    <div style="background: #ffffff; border: 2px solid #149d87; border-radius: 14px; padding: 22px 18px; margin-bottom: 20px; text-align: center; box-shadow: 0 6px 20px rgba(20,157,135,0.08);">
+      <div style="display: inline-flex; align-items: center; gap: 6px; color: #149d87; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px;">
+        <i data-lucide="clipboard-list" style="width: 16px; height: 16px;"></i> Paso 2 de 2: Encuesta de Estudio de Mercado
+      </div>
+      <p style="font-size: 13.5px; color: #4b6375; margin: 0 0 16px; line-height: 1.5;">
+        Son solo <strong>19 preguntas breves</strong> (toma de 3 a 5 minutos). Puede responderlas desde su celular o computador ahora mismo.
+      </p>
+
+      <a href="{{survey_url}}" class="btn btn-primary btn-wide" style="display: flex; align-items: center; justify-content: center; gap: 8px; font-size: 15.5px; padding: 14px 20px; text-decoration: none; font-weight: 800; margin-bottom: 14px; border-radius: 10px;">
+        <i data-lucide="play-circle"></i> Responder Encuesta Ahora Mismo (Paso 2)
+      </a>
+
+      <div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center;">
+        <button type="button" class="btn btn-outline" id="copyBtn" onclick="navigator.clipboard.writeText('{{survey_url}}').then(()=>{ this.innerHTML='<i data-lucide=\'check\'></i> ¡Enlace copiado!'; setTimeout(()=>{ this.innerHTML='<i data-lucide=\'copy\'></i> Copiar enlace'; lucide.createIcons(); }, 2500); lucide.createIcons(); });" style="font-size: 12.5px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px;">
+          <i data-lucide="copy"></i> Copiar enlace
+        </button>
+
+        <a href="https://api.whatsapp.com/send?text={{whatsapp_message|urlencode}}" target="_blank" rel="noopener" class="btn" style="background: #25D366; color: #ffffff; border: none; font-size: 12.5px; padding: 8px 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 600; text-decoration: none;">
+          <i data-lucide="message-circle"></i> Compartir por WhatsApp
+        </a>
+      </div>
+
+      <div style="margin-top: 14px; background: #f8fcfa; padding: 8px 12px; border-radius: 6px; border: 1px dashed #bfe1d8; word-break: break-all; font-family: monospace; font-size: 11.5px; color: #0f766e; text-align: left;">
+        {{survey_url}}
+      </div>
+    </div>
+
+    <div style="font-size: 11.5px; color: #94a5b3; border-top: 1px solid #edf2f6; padding-top: 14px;">
+      <span>Unidades Tecnológicas de Santander · F-DC-124</span><br>
+      <span>Bucaramanga, Santander</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

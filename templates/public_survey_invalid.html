@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}{{ self.auth() }}{% endblock %}
+{% block auth %}
+<div style="min-height: 80vh; display: flex; align-items: center; justify-content: center; padding: 24px 16px;">
+  <div class="panel-card" style="max-width: 520px; width: 100%; padding: 40px 30px; text-align: center; border-radius: 18px;">
+    <div style="width: 68px; height: 68px; border-radius: 50%; background: #fff2ec; color: #a64e3c; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 20px;">
+      <i data-lucide="alert-triangle" style="width: 36px; height: 36px;"></i>
+    </div>
+    
+    <span class="pill pill-yellow" style="font-size: 11px; margin-bottom: 12px;">ENLACE NO DISPONIBLE</span>
+    
+    <h1 style="font-size: 24px; color: #12384a; margin: 10px 0 12px; font-weight: 800;">
+      Enlace no válido o expirado
+    </h1>
+    
+    <p style="color: #536b7e; font-size: 14px; line-height: 1.6; margin: 0 0 24px;">
+      El enlace que ha utilizado para ingresar a la encuesta no es válido, ha caducado o contiene un error en el código de acceso.
+    </p>
+
+    <div class="info-bar" style="text-align: left; margin: 0 0 24px;">
+      <i data-lucide="info"></i>
+      <p>
+        Por favor, póngase en contacto con el equipo de investigación de las UTS que le compartió la invitación para solicitar un nuevo enlace actualizado.
+      </p>
+    </div>
+
+    <div style="font-size: 12px; color: #94a5b3; border-top: 1px solid #edf2f6; padding-top: 18px;">
+      <span>Datapyme Research Studio · Unidades Tecnológicas de Santander</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

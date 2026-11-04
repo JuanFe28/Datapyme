@@ -1,0 +1,16 @@
+.venv
+.local
+.env
+.git
+.agents
+.codex
+tmp
+dist
+__pycache__
+.pytest_cache
+*.db
+*.sqlite*
+*.pyc
+tests
+docs/source_review
+USO_PRIVADO_EQUIPO.txt

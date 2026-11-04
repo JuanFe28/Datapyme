@@ -1,0 +1,198 @@
+{% extends 'base.html' %}
+{% block content %}{{ self.auth() }}{% endblock %}
+{% block auth %}
+<div style="max-width: 820px; margin: 0 auto; padding: 24px 16px 60px;">
+  <!-- Encabezado Institucional -->
+  <header style="text-align: center; margin-bottom: 22px;">
+    <div style="display: inline-flex; align-items: center; gap: 8px; background: #e6f7f3; color: #159a88; padding: 6px 14px; border-radius: 20px; font-size: 11px; font-weight: 800; letter-spacing: 1px; margin-bottom: 12px;">
+      <span class="brand-mark" style="width: 20px; height: 20px; font-size: 12px; border-radius: 6px; box-shadow: none;">▥</span>
+      UNIDADES TECNOLÓGICAS DE SANTANDER · UTS
+    </div>
+    <h1 style="font-size: clamp(22px, 4vw, 30px); font-weight: 800; color: #12384a; margin: 0 0 8px; line-height: 1.25;">
+      Encuesta de Estudio de Mercado
+    </h1>
+    <p style="color: #536b7e; font-size: 14px; max-width: 600px; margin: 0 auto; line-height: 1.5;">
+      Plan de Negocios para la plataforma <strong>Datapyme</strong> (F-DC-124 · Propuesta UTS 65-2026-147).
+    </p>
+  </header>
+
+  <!-- Indicador visual de 2 pasos -->
+  <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 22px; gap: 8px; flex-wrap: wrap;">
+    <div style="display: flex; align-items: center; gap: 6px; background: #eef8f5; border: 1.5px solid #149d87; padding: 5px 12px; border-radius: 20px;">
+      <span style="color: #149d87; font-weight: 800; font-size: 13px;">✓</span>
+      <span style="font-size: 12.5px; font-weight: 700; color: #12384a;">Paso 1: Empresa Registrada</span>
+    </div>
+    <span style="color: #9cb1c0; font-size: 16px;">→</span>
+    <div style="display: flex; align-items: center; gap: 6px; background: #e6f7f3; border: 1.5px solid #149d87; padding: 5px 12px; border-radius: 20px;">
+      <span style="display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px; border-radius: 50%; background: #149d87; color: #fff; font-weight: 700; font-size: 11px;">2</span>
+      <span style="font-size: 12.5px; font-weight: 700; color: #12384a;">Paso 2: Encuesta de Mercado (19 preguntas)</span>
+    </div>
+  </div>
+
+  <!-- Tarjeta de la Empresa -->
+  <div class="panel-card" style="padding: 16px 20px; margin-bottom: 18px; border-left: 4px solid #159a88; background: #fafdfd;">
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+      <div>
+        <span style="font-size: 11px; font-weight: 800; color: #159a88; letter-spacing: 0.5px;">EMPRESA PARTICIPANTE</span>
+        <h2 style="font-size: 17px; color: #12384a; margin: 3px 0 2px;">{{company.name}}</h2>
+        <span style="font-size: 12px; color: #6d8494;">Ubicación: {{company.barrio}} · {{company.city}}</span>
+      </div>
+      <span class="pill pill-green" style="font-size: 11px; padding: 5px 10px;">
+        <i data-lucide="shield-check"></i> Enlace seguro y confidencial
+      </span>
+    </div>
+  </div>
+
+  <!-- Barra de Progreso Dinámica -->
+  <div class="survey-progress panel-card">
+    <span id="progressText">Preparando cuestionario…</span>
+    <progress id="surveyProgress" max="100" value="0" aria-label="Progreso de la encuesta"></progress>
+  </div>
+
+  {% if errors %}
+  <div class="notice notice-error" role="alert" style="margin-bottom: 20px;">
+    <div>
+      <strong>Por favor, revise las siguientes preguntas:</strong>
+      <ul style="margin: 6px 0 0; padding-left: 20px; font-size: 13px;">
+        {% for key, message in errors.items() %}
+        <li>{{key}}: {{message}}</li>
+        {% endfor %}
+      </ul>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- Formulario de la Encuesta -->
+  <form method="post" action="/encuesta/{{token}}" class="panel-card form-card survey-form" id="surveyForm" novalidate style="box-shadow: 0 10px 30px rgba(18,56,74,0.06); padding: 26px 22px;">
+    <!-- Trampa Honeypot anti-bots (Invisible) -->
+    <div style="display:none; position:absolute; left:-9999px;" aria-hidden="true">
+      <label>No complete este campo<input type="text" name="website_url" tabindex="-1" autocomplete="off"></label>
+    </div>
+
+    <!-- Valor por defecto para M23 -->
+    <input type="hidden" name="M23" value="Respondida directamente por la empresa">
+
+    <!-- Sección 00: Consentimiento Informado (Ley 1581 de 2012) -->
+    <div class="form-section-title">
+      <span class="section-number">00</span>
+      <div>
+        <h3>Consentimiento Informado (Ley 1581 de 2012)</h3>
+        <p>Requisito ético y legal de las Unidades Tecnológicas de Santander (F-DC-124).</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 24px;">
+      <label class="consent-field wide" id="consent" style="cursor: pointer; background: #f8fcfa; border-color: #d1eae2; padding: 16px; border-radius: 10px; display: flex; gap: 12px; align-items: flex-start;">
+        <input type="checkbox" name="consent" value="yes" {{'checked' if values.get('consent')=='yes' or not values}} required style="margin-top: 4px; width: 20px; height: 20px; flex-shrink: 0; accent-color: #149d87;">
+        <span style="font-size: 13.5px; color: #2e4758; line-height: 1.6;">
+          <strong>Consentimiento del Empresario:</strong> {{consent_statement}}
+        </span>
+      </label>
+      {% if 'consent' in errors %}
+      <p class="field-error" style="margin-top: 6px;">{{errors['consent']}}</p>
+      {% endif %}
+    </div>
+
+    <div class="survey-context" style="margin-bottom: 24px;">
+      <i data-lucide="info"></i>
+      <p>
+        <strong>Objetivo del estudio:</strong> Este cuestionario consta de 19 preguntas breves para diagnosticar los métodos actuales de registro de ventas, control de inventarios y necesidades de software en el comercio de Bucaramanga.
+      </p>
+    </div>
+
+    <!-- Secciones del Cuestionario (M04 a M22) -->
+    {% for heading, questions in sections %}
+    <section class="instrument-section" style="margin-bottom: 28px;">
+      <div class="form-section-title gap-top">
+        <span class="section-number">{{'%02d'|format(loop.index)}}</span>
+        <div>
+          <h3>{{heading}}</h3>
+          <p>Seleccione la opción que mejor refleje la realidad actual de su negocio.</p>
+        </div>
+      </div>
+
+      <div class="question-stack">
+        {% for q in questions %}
+        {% set value = values.get(q.code, []) if q.kind == 'multi' else values.get(q.code, '') %}
+        {% set help_text = q_help.get(q.code, q.help) %}
+        <div class="question {{'question-error' if q.code in errors}}" data-question="{{q.code}}" data-required="{{'yes' if q.required else 'no'}}" data-kind="{{q.kind}}">
+          <label class="question-label" for="{{q.code}}">
+            <span class="question-code">{{q.code}}</span>
+            {{q.label}}
+            {% if q.required %}<span class="required">*</span>{% endif %}
+          </label>
+          {% if help_text %}
+          <p class="field-help" style="color: #4b6375; font-size: 13px; margin: 4px 0 10px; line-height: 1.4;">{{help_text}}</p>
+          {% endif %}
+
+          {% if q.kind == 'select' %}
+          <select id="{{q.code}}" name="{{q.code}}" {{'required' if q.required}} style="font-size: 14px; min-height: 44px;">
+            <option value="">Seleccionar una opción…</option>
+            {% for op in q.choices %}
+            <option value="{{op}}" {{'selected' if value == op}}>{{op}}</option>
+            {% endfor %}
+          </select>
+
+          {% elif q.kind == 'multi' %}
+          <div class="option-grid" id="{{q.code}}" data-max="{{q.maximum or q.choices|length}}">
+            {% for op in q.choices %}
+            <label class="option-tile" style="padding: 12px;">
+              <input type="checkbox" name="{{q.code}}" value="{{op}}" {{'checked' if op in value}}>
+              <span style="font-size: 13px;">{{op}}</span>
+            </label>
+            {% endfor %}
+          </div>
+
+          {% elif q.kind == 'scale' %}
+          <div class="scale-row" id="{{q.code}}">
+            {% for n in [1, 2, 3, 4, 5] %}
+            <label class="scale-option">
+              <input type="radio" name="{{q.code}}" value="{{n}}" {{'checked' if value|string == n|string}} {{'required' if q.required}}>
+              <span style="height: 44px; font-size: 14px;">{{n}}</span>
+            </label>
+            {% endfor %}
+          </div>
+          <div class="scale-labels">
+            <span>1 · Nada importante / Nada útil</span>
+            <span>5 · Muy importante / Muy útil</span>
+          </div>
+
+          {% elif q.kind == 'number' %}
+          <div class="input-money">
+            <span>COP $</span>
+            <input type="number" min="0" max="999999999999" step="1" id="{{q.code}}" name="{{q.code}}" value="{{value if value is not none else ''}}" placeholder="Ej: 50000" inputmode="numeric" style="font-size: 14px; min-height: 44px;">
+          </div>
+
+          {% elif q.kind == 'textarea' %}
+          <textarea id="{{q.code}}" name="{{q.code}}" rows="3" maxlength="4000" placeholder="Escriba su respuesta aquí…" {{'required' if q.required}} style="font-size: 14px;">{{value or ''}}</textarea>
+
+          {% else %}
+          <input id="{{q.code}}" name="{{q.code}}" maxlength="4000" value="{{value or ''}}" {{'required' if q.required}} style="font-size: 14px; min-height: 44px;">
+          {% endif %}
+
+          {% if q.code in errors %}
+          <p class="field-error" role="alert" style="margin-top: 6px;">{{errors[q.code]}}</p>
+          {% endif %}
+        </div>
+        {% endfor %}
+      </div>
+    </section>
+    {% endfor %}
+
+    <!-- Botón de Envío -->
+    <div style="margin-top: 36px; padding-top: 24px; border-top: 1px solid var(--line); text-align: center;">
+      <button class="btn btn-primary btn-wide" type="submit" style="font-size: 16px; padding: 16px 28px; min-height: 52px; font-weight: 800; border-radius: 12px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px;">
+        <i data-lucide="check-circle-2"></i> Finalizar y Enviar Encuesta
+      </button>
+      <p style="font-size: 12px; color: #8294a3; margin-top: 12px;">
+        Al presionar enviar, sus respuestas serán guardadas de forma segura y confidencial en el proyecto Datapyme.
+      </p>
+    </div>
+  </form>
+
+  <footer style="text-align: center; margin-top: 36px; color: #8e9fab; font-size: 12px;">
+    <span>Datapyme Research Studio · Unidades Tecnológicas de Santander (UTS)</span><br>
+    <span>Facultad de Ciencias Socioeconómicas y Empresariales · Bucaramanga, Colombia</span>
+  </footer>
+</div>
+{% endblock %}
