@@ -1,4 +1,5 @@
 """Tests de Sesion Web: login, bloqueo por fallos, cookie solo-lectura (anti-CSRF) y expiracion."""
+
 from datetime import timedelta
 
 from fastapi.testclient import TestClient
@@ -45,12 +46,16 @@ def test_login_flow_cookie_is_read_only_and_logout_revokes(tmp_path):
         ok = client.post("/login", data={"email": "gerencia@pyme.co", "password": PASSWORD})
         assert ok.status_code == 303 and ok.headers["location"] == "/dashboard"
         set_cookie = ok.headers["set-cookie"].lower()
-        assert "httponly" in set_cookie and ("samesite=lax" in set_cookie or "samesite=strict" in set_cookie)
+        assert "httponly" in set_cookie and (
+            "samesite=lax" in set_cookie or "samesite=strict" in set_cookie
+        )
 
         # Con cookie: lectura permitida (GET) y escritura rechazada (403)
         assert client.get("/dashboard").status_code == 200
         assert client.get("/api/kpis").status_code == 200
-        write = client.post("/api/products", json={"sku": "X", "name": "X", "cost_price": "1", "sale_price": "2"})
+        write = client.post(
+            "/api/products", json={"sku": "X", "name": "X", "cost_price": "1", "sale_price": "2"}
+        )
         assert write.status_code == 403
 
         # Logout revoca la sesion en servidor
@@ -65,9 +70,12 @@ def test_lockout_after_repeated_failures_and_session_expiry(tmp_path):
         reg = _register(client)
 
         for _ in range(5):
-            assert client.post(
-                "/api/auth/login", json={"email": "gerencia@pyme.co", "password": "equivocada-999"}
-            ).status_code == 401
+            assert (
+                client.post(
+                    "/api/auth/login", json={"email": "gerencia@pyme.co", "password": "equivocada-999"}
+                ).status_code
+                == 401
+            )
         # Tras 5 fallos, incluso la contrasena correcta queda bloqueada temporalmente
         locked = client.post("/api/auth/login", json={"email": "gerencia@pyme.co", "password": PASSWORD})
         assert locked.status_code == 429

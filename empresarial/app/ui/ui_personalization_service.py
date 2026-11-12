@@ -2,6 +2,7 @@
 Motor de Interfaz Adaptativa Basado en Encuesta (Survey-Driven Adaptive UI).
 Implementa el mapeo determinista `map-v1` y el generador de layout `layout-v1` (Bento Grid Adaptativo).
 """
+
 from dataclasses import dataclass, field
 from typing import Any, Literal
 
@@ -86,18 +87,26 @@ def compute_priority_weights(diagnosis: DiagnosisInput) -> PriorityProfile:
 
     # 2. M12 — Información más útil para tomar decisiones
     for item in diagnosis.M12:
-        if item in ("Ventas por periodo", "Comparación entre periodos", "Productos más y menos vendidos"):
+        if item in (
+            "Ventas por periodo",
+            "Comparación entre periodos",
+            "Productos más y menos vendidos",
+        ):
             pts_sales += 1.0
         elif item in ("Existencias y alertas", "Rotación de productos"):
             pts_inv += 1.0
         elif item == "Tendencias o estimaciones":
             pts_pred += 1.0
-            explanations.append({"widget": "forecast_main", "reason_code": "M12:Tendencias o estimaciones"})
+            explanations.append(
+                {"widget": "forecast_main", "reason_code": "M12:Tendencias o estimaciones"}
+            )
 
     # 3. M17 — Capacidad prioritaria declarada (doble peso = 2.0)
     if diagnosis.M17 == "Consulta de ventas e indicadores":
         pts_sales += 2.0
-        explanations.append({"widget": "sales_trend", "reason_code": "M17:Consulta de ventas e indicadores"})
+        explanations.append(
+            {"widget": "sales_trend", "reason_code": "M17:Consulta de ventas e indicadores"}
+        )
     elif diagnosis.M17 in ("Inventarios y existencias", "Rotación de productos"):
         pts_inv += 2.0
         explanations.append({"widget": "turnover_coverage", "reason_code": f"M17:{diagnosis.M17}"})

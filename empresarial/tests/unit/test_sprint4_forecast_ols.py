@@ -1,4 +1,5 @@
 """Tests Unitarios Estadísticos Golden para Regresión Lineal OLS y Promedios Móviles (Sprint 4 — Act. 3.5)."""
+
 import pytest
 
 from app.forecast.stats import MANDATORY_FDC124_DISCLAIMER, compute_ols_and_moving_averages

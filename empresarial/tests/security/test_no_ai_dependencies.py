@@ -1,4 +1,5 @@
 """Auditoría Normativa F-DC-124: Prohibición Absoluta de APIs Externas de IA o Deep Learning (Act. 3.5)."""
+
 import ast
 
 from app.core.config import ROOT

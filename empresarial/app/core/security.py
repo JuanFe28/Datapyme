@@ -1,4 +1,5 @@
 """Seguridad criptográfica: Argon2id, tokens de sesión y cadena SHA-256 de consentimientos."""
+
 import hashlib
 import secrets
 

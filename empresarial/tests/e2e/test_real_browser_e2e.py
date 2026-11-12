@@ -10,6 +10,7 @@ Verifica rigurosamente:
 6. Carrito multi-producto en '+ Registrar Venta': agregar 2 o más productos distintos, cálculo dinámico y registro atómico.
 7. Proyección Estadística: tarjetas de negocios, gráfico visual propio y acordeón de auditoría OLS (F-DC-124).
 """
+
 import os
 import re
 import socket
@@ -36,6 +37,7 @@ def live_server():
 
     if not is_open:
         from app.main import create_app
+
         test_app = create_app()
         config = uvicorn.Config(test_app, host="127.0.0.1", port=8000, log_level="error")
         server = uvicorn.Server(config)
@@ -68,7 +70,8 @@ def setup_console_listener(page: Page):
 
     # Filtrar solo errores críticos de script o CSP
     critical_errors = [
-        err for err in console_errors 
+        err
+        for err in console_errors
         if "favicon" not in err.lower() and "failed to load resource: net::err" not in err.lower()
     ]
     assert len(critical_errors) == 0, f"Errores en consola de navegador detectados: {critical_errors}"
@@ -92,8 +95,12 @@ def test_01_login_styling_and_quick_fill(page: Page):
             boxShadow: cs.boxShadow
         };
     }""")
-    assert "255, 255, 255" in card_styles["bg"], f"Tarjeta de login debe tener fondo blanco: {card_styles}"
-    assert "16px" in card_styles["borderRadius"], f"Tarjeta debe tener borde redondeado 16px: {card_styles}"
+    assert "255, 255, 255" in card_styles["bg"], (
+        f"Tarjeta de login debe tener fondo blanco: {card_styles}"
+    )
+    assert "16px" in card_styles["borderRadius"], (
+        f"Tarjeta debe tener borde redondeado 16px: {card_styles}"
+    )
 
     # 2. Verificar botón primario estilizado
     btn = page.locator(".login-btn-submit")
@@ -139,7 +146,7 @@ def test_02_dashboard_sidebar_spanish_and_navigation(page: Page):
         "Inventarios y Kardex",
         "Ventas y Facturación",
         "Proyección Estadística",
-        "Mis Datos (Ley 1581)"
+        "Mis Datos (Ley 1581)",
     ]
     for label in expected_labels:
         expect(sidebar.get_by_text(label)).to_be_visible()
@@ -241,11 +248,13 @@ def test_04_tables_layout_padding_dates_and_payment_methods(page: Page):
 
     # 2. Verificar fechas legibles en español (no formato ISO crudo con T)
     table_text = sales_table.inner_text()
-    assert "T" not in re.findall(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", table_text), "No debe haber fechas ISO crudas con T"
-    # Debe contener meses en español y a. m. / p. m.
-    assert re.search(r"\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\b", table_text, re.IGNORECASE), (
-        "Las fechas deben incluir nombres de mes en español"
+    assert "T" not in re.findall(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}", table_text), (
+        "No debe haber fechas ISO crudas con T"
     )
+    # Debe contener meses en español y a. m. / p. m.
+    assert re.search(
+        r"\b(ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)\b", table_text, re.IGNORECASE
+    ), "Las fechas deben incluir nombres de mes en español"
 
     # 3. Verificar medios de pago traducidos al español con badges
     assert "Efectivo" in table_text or "Tarjeta" in table_text or "Transferencia" in table_text

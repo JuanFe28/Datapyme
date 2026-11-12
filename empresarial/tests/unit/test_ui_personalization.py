@@ -1,4 +1,5 @@
 """Tests Unitarios y de Integración del Motor de Personalización UI Basado en Encuesta (map-v1 / layout-v1)."""
+
 from app.ui.ui_personalization_service import (
     ALL_KPIS,
     ALL_WIDGETS,

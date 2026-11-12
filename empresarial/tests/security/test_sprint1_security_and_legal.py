@@ -1,4 +1,5 @@
 """Tests de Seguridad Multi-Tenant, Argon2id, Inmutabilidad Legal (Ley 1581) y Aislamiento de Layout UI."""
+
 import pytest
 from sqlalchemy.exc import IntegrityError, InternalError, OperationalError
 
@@ -46,9 +47,7 @@ def test_legal_consents_immutability_and_hash_chain(client):
 
     with client.app.state.Session() as db:
         consents = (
-            db.query(LegalConsent)
-            .order_by(LegalConsent.accepted_at.asc(), LegalConsent.id.asc())
-            .all()
+            db.query(LegalConsent).order_by(LegalConsent.accepted_at.asc(), LegalConsent.id.asc()).all()
         )
         assert len(consents) == 3
         assert consents[0].prev_hash == "0" * 64

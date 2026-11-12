@@ -2,8 +2,10 @@
 Servicio seguro de subida y procesamiento de imágenes de productos (F-DC-124).
 Aislamiento Multi-Tenant, verificación de magic bytes y mitigación de vulnerabilidades de archivo.
 """
-from pathlib import Path
+
 import uuid
+from pathlib import Path
+
 from fastapi import HTTPException
 
 ALLOWED_IMAGE_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp"}

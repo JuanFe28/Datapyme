@@ -2,16 +2,17 @@
 Servicio de Mapeo Inteligente de Excel Multi-Hoja y Diccionario de Sinónimos Comerciales (F-DC-124).
 100% Python puro con openpyxl y csv, cero APIs externas.
 """
-from decimal import Decimal, InvalidOperation
+
 import io
-from pathlib import Path
 import re
 import unicodedata
 import zipfile
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any
 
-from fastapi import HTTPException
 import openpyxl
+from fastapi import HTTPException
 
 ALLOWED_EXTENSIONS = {".xlsx", ".csv"}
 MAX_SCAN_ROWS = 15
@@ -21,37 +22,95 @@ MAX_ROWS_LIMIT = 20000
 # Diccionario de sinónimos comerciales colombianos normalizados (sin acentos, minúsculas)
 SYNONYMS_MAP: dict[str, list[str]] = {
     "sku": [
-        "sku", "codigo", "ref", "referencia", "id", "item", "cod",
-        "articulo_id", "cod_articulo", "referencia_producto", "codigo_barra",
+        "sku",
+        "codigo",
+        "ref",
+        "referencia",
+        "id",
+        "item",
+        "cod",
+        "articulo_id",
+        "cod_articulo",
+        "referencia_producto",
+        "codigo_barra",
     ],
     "name": [
-        "nombre", "producto", "descripcion", "articulo", "detalle",
-        "mercancia", "item", "nombre_producto", "descripcion_producto",
+        "nombre",
+        "producto",
+        "descripcion",
+        "articulo",
+        "detalle",
+        "mercancia",
+        "item",
+        "nombre_producto",
+        "descripcion_producto",
     ],
     "category": [
-        "categoria", "linea", "grupo", "familia", "tipo", "clase",
-        "departamento", "seccion", "rubro", "categoria_producto",
+        "categoria",
+        "linea",
+        "grupo",
+        "familia",
+        "tipo",
+        "clase",
+        "departamento",
+        "seccion",
+        "rubro",
+        "categoria_producto",
     ],
     "cost_price": [
-        "costo", "precio_costo", "costo_unitario", "valor_compra",
-        "compra", "costo_promedio", "val_costo", "vlr_costo", "precio_compra",
+        "costo",
+        "precio_costo",
+        "costo_unitario",
+        "valor_compra",
+        "compra",
+        "costo_promedio",
+        "val_costo",
+        "vlr_costo",
+        "precio_compra",
     ],
     "sale_price": [
-        "precio", "precio_venta", "venta", "pvp", "valor",
-        "valor_unitario", "precio_publico", "precio_final", "val_venta",
-        "vlr_venta", "tarifa", "precio_unitario",
+        "precio",
+        "precio_venta",
+        "venta",
+        "pvp",
+        "valor",
+        "valor_unitario",
+        "precio_publico",
+        "precio_final",
+        "val_venta",
+        "vlr_venta",
+        "tarifa",
+        "precio_unitario",
     ],
     "initial_stock": [
-        "stock", "cantidad", "existencias", "unidades", "saldo",
-        "bodega", "inventario", "cant", "cant_actual", "existencia",
-        "cant_disponible", "disponible",
+        "stock",
+        "cantidad",
+        "existencias",
+        "unidades",
+        "saldo",
+        "bodega",
+        "inventario",
+        "cant",
+        "cant_actual",
+        "existencia",
+        "cant_disponible",
+        "disponible",
     ],
     "min_stock": [
-        "stock_minimo", "min_stock", "minimo", "alerta_stock",
-        "punto_reorden", "seguridad",
+        "stock_minimo",
+        "min_stock",
+        "minimo",
+        "alerta_stock",
+        "punto_reorden",
+        "seguridad",
     ],
     "unit": [
-        "unidad", "medida", "presentacion", "unit", "und", "uom",
+        "unidad",
+        "medida",
+        "presentacion",
+        "unit",
+        "und",
+        "uom",
     ],
 }
 
@@ -141,18 +200,22 @@ def inspect_workbook(
         except UnicodeDecodeError:
             text_data = content.decode("latin-1")
         lines = [line for line in text_data.splitlines() if line.strip()]
-        for line in lines[:MAX_SCAN_ROWS + 10]:
+        for line in lines[: MAX_SCAN_ROWS + 10]:
             parts = [p.strip() for p in re.split(r"[,;|\t]", line)]
             raw_matrix.append(parts)
         selected_sheet = sheets[0]
     else:
         if not content.startswith(b"PK\x03\x04"):
-            raise HTTPException(status_code=422, detail="El archivo no es un Excel válido (firma ZIP inválida).")
+            raise HTTPException(
+                status_code=422, detail="El archivo no es un Excel válido (firma ZIP inválida)."
+            )
         try:
             with zipfile.ZipFile(io.BytesIO(content)) as zf:
                 total_uncompressed = sum(info.file_size for info in zf.infolist())
                 if total_uncompressed > 25 * 1024 * 1024:
-                    raise HTTPException(status_code=422, detail="Archivo Excel excede límite descomprimido.")
+                    raise HTTPException(
+                        status_code=422, detail="Archivo Excel excede límite descomprimido."
+                    )
         except zipfile.BadZipFile as exc:
             raise HTTPException(status_code=422, detail="Archivo XLSX corrupto.") from exc
 
@@ -207,7 +270,7 @@ def inspect_workbook(
         best_headers.pop()
 
     # Generar nombres amigables si alguna columna intermedia está vacía
-    columns = [h if h else f"Columna_{i+1}" for i, h in enumerate(best_headers)]
+    columns = [h if h else f"Columna_{i + 1}" for i, h in enumerate(best_headers)]
 
     # Auto-Mapeo usando sinónimos comerciales
     suggested_mapping: dict[str, str | None] = {
@@ -229,14 +292,16 @@ def inspect_workbook(
                 continue
             norm = normalize_text(col)
             # Coincidencia exacta o contenida
-            if norm in synonyms or any(norm == syn or norm.startswith(syn + "_") or norm.endswith("_" + syn) for syn in synonyms):
+            if norm in synonyms or any(
+                norm == syn or norm.startswith(syn + "_") or norm.endswith("_" + syn) for syn in synonyms
+            ):
                 suggested_mapping[field] = col
                 assigned_cols.add(col)
                 break
 
     # Extraer previsualización de 3 filas posteriores al encabezado
     sample_rows: list[dict[str, Any]] = []
-    data_rows = raw_matrix[best_row_idx + 1: best_row_idx + 4]
+    data_rows = raw_matrix[best_row_idx + 1 : best_row_idx + 4]
 
     for d_row in data_rows:
         if not any(c is not None and str(c).strip() for c in d_row):
@@ -310,33 +375,33 @@ def parse_mapped_workbook_products(
     parsed_products: list[dict[str, Any]] = []
     auto_sku_counter = 1
 
+    def get_val(row: list[Any], field: str) -> str:
+        if field in field_to_idx:
+            idx = field_to_idx[field]
+            if idx < len(row) and row[idx] is not None:
+                return str(row[idx]).strip()
+        return ""
+
     for row_num, row_data in enumerate(raw_rows[header_row_index:], start=header_row_index + 1):
         if not any(c is not None and str(c).strip() for c in row_data):
             continue
 
-        def get_val(field: str) -> str:
-            if field in field_to_idx:
-                idx = field_to_idx[field]
-                if idx < len(row_data) and row_data[idx] is not None:
-                    return str(row_data[idx]).strip()
-            return ""
-
-        raw_name = get_val("name")
+        raw_name = get_val(row_data, "name")
         if not raw_name:
             continue
 
-        raw_sku = get_val("sku")
+        raw_sku = get_val(row_data, "sku")
         if not raw_sku:
             raw_sku = f"AUTO-{auto_sku_counter:04d}"
             auto_sku_counter += 1
 
-        category = get_val("category") or "General"
-        unit = get_val("unit") or "und"
+        category = get_val(row_data, "category") or "General"
+        unit = get_val(row_data, "unit") or "und"
 
-        cost_clean = clean_currency_or_number_string(get_val("cost_price"))
-        sale_clean = clean_currency_or_number_string(get_val("sale_price"))
-        stock_clean = clean_currency_or_number_string(get_val("initial_stock"))
-        min_stock_clean = clean_currency_or_number_string(get_val("min_stock"))
+        cost_clean = clean_currency_or_number_string(get_val(row_data, "cost_price"))
+        sale_clean = clean_currency_or_number_string(get_val(row_data, "sale_price"))
+        stock_clean = clean_currency_or_number_string(get_val(row_data, "initial_stock"))
+        min_stock_clean = clean_currency_or_number_string(get_val(row_data, "min_stock"))
 
         try:
             cost_dec = Decimal(cost_clean).quantize(Decimal("0.01"))
@@ -358,18 +423,20 @@ def parse_mapped_workbook_products(
         except (InvalidOperation, TypeError):
             min_stock_dec = Decimal("0.000")
 
-        parsed_products.append({
-            "sku": raw_sku.upper()[:64],
-            "name": raw_name[:180],
-            "category": category[:90],
-            "unit": unit[:20],
-            "cost_price": cost_dec,
-            "sale_price": sale_dec,
-            "vat_rate": Decimal("19.00"),
-            "initial_stock": stock_dec,
-            "min_stock": min_stock_dec,
-            "row_number": row_num,
-        })
+        parsed_products.append(
+            {
+                "sku": raw_sku.upper()[:64],
+                "name": raw_name[:180],
+                "category": category[:90],
+                "unit": unit[:20],
+                "cost_price": cost_dec,
+                "sale_price": sale_dec,
+                "vat_rate": Decimal("19.00"),
+                "initial_stock": stock_dec,
+                "min_stock": min_stock_dec,
+                "row_number": row_num,
+            }
+        )
 
         if len(parsed_products) > MAX_ROWS_LIMIT:
             raise HTTPException(status_code=422, detail="El archivo supera el límite de 20.000 filas.")

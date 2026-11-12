@@ -1,4 +1,5 @@
 """Tests de Seguridad Multi-Tenant de Ventas/Inventario y Sanitización OWASP de CSV/XLSX (Act. 3.3)."""
+
 import io
 from decimal import Decimal
 

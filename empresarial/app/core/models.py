@@ -1,4 +1,5 @@
 """Modelos relacionales Multi-Tenant para Datapyme Empresarial (F-DC-124)."""
+
 import uuid
 from datetime import UTC, datetime
 

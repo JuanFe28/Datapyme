@@ -1,10 +1,12 @@
 """
 Pruebas Unitarias para el Mapeador Inteligente de Excel Multi-Hoja (F-DC-124).
 """
-from decimal import Decimal
+
 import io
+from decimal import Decimal
+
 import openpyxl
-import pytest
+
 from app.imports.smart_excel_mapper import (
     clean_currency_or_number_string,
     inspect_workbook,
@@ -30,9 +32,13 @@ def create_messy_multi_sheet_excel() -> bytes:
     # Fila 4: Encabezados con sinónimos colombianos
     ws2.append(["Ref", "Artículo", "Línea", "Costo Unitario", "PVP", "Existencias", "Presentación"])
     # Filas 5+: Datos con moneda colombiana
-    ws2.append(["TAL-01", "Taladro Percutor 650W", "Herramientas", "$ 165.000,00", "$ 230.000,00", "15", "und"])
+    ws2.append(
+        ["TAL-01", "Taladro Percutor 650W", "Herramientas", "$ 165.000,00", "$ 230.000,00", "15", "und"]
+    )
     ws2.append(["CEM-02", "Cemento Gris 50kg", "Obra Gris", "$ 24.500", "$ 32.000", "150", "bulto"])
-    ws2.append(["", "Martillo Carpintero 16oz", "Manual", "$ 18.000", "$ 28.000", "24", "und"])  # Sin SKU
+    ws2.append(
+        ["", "Martillo Carpintero 16oz", "Manual", "$ 18.000", "$ 28.000", "24", "und"]
+    )  # Sin SKU
 
     # Hoja 3: Proveedores
     ws3 = wb.create_sheet(title="Proveedores")

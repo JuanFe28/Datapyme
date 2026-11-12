@@ -1,11 +1,13 @@
 """
 Pruebas de Seguridad y Validación de Subida de Imágenes de Productos (F-DC-124).
 """
+
 import io
-from fastapi.testclient import TestClient
+
 import pytest
+from fastapi.testclient import TestClient
+
 from app.main import create_app
-from app.core.models import User, Tenant
 
 
 @pytest.fixture
@@ -47,7 +49,9 @@ def test_valid_image_upload_jpeg(app_and_client):
     token = get_auth_token(client)
 
     # JPEG válido mínimo con magic bytes
-    valid_jpeg_bytes = b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00\xff\xd9"
+    valid_jpeg_bytes = (
+        b"\xff\xd8\xff\xe0\x00\x10JFIF\x00\x01\x01\x01\x00`\x00`\x00\x00\xff\xdb\x00C\x00\xff\xd9"
+    )
 
     files = {"file": ("cemento.jpg", io.BytesIO(valid_jpeg_bytes), "image/jpeg")}
     headers = {"Authorization": f"Bearer {token}"}

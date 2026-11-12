@@ -1,4 +1,5 @@
 """Tests Unitarios Matemáticos de KPIs Comerciales y Clasificación Pareto (Sprint 3 — Act. 3.4)."""
+
 from decimal import Decimal
 
 from app.analytics.kpis import compute_pareto_and_stagnant, compute_pure_kpis
@@ -70,9 +71,30 @@ def test_compute_pure_kpis_zero_division_safety():
 
 def test_pareto_star_vs_stagnant_classification():
     products = [
-        {"id": "p1", "sku": "SKU-STAR", "name": "Cemento Gris", "category": "Obra", "stock_qty": Decimal(10), "cost_price": Decimal(25000)},
-        {"id": "p2", "sku": "SKU-SEC", "name": "Arena Bulto", "category": "Obra", "stock_qty": Decimal(5), "cost_price": Decimal(10000)},
-        {"id": "p3", "sku": "SKU-STAG", "name": "Taladro Especial", "category": "Herramienta", "stock_qty": Decimal(4), "cost_price": Decimal(200000)},
+        {
+            "id": "p1",
+            "sku": "SKU-STAR",
+            "name": "Cemento Gris",
+            "category": "Obra",
+            "stock_qty": Decimal(10),
+            "cost_price": Decimal(25000),
+        },
+        {
+            "id": "p2",
+            "sku": "SKU-SEC",
+            "name": "Arena Bulto",
+            "category": "Obra",
+            "stock_qty": Decimal(5),
+            "cost_price": Decimal(10000),
+        },
+        {
+            "id": "p3",
+            "sku": "SKU-STAG",
+            "name": "Taladro Especial",
+            "category": "Herramienta",
+            "stock_qty": Decimal(4),
+            "cost_price": Decimal(200000),
+        },
     ]
     sold_by_product = {
         "p1": {"units_sold": Decimal("20.000"), "net_revenue": Decimal("850000.00")},

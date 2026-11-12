@@ -6,6 +6,7 @@ Uso (dentro del contenedor o con el venv activo):
 
 Las credenciales se imprimen UNA sola vez en la salida estandar y no se almacenan en texto plano.
 """
+
 import argparse
 
 from sqlalchemy import create_engine

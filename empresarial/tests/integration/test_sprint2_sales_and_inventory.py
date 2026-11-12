@@ -1,4 +1,5 @@
 """Tests de Integración de Sprint 2: Catálogo, Kardex Inmutable, Ventas Atómicas y Alertas de Stock (Act. 3.3)."""
+
 from decimal import Decimal
 
 import pytest
@@ -157,15 +158,23 @@ def test_kardex_reconciliation_atomic_sales_and_void_reversal(client):
     assert Decimal(sale["cogs_total"]) == Decimal("238500.00")
 
     # Stock descontado: p1 = 70, p2 = 8
-    assert Decimal(client.get(f"/api/products/{p1['id']}", headers=headers).json()["stock_qty"]) == Decimal("70.000")
-    assert Decimal(client.get(f"/api/products/{p2['id']}", headers=headers).json()["stock_qty"]) == Decimal("8.000")
+    assert Decimal(
+        client.get(f"/api/products/{p1['id']}", headers=headers).json()["stock_qty"]
+    ) == Decimal("70.000")
+    assert Decimal(
+        client.get(f"/api/products/{p2['id']}", headers=headers).json()["stock_qty"]
+    ) == Decimal("8.000")
 
     # 5. Anular la venta y comprobar reversa atómica en kardex
     void_res = client.post(f"/api/sales/{sale['id']}/void", headers=headers)
     assert void_res.status_code == 200, void_res.text
     assert void_res.json()["status"] == "voided"
-    assert Decimal(client.get(f"/api/products/{p1['id']}", headers=headers).json()["stock_qty"]) == Decimal("75.000")
-    assert Decimal(client.get(f"/api/products/{p2['id']}", headers=headers).json()["stock_qty"]) == Decimal("10.000")
+    assert Decimal(
+        client.get(f"/api/products/{p1['id']}", headers=headers).json()["stock_qty"]
+    ) == Decimal("75.000")
+    assert Decimal(
+        client.get(f"/api/products/{p2['id']}", headers=headers).json()["stock_qty"]
+    ) == Decimal("10.000")
 
     # 6. Reconciliación matemática Kardex == stock_qty e inmutabilidad por trigger
     from app.core.models import InventoryMovement, Product

@@ -7,11 +7,11 @@ Verifica rigurosamente los 4 flujos críticos:
 3. Botón 'Editar' en inventario: Slide-Over Drawer con cálculo de margen en vivo y actualización de precios.
 4. Botón 'Ver detalle' en ventas: Comprobante/recibo completo con desglose de productos, cantidades, precios y utilidad.
 """
+
 import os
 import re
 from pathlib import Path
 
-import pytest
 from playwright.sync_api import Page, expect
 
 BASE_URL = os.environ.get("DATAPYME_TEST_URL", "http://127.0.0.1:8000")

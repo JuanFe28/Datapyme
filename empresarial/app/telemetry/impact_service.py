@@ -10,6 +10,7 @@ Reglas Inquebrantables de Privacidad y Seguridad:
    en JSON estructurado y solicitar la supresión/anonimización programada preservando la cadena
    criptográfica inmutable `legal_consents`.
 """
+
 from collections import defaultdict
 from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
@@ -41,7 +42,9 @@ def verify_legal_consents_chain(db: Session, tenant_id: str | None = None) -> di
     Verifica la cadena de bloques ligera SHA-256 (`prev_hash -> row_hash`) de `legal_consents`.
     No expone PII ni `tenant_id` en el resumen público de auditoría.
     """
-    query = db.query(LegalConsent).order_by(LegalConsent.tenant_id.asc(), LegalConsent.accepted_at.asc(), LegalConsent.id.asc())
+    query = db.query(LegalConsent).order_by(
+        LegalConsent.tenant_id.asc(), LegalConsent.accepted_at.asc(), LegalConsent.id.asc()
+    )
     if tenant_id:
         query = query.filter(LegalConsent.tenant_id == tenant_id)
     rows = query.all()
@@ -114,11 +117,7 @@ def _compute_cohort_metrics(
 
     t_ids = [t.id for t in tenants]
 
-    sales = (
-        db.query(Sale)
-        .filter(Sale.tenant_id.in_(t_ids), Sale.status != "voided")
-        .all()
-    )
+    sales = db.query(Sale).filter(Sale.tenant_id.in_(t_ids), Sale.status != "voided").all()
     sales_count = len(sales)
     sales_amount_cop = sum(
         (Decimal(str(s.total)) for s in sales),
@@ -126,9 +125,7 @@ def _compute_cohort_metrics(
     ).quantize(Decimal(1), rounding=ROUND_HALF_UP)
 
     products_managed = (
-        db.query(Product)
-        .filter(Product.tenant_id.in_(t_ids), Product.is_active.is_(True))
-        .count()
+        db.query(Product).filter(Product.tenant_id.in_(t_ids), Product.is_active.is_(True)).count()
     )
 
     stockout_risk_alerts = 0
@@ -140,12 +137,16 @@ def _compute_cohort_metrics(
 
     events = db.query(UsageEvent).filter(UsageEvent.tenant_id.in_(t_ids)).all()
     forecasts_generated = sum(1 for e in events if e.event_type == "forecast_executed")
-    reports_generated = sum(1 for e in events if e.event_type in ("kpi_dashboard_viewed", "import_completed"))
+    reports_generated = sum(
+        1 for e in events if e.event_type in ("kpi_dashboard_viewed", "import_completed")
+    )
     alerts_resolved = sum(1 for e in events if e.event_type == "stock_alert_resolved")
 
     # Estimación conservadora de minutos ahorrados frente a línea base manual M24:
     # 4 min por venta conciliada + 15 min por proyección OLS + 10 min por tablero KPI/importación
-    est_minutes_saved = Decimal((sales_count * 4) + (forecasts_generated * 15) + (reports_generated * 10))
+    est_minutes_saved = Decimal(
+        (sales_count * 4) + (forecasts_generated * 15) + (reports_generated * 10)
+    )
 
     prefs = db.query(CompanyUIPreference).filter(CompanyUIPreference.tenant_id.in_(t_ids)).all()
     focus_counts = {"sales": 0, "inventory": 0, "predictive": 0, "balanced": 0}
@@ -207,9 +208,7 @@ def compute_platform_impact_telemetry(
     Solo incluye empresas activas que hayan otorgado consentimiento explícito (`research_stats_opt_in=True`).
     """
     eligible_tenants = (
-        db.query(Tenant)
-        .filter(Tenant.status == "active", Tenant.research_stats_opt_in.is_(True))
-        .all()
+        db.query(Tenant).filter(Tenant.status == "active", Tenant.research_stats_opt_in.is_(True)).all()
     )
 
     global_metrics = _compute_cohort_metrics(
@@ -272,7 +271,9 @@ def export_habeas_data_bundle(
         .all()
     )
     sales = db.query(Sale).filter_by(tenant_id=tenant_id).order_by(Sale.sale_number.asc()).all()
-    imports = db.query(ImportJob).filter_by(tenant_id=tenant_id).order_by(ImportJob.created_at.asc()).all()
+    imports = (
+        db.query(ImportJob).filter_by(tenant_id=tenant_id).order_by(ImportJob.created_at.asc()).all()
+    )
 
     db.add(UsageEvent(tenant_id=tenant_id, event_type="habeas_data_exported"))
     db.commit()

@@ -2,13 +2,14 @@
 Pruebas E2E de Responsividad Móvil con Playwright (Emulación iPhone 14 - 390x844)
 UTS F-DC-124 / F-DC-125.
 """
+
 import os
-from pathlib import Path
 import re
 import socket
 import sys
 import threading
 import time
+from pathlib import Path
 
 import pytest
 import uvicorn
@@ -28,6 +29,7 @@ def live_server():
 
     if not is_open:
         from app.main import create_app
+
         test_app = create_app()
         config = uvicorn.Config(test_app, host="127.0.0.1", port=8010, log_level="error")
         server = uvicorn.Server(config)
@@ -118,7 +120,9 @@ def test_03_mobile_sale_drawer_full_width_and_interaction(page: Page):
     expect(drawer).to_have_class(re.compile(r"open"))
 
     # Ancho del panel debe cubrir la pantalla completa del celular
-    panel_w = page.evaluate("() => document.querySelector('#drawer-sale .drawer-panel').getBoundingClientRect().width")
+    panel_w = page.evaluate(
+        "() => document.querySelector('#drawer-sale .drawer-panel').getBoundingClientRect().width"
+    )
     assert panel_w >= 380, f"El drawer debe ocupar el 100% de la pantalla móvil: {panel_w}px"
 
     # Captura vertical de celular con el drawer abierto

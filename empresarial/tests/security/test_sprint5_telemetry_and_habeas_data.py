@@ -1,4 +1,5 @@
 """Tests de Seguridad de Sprint 5: Telemetría con k-Anonimato (k >= 3), Separación SuperAdmin y Habeas Data."""
+
 import json
 from datetime import timedelta
 

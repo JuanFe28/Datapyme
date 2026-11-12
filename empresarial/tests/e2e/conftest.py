@@ -1,11 +1,12 @@
-import os
 import socket
 import sys
 import threading
 import time
 from pathlib import Path
+
 import pytest
 import uvicorn
+
 
 @pytest.fixture(scope="session", autouse=True)
 def live_server():
@@ -17,6 +18,7 @@ def live_server():
 
     if not is_open:
         from app.main import create_app
+
         test_app = create_app()
         config = uvicorn.Config(test_app, host="127.0.0.1", port=8000, log_level="error")
         server = uvicorn.Server(config)

@@ -6,6 +6,7 @@ Restricción Normativa Inquebrantable (F-DC-124):
   y Promedios Móviles de 3 periodos (SMA-3 y WMA-3 con pesos [1, 2, 3]).
 - PROHIBIDO conectar APIs externas de IA o modelos opacos de Deep Learning.
 """
+
 from collections import defaultdict
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
@@ -53,8 +54,8 @@ def compute_ols_and_moving_averages(
             "methodological_disclaimer": MANDATORY_FDC124_DISCLAIMER,
         }
 
-    y_vals = [ float(v) for v in series ]
-    x_vals = [ float(i) for i in range(1, n + 1) ]
+    y_vals = [float(v) for v in series]
+    x_vals = [float(i) for i in range(1, n + 1)]
 
     sum_x = sum(x_vals)
     sum_y = sum(y_vals)
@@ -93,7 +94,11 @@ def compute_ols_and_moving_averages(
     wma_3 = ((1.0 * last_3[0]) + (2.0 * last_3[1]) + (3.0 * last_3[2])) / 6.0
 
     # Tabla histórica auditable (con SMA-3 y WMA-3 deslizantes)
-    labels = period_labels if (period_labels and len(period_labels) == n) else [f"P{i}" for i in range(1, n + 1)]
+    labels = (
+        period_labels
+        if (period_labels and len(period_labels) == n)
+        else [f"P{i}" for i in range(1, n + 1)]
+    )
     audit_rows: list[dict[str, Any]] = []
     for idx in range(n):
         x_i = idx + 1
@@ -178,11 +183,7 @@ def get_tenant_forecast_payload(
 
     if metric == "units_sold" and product_id:
         sale_map = {s.id: s for s in sales}
-        items = (
-            db.query(SaleItem)
-            .filter_by(tenant_id=tenant_id, product_id=product_id)
-            .all()
-        )
+        items = db.query(SaleItem).filter_by(tenant_id=tenant_id, product_id=product_id).all()
         for item in items:
             parent_sale = sale_map.get(item.sale_id)
             if not parent_sale:

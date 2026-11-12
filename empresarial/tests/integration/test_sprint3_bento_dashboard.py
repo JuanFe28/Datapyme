@@ -1,4 +1,5 @@
 """Tests de Integración de Sprint 3: Tablero Bento Grid Adaptativo y KPIs por Tenant (Act. 3.4)."""
+
 from fastapi.testclient import TestClient
 
 from app.main import create_app

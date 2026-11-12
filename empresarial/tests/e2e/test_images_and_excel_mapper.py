@@ -2,14 +2,14 @@
 Pruebas E2E en Navegador Real con Playwright (F-DC-124 / F-DC-125):
 Verificación de miniaturas visuales de productos y flujo interactivo del mapeador inteligente de Excel.
 """
-import io
+
 import os
 from pathlib import Path
+
 import openpyxl
-import pytest
 from playwright.sync_api import Page, expect
 
-BASE_URL = os.environ.get("DATAPYME_TEST_URL", "http://127.0.0.1:8010")
+BASE_URL = os.environ.get("DATAPYME_TEST_URL", "http://127.0.0.1:8000")
 ARTIFACTS_DIR = Path(r"C:\Users\juanf\.gemini\antigravity\brain\46e60f00-dd8e-472a-98a1-c0a401f7e5ca")
 
 

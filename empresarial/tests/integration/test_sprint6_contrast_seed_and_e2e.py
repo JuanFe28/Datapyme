@@ -1,4 +1,5 @@
 """Tests de Integración E2E de Sprint 6: Seed Contrastante [DEMO-FDC125] y Flujo Completo F-DC-124."""
+
 from fastapi.testclient import TestClient
 
 from app.core.demo_seed import clear_contrast_demo_tenants, seed_contrast_demo_tenants
@@ -32,7 +33,10 @@ def test_seed_and_clear_contrast_demo_tenants_e2e(tmp_path):
         assert fc_a["observed_periods"] >= 4
         assert fc_a["beta_1"] > 0
         assert fc_a["r_squared"] > 0.70
-        assert "Regresión Lineal Simple por Mínimos Cuadrados Ordinarios (OLS)" in fc_a["methodological_disclaimer"]
+        assert (
+            "Regresión Lineal Simple por Mínimos Cuadrados Ordinarios (OLS)"
+            in fc_a["methodological_disclaimer"]
+        )
 
         # 3. Verificar Telemetría SuperAdmin con las 3 empresas demo activas (k = 3) y al menos 40 ventas
         impact = client.get(

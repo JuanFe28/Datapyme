@@ -6,6 +6,7 @@ Reglas Financieras Inquebrantables:
 - Las ventas en estado `voided` se excluyen estrictamente de ingresos, margen, ticket promedio y rotación.
 - División segura por cero cuando una PyME recién creada aún no registra ventas o inventario.
 """
+
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
@@ -187,8 +188,7 @@ def compute_pareto_and_stagnant(
 
     stagnant_candidates.sort(key=lambda item: item["_imm_dec"], reverse=True)
     stagnant_products = [
-        {k: v for k, v in item.items() if not k.startswith("_")}
-        for item in stagnant_candidates
+        {k: v for k, v in item.items() if not k.startswith("_")} for item in stagnant_candidates
     ]
 
     return {
@@ -246,11 +246,7 @@ def get_tenant_kpis_payload(
     )
 
     confirmed_sale_ids = {s.id for s in sales if s.status != "voided"}
-    sale_items = (
-        db.query(SaleItem)
-        .filter(SaleItem.tenant_id == tenant_id)
-        .all()
-    )
+    sale_items = db.query(SaleItem).filter(SaleItem.tenant_id == tenant_id).all()
     sold_by_product: dict[str, dict[str, Decimal]] = {}
     for item in sale_items:
         if item.sale_id not in confirmed_sale_ids:
@@ -268,7 +264,9 @@ def get_tenant_kpis_payload(
         "out_of_stock": len(alerts["out_of_stock"]),
         "stockout_risk": len(alerts["stockout_risk"]),
         "overstock": len(alerts["overstock"]),
-        "total_alerts": len(alerts["out_of_stock"]) + len(alerts["stockout_risk"]) + len(alerts["overstock"]),
+        "total_alerts": len(alerts["out_of_stock"])
+        + len(alerts["stockout_risk"])
+        + len(alerts["overstock"]),
     }
     alerts_items = (alerts["out_of_stock"] + alerts["stockout_risk"] + alerts["overstock"])[:10]
 
