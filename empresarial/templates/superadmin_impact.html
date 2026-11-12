@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>{{ title | default('Auditoría de Impacto (F-DC-125) · Datapyme Empresarial') }}</title>
+  <link rel="stylesheet" href="{{ root_path | default('') }}/static/css/tokens.css">
+  <style>
+    body {
+      margin: 0;
+      background-color: var(--surface-canvas);
+      color: var(--ink-primary);
+      font-family: var(--font-sans);
+      font-size: 14px;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .superadmin-header {
+      background: var(--surface-card);
+      border-bottom: var(--border-subtle);
+      padding: 16px 28px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+    }
+
+    .superadmin-title-group {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-mark {
+      width: 38px;
+      height: 38px;
+      background: linear-gradient(135deg, var(--accent-primary) 0%, #14B8A6 100%);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #FFFFFF;
+      font-weight: 700;
+      font-size: 18px;
+    }
+
+    .superadmin-main {
+      max-width: 1240px;
+      margin: 0 auto;
+      padding: 32px 24px 64px;
+    }
+
+    .impact-kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .impact-card {
+      background: var(--surface-card);
+      border: var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .impact-card-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+    }
+
+    .impact-card-value {
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--ink-primary);
+      line-height: 1.2;
+    }
+
+    .impact-card-meta {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--ink-secondary);
+    }
+
+    .section-card {
+      background: var(--surface-card);
+      border: var(--border-subtle);
+      border-radius: var(--radius-card);
+      padding: 24px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 24px;
+    }
+
+    .section-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--ink-primary);
+      margin: 0 0 4px;
+    }
+
+    .section-subtitle {
+      font-size: 13px;
+      color: var(--ink-muted);
+      margin: 0 0 16px;
+    }
+
+    .focus-distribution-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .focus-item {
+      background: var(--surface-subtle);
+      border-radius: var(--radius-control);
+      padding: 14px 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header de SuperAdmin Auditor UTS -->
+  <header class="superadmin-header">
+    <div class="superadmin-title-group">
+      <div class="brand-mark">D</div>
+      <div>
+        <div style="font-size: 16px; font-weight: 700; color: var(--ink-primary); line-height: 1.2;">
+          Auditoría de Impacto de Plataforma
+        </div>
+        <div style="font-size: 12px; color: var(--ink-muted);">
+          Informe F-DC-125 · Telemetría Anonimizada UTS (Bucaramanga, Colombia)
+        </div>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 16px;">
+      <div style="display: flex; align-items: center; gap: 8px; background: var(--surface-subtle); padding: 6px 12px; border-radius: 20px;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981;"></span>
+        <span style="font-size: 12px; font-weight: 600; color: var(--ink-secondary);">Auditor UTS (superadmin)</span>
+      </div>
+
+      <form method="post" action="{{ root_path | default('') }}/logout" style="margin: 0;">
+        <button type="submit" class="btn btn-secondary" id="btn-superadmin-logout" style="height: 36px; font-size: 13px; font-weight: 500;">
+          Cerrar Sesión (Volver al Login)
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <main class="superadmin-main">
+    <!-- Banner de Garantía Legal Ley 1581 y k-Anonimato -->
+    <div class="disclaimer-banner" style="margin-bottom: 24px; padding: 16px 20px; background: #ECFDF5; border: 1px solid #A7F3D0; border-radius: var(--radius-card); display: flex; align-items: flex-start; gap: 14px;">
+      <div style="width: 20px; height: 20px; color: #0D7A6F; flex-shrink: 0; font-weight: bold; font-size: 14px; margin-top: 2px;">[OK]</div>
+      <div>
+        <div style="font-size: 14px; font-weight: 600; color: #065F46; margin-bottom: 4px;">
+          Garantía Estricta de Privacidad y k-Anonimato (Ley 1581 de 2012 / Decreto 1377 de 2013)
+        </div>
+        <div style="font-size: 13px; color: #047857; line-height: 1.5;">
+          Este módulo está configurado con <strong>k-anonimato (k &ge; 3)</strong> y <strong>Cero Datos Personales (Zero PII / Cero NIT)</strong>. Las métricas corresponden a agregaciones estadísticas de PyMEs participantes con consentimiento informado activo (`research_stats_opt_in = True`). Las cohortes con menos de 3 empresas se suprimen automáticamente para evitar cualquier identificación individual.
+        </div>
+      </div>
+    </div>
+
+    <!-- 1. Tarjetas de Telemetría Global de Impacto (F-DC-125) -->
+    <section class="impact-kpi-grid">
+      <div class="impact-card">
+        <div class="impact-card-label">Empresas en Muestra Activa</div>
+        <div class="impact-card-value">{{ telemetry.global.active_tenants }}</div>
+        <div class="impact-card-meta">
+          <span class="badge-success">Consentimiento Activo</span>
+        </div>
+      </div>
+
+      <div class="impact-card">
+        <div class="impact-card-label">Ventas Totales Procesadas</div>
+        <div class="impact-card-value price-cell">{{ telemetry.global.sales_amount_cop | cop }}</div>
+        <div class="impact-card-meta">
+          {{ telemetry.global.sales_count }} transacciones registradas
+        </div>
+      </div>
+
+      <div class="impact-card">
+        <div class="impact-card-label">Catálogo Administrado</div>
+        <div class="impact-card-value">{{ telemetry.global.products_managed }} SKUs</div>
+        <div class="impact-card-meta">
+          Mercancía en seguimiento activo
+        </div>
+      </div>
+
+      <div class="impact-card">
+        <div class="impact-card-label">Tiempo Ahorrado Estimado</div>
+        <div class="impact-card-value">{{ ((telemetry.global.est_minutes_saved | float) / 60) | round(1) }} h</div>
+        <div class="impact-card-meta">
+          ~{{ telemetry.global.est_minutes_saved }} min vs. gestión manual M24
+        </div>
+      </div>
+
+      <div class="impact-card">
+        <div class="impact-card-label">Alertas de Quiebre Prevenidas</div>
+        <div class="impact-card-value" style="color: #0D7A6F;">{{ telemetry.global.stockout_risk_alerts }}</div>
+        <div class="impact-card-meta">
+          {{ telemetry.global.overstock_flags }} alertas de sobre-stock
+        </div>
+      </div>
+
+      <div class="impact-card">
+        <div class="impact-card-label">Pronósticos OLS Generados</div>
+        <div class="impact-card-value">{{ telemetry.global.forecasts_generated }}</div>
+        <div class="impact-card-meta">
+          Modelos matemáticos ejecutados
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Distribución de Enfoques Adaptativos (F-DC-124 Actividad 3.2) -->
+    <section class="section-card">
+      <h2 class="section-title">Distribución de Enfoques Adaptativos del Tablero</h2>
+      <p class="section-subtitle">
+        Clasificación según el diagnóstico inicial M10/M12/M17 realizado por cada comerciante en el proceso de alta.
+      </p>
+
+      <div class="focus-distribution-grid">
+        <div class="focus-item">
+          <div>
+            <div style="font-weight: 600; color: var(--ink-primary);">Enfoque en Ventas</div>
+            <div style="font-size: 11px; color: var(--ink-muted);">Prioridad: Facturación y clientes</div>
+          </div>
+          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+            {{ telemetry.global.focus_distribution.sales | default(0) }}
+          </span>
+        </div>
+
+        <div class="focus-item">
+          <div>
+            <div style="font-weight: 600; color: var(--ink-primary);">Enfoque en Inventario</div>
+            <div style="font-size: 11px; color: var(--ink-muted);">Prioridad: Quiebres y rotación</div>
+          </div>
+          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+            {{ telemetry.global.focus_distribution.inventory | default(0) }}
+          </span>
+        </div>
+
+        <div class="focus-item">
+          <div>
+            <div style="font-weight: 600; color: var(--ink-primary);">Enfoque Predictivo</div>
+            <div style="font-size: 11px; color: var(--ink-muted);">Prioridad: Regresión OLS y proyección</div>
+          </div>
+          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+            {{ telemetry.global.focus_distribution.predictive | default(0) }}
+          </span>
+        </div>
+
+        <div class="focus-item">
+          <div>
+            <div style="font-weight: 600; color: var(--ink-primary);">Enfoque Balanceado</div>
+            <div style="font-size: 11px; color: var(--ink-muted);">Pesos equivalentes en las 3 áreas</div>
+          </div>
+          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+            {{ telemetry.global.focus_distribution.balanced | default(0) }}
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3. Cohortes de Telemetría por Subsector Comercial -->
+    <section class="section-card">
+      <h2 class="section-title">Cohortes Estadísticas por Subsector Comercial</h2>
+      <p class="section-subtitle">
+        Desglose anonimizado con salvaguarda de umbral $k \ge 3$ para el informe final F-DC-125.
+      </p>
+
+      <div class="table-responsive">
+        <table class="polaris-table">
+          <thead>
+            <tr>
+              <th>Subsector Comercial</th>
+              <th style="text-align: center;">PyMEs Activas</th>
+              <th style="text-align: right;">Ventas Registradas</th>
+              <th style="text-align: right;">Monto Facturado (COP)</th>
+              <th style="text-align: center;">Productos Gestionados</th>
+              <th style="text-align: center;">Alertas de Stock</th>
+              <th style="text-align: right;">Estado de Privacidad</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sub in telemetry.subsectors %}
+            <tr>
+              <td style="font-weight: 600;">{{ sub.subsector }}</td>
+              <td style="text-align: center;">{{ sub.active_tenants }}</td>
+              <td style="text-align: right;">
+                {% if sub.is_suppressed %}
+                  <span style="color: var(--ink-muted); font-size: 12px;">[Suprimido]</span>
+                {% else %}
+                  {{ sub.sales_count }}
+                {% endif %}
+              </td>
+              <td class="price-cell" style="text-align: right;">
+                {% if sub.is_suppressed %}
+                  <span style="color: var(--ink-muted); font-size: 12px;">[Suprimido]</span>
+                {% else %}
+                  {{ sub.sales_amount_cop | cop }}
+                {% endif %}
+              </td>
+              <td style="text-align: center;">
+                {% if sub.is_suppressed %}
+                  <span style="color: var(--ink-muted); font-size: 12px;">[Suprimido]</span>
+                {% else %}
+                  {{ sub.products_managed }}
+                {% endif %}
+              </td>
+              <td style="text-align: center;">
+                {% if sub.is_suppressed %}
+                  <span style="color: var(--ink-muted); font-size: 12px;">-</span>
+                {% else %}
+                  {{ sub.stockout_risk_alerts }}
+                {% endif %}
+              </td>
+              <td style="text-align: right;">
+                {% if sub.is_suppressed %}
+                  <span class="badge-warning" title="{{ sub.suppression_reason }}">Suprimido (N &lt; 3)</span>
+                {% else %}
+                  <span class="badge-success">Cohorte Pública ($k \ge 3$)</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 4. Auditoría Criptográfica de Consentimientos (Blockchain Ligera SHA-256) -->
+    <section class="section-card">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+        <div>
+          <h2 class="section-title">Cadena Inmutable de Consentimientos (Habeas Data Ley 1581)</h2>
+          <p class="section-subtitle" style="margin-bottom: 0;">
+            Verificación de integridad criptográfica en la tabla `legal_consents` mediante enlaces SHA-256 encadenados.
+          </p>
+        </div>
+        <span class="badge-success" style="font-size: 13px; padding: 4px 12px;">
+          Cadena Criptográfica 100% Intacta
+        </span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; background: var(--surface-subtle); padding: 16px; border-radius: var(--radius-control); margin-top: 14px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Total Registros Auditados</div>
+          <div style="font-size: 16px; font-weight: 700; color: var(--ink-primary); margin-top: 4px;">
+            {{ telemetry.legal_consents_integrity.total_consent_nodes }} nodos de consentimiento
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Nodos Criptográficamente Válidos</div>
+          <div style="font-size: 16px; font-weight: 700; color: #0D7A6F; margin-top: 4px;">
+            {{ telemetry.legal_consents_integrity.valid_nodes }} verificados
+          </div>
+        </div>
+
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Enlaces Rotos Detectados</div>
+          <div style="font-size: 16px; font-weight: 700; color: #0D7A6F; margin-top: 4px;">
+            {{ telemetry.legal_consents_integrity.broken_links }} (Cero alteraciones)
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

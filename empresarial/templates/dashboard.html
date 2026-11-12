@@ -43,10 +43,10 @@
       <div class="metric-strip-item">
         <div class="metric-strip-label">
           Valor en Inventario
-          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Costo total del stock acumulado valorado a su precio de adquisición.</span></span>
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Es el dinero invertido en tu mercancía actual calculado al precio de compra al proveedor. Al venderse, la diferencia frente al precio de venta genera tu Margen Bruto en las gráficas.</span></span>
         </div>
         <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.inventory_value_at_cost | cop }}</div>
-        <span class="metric-strip-badge badge-neutral">Costo reposición COP</span>
+        <span class="metric-strip-badge badge-neutral">Capital en bodega (a costo de compra)</span>
       </div>
 
       <div class="metric-strip-item">
@@ -324,7 +324,13 @@
                 <span class="badge-success">Óptimo</span>
               {% endif %}
             </td>
-            <td style="text-align: right;">
+            <td style="text-align: right; white-space: nowrap;">
+              <button type="button" class="btn btn-ghost btn-edit-product" 
+                      data-prod-id="{{ prod.id }}" 
+                      title="Editar ficha, precios y margen del producto"
+                      style="margin-right: 4px;">
+                Editar
+              </button>
               <button type="button" class="btn btn-ghost btn-quick-sale" 
                       data-prod-id="{{ prod.id }}" 
                       data-prod-price="{{ prod.sale_price }}" 
@@ -358,14 +364,21 @@
         <tbody>
           {% for sale in recent_sales %}
           <tr>
-            <td style="font-weight: 600; color: var(--ink-primary);">#{{ sale.sale_number }}</td>
+            <td style="font-weight: 600; color: var(--ink-primary);">
+              <a href="#" class="sale-number-link" data-sale-id="{{ sale.id }}" style="color: var(--accent-primary); text-decoration: none;" title="Ver detalle de la venta #{{ sale.sale_number }}">
+                #{{ sale.sale_number }}
+              </a>
+            </td>
             <td style="color: var(--ink-secondary); font-size: 13px; white-space: nowrap;">{{ sale.occurred_at | date_es }}</td>
             <td>{{ sale.customer_label or 'Cliente Mostrador' }}</td>
             <td><span class="badge-neutral" style="font-weight: 500;">{{ sale.payment_method | payment_label }}</span></td>
             <td class="price-cell" style="text-align: right;">{{ sale.subtotal | cop }}</td>
             <td class="price-cell" style="text-align: right; color: var(--ink-muted);">{{ sale.discount_total | cop }}</td>
             <td class="price-cell" style="text-align: right; font-weight: 600; color: var(--accent-primary);">{{ sale.total | cop }}</td>
-            <td style="text-align: right;">
+            <td style="text-align: right; white-space: nowrap;">
+              <button type="button" class="btn btn-ghost btn-view-sale" data-sale-id="{{ sale.id }}" style="margin-right: 4px;" title="Ver comprobante y artículos de esta venta">
+                Ver detalle
+              </button>
               {% if sale.status != 'voided' %}
               <button type="button" class="btn btn-ghost" onclick="voidSale('{{ sale.id }}')" style="color: var(--status-danger-text);" title="Anular venta y restituir stock en Kardex">
                 Anular
@@ -449,7 +462,7 @@
           <th>SKU</th>
           <th>Nombre</th>
           <th>Categoría</th>
-          <th style="text-align: right;">Costo Reposición</th>
+          <th style="text-align: right;">Costo de Compra</th>
           <th style="text-align: right;">Precio Venta</th>
           <th>Stock Actual</th>
           <th>Stock Mínimo</th>
@@ -476,7 +489,13 @@
               <span class="badge-success">Disponible</span>
             {% endif %}
           </td>
-          <td style="text-align: right;">
+          <td style="text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-secondary btn-edit-product" 
+                    data-prod-id="{{ prod.id }}" 
+                    style="margin-right: 4px;"
+                    title="Editar ficha, precios y margen del producto">
+              Editar
+            </button>
             <button type="button" class="btn btn-secondary btn-quick-sale" 
                     data-prod-id="{{ prod.id }}" 
                     data-prod-price="{{ prod.sale_price }}">
@@ -525,7 +544,11 @@
       <tbody>
         {% for sale in recent_sales %}
         <tr>
-          <td style="font-weight: 600;">#{{ sale.sale_number }}</td>
+          <td style="font-weight: 600;">
+            <a href="#" class="sale-number-link" data-sale-id="{{ sale.id }}" style="color: var(--accent-primary); text-decoration: none;" title="Ver detalle de la venta #{{ sale.sale_number }}">
+              #{{ sale.sale_number }}
+            </a>
+          </td>
           <td style="color: var(--ink-secondary); font-size: 13px; white-space: nowrap;">{{ sale.occurred_at | date_es }}</td>
           <td>{{ sale.customer_label or 'Cliente Mostrador' }}</td>
           <td><span class="badge-neutral" style="font-weight: 500;">{{ sale.payment_method | payment_label }}</span></td>
@@ -539,7 +562,10 @@
               <span class="badge-danger">Anulada</span>
             {% endif %}
           </td>
-          <td style="text-align: right;">
+          <td style="text-align: right; white-space: nowrap;">
+            <button type="button" class="btn btn-secondary btn-view-sale" data-sale-id="{{ sale.id }}" style="margin-right: 4px;" title="Ver comprobante y desglose de productos">
+              Ver detalle
+            </button>
             {% if sale.status != 'voided' %}
             <button type="button" class="btn btn-ghost" onclick="voidSale('{{ sale.id }}')" style="color: var(--status-danger-text);">
               Anular
@@ -1126,6 +1152,251 @@
         <button type="submit" class="btn btn-primary" id="btn-submit-import">Confirmar e Importar Datos</button>
       </div>
     </form>
+  </aside>
+</div>
+
+<!-- 4. Drawer: Editar Producto en Catálogo -->
+<div id="drawer-edit-product" class="drawer-backdrop" aria-hidden="true">
+  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-edit-product-title">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawer-edit-product-title" class="drawer-title">Editar Producto</h3>
+        <p class="drawer-subtitle">Actualiza precios, márgenes en vivo y existencias en bodega.</p>
+      </div>
+      <button type="button" class="drawer-close-btn" data-close-drawer="drawer-edit-product" aria-label="Cerrar panel">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+
+    <form id="form-edit-product">
+      <input type="hidden" id="edit-prod-id" value="">
+      <div class="drawer-body">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-sku">SKU / Código *</label>
+            <input type="text" id="edit-prod-sku" class="form-input" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-name">Nombre del Producto *</label>
+            <input type="text" id="edit-prod-name" class="form-input" required>
+          </div>
+        </div>
+
+        <!-- Foto del Producto (Edición/Actualización) -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="edit-prod-image-file">Foto del Producto (JPG, PNG, WEBP máx 2MB)</label>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div id="edit-prod-img-preview-box" class="product-img-upload-preview">
+              <i data-lucide="image" style="width: 22px; height: 22px; color: var(--ink-muted);"></i>
+            </div>
+            <div style="flex: 1;">
+              <input type="file" id="edit-prod-image-file" accept="image/png,image/jpeg,image/webp" class="form-input" style="padding: 6px 10px; font-size: 13px;">
+              <input type="hidden" id="edit-prod-image-url" value="">
+              <span id="edit-prod-img-upload-status" style="font-size: 11px; color: var(--ink-muted); display: block; margin-top: 4px;">
+                Foto actual o selecciona una nueva imagen para actualizarla.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-category">Categoría</label>
+            <input type="text" id="edit-prod-category" class="form-input" placeholder="General">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-unit">Unidad de Medida</label>
+            <select id="edit-prod-unit" class="form-input">
+              <option value="und">Unidad (und)</option>
+              <option value="bulto">Bulto</option>
+              <option value="kg">Kilogramo (kg)</option>
+              <option value="par">Par</option>
+              <option value="paq">Paquete</option>
+              <option value="galon">Galón</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-cost">Costo de Compra (COP) *</label>
+            <input type="number" id="edit-prod-cost" class="form-input" min="0" step="100" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-price">Precio de Venta (COP) *</label>
+            <input type="number" id="edit-prod-price" class="form-input" min="0" step="100" required>
+          </div>
+        </div>
+
+        <!-- Caja de Ganancia y Margen Dinámico en Vivo -->
+        <div id="edit-margin-live-box" style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-control); padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase; letter-spacing: 0.04em;">Margen Bruto Unitario</div>
+            <div id="edit-profit-display" style="font-size: 13px; font-weight: 600; color: #15803D; margin-top: 2px;">
+              Ganancia: $ 0 COP
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase; letter-spacing: 0.04em;">Margen %</div>
+            <div id="edit-margin-pct-display" style="font-size: 16px; font-weight: 700; color: #15803D; margin-top: 2px;">
+              0.0 %
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-stock-display">Stock Actual en Bodega</label>
+            <input type="text" id="edit-prod-stock-display" class="form-input" disabled style="background: var(--surface-subtle); color: var(--ink-secondary); font-weight: 600;">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="edit-prod-min-stock">Stock Mínimo (Alerta) *</label>
+            <input type="number" id="edit-prod-min-stock" class="form-input" min="0" step="1" required>
+          </div>
+        </div>
+
+        <!-- Ajuste Rápido de Stock Opcional -->
+        <div style="margin-top: 14px; padding: 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.08);">
+          <div style="display: flex; align-items: center; justify-content: space-between;">
+            <label for="edit-stock-toggle" style="font-size: 13px; font-weight: 600; color: var(--ink-primary); cursor: pointer;">
+              ¿Registrar ajuste de existencias en Kardex?
+            </label>
+            <input type="checkbox" id="edit-stock-toggle" style="cursor: pointer; width: 16px; height: 16px;">
+          </div>
+
+          <div id="edit-stock-adjustment-fields" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, 0.08);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px;">
+              <div class="form-group">
+                <label class="form-label" for="edit-adj-type" style="font-size: 12px;">Motivo del Movimiento</label>
+                <select id="edit-adj-type" class="form-input" style="font-size: 12px;">
+                  <option value="purchase_in">Compra a proveedor (+)</option>
+                  <option value="adjustment_in">Conteo físico / Aumento (+)</option>
+                  <option value="adjustment_out">Merma / Avería / Conteo (-)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="edit-adj-qty" style="font-size: 12px;">Cantidad a Ajustar</label>
+                <input type="number" id="edit-adj-qty" class="form-input" min="0.001" step="any" placeholder="0" style="font-size: 12px;">
+              </div>
+            </div>
+            <div class="form-group" style="margin-bottom: 0;">
+              <label class="form-label" for="edit-adj-reason" style="font-size: 12px;">Nota / Justificación del Ajuste</label>
+              <input type="text" id="edit-adj-reason" class="form-input" placeholder="Ej: Factura compra proveedor o conteo mensual" style="font-size: 12px;">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" data-close-drawer="drawer-edit-product">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-edit-product">Guardar Cambios</button>
+      </div>
+    </form>
+  </aside>
+</div>
+
+<!-- 5. Drawer: Detalle y Comprobante de Venta -->
+<div id="drawer-sale-detail" class="drawer-backdrop" aria-hidden="true">
+  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-sale-detail-title" style="max-width: 620px;">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawer-sale-detail-title" class="drawer-title">Comprobante de Venta</h3>
+        <p class="drawer-subtitle" id="sale-detail-subtitle">Desglose de productos, cálculo de IVA y margen comercial.</p>
+      </div>
+      <button type="button" class="drawer-close-btn" data-close-drawer="drawer-sale-detail" aria-label="Cerrar panel">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+
+    <div class="drawer-body">
+      <!-- Encabezado de la transacción -->
+      <div style="background: var(--surface-subtle); border-radius: var(--radius-control); padding: 16px; margin-bottom: 18px; border: 1px solid rgba(15, 23, 42, 0.06); display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px;">
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Número de Venta</div>
+          <div id="sale-detail-number" style="font-size: 18px; font-weight: 700; color: var(--ink-primary); margin-top: 2px;">#0</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Fecha y Hora</div>
+          <div id="sale-detail-date" style="font-size: 13px; font-weight: 500; color: var(--ink-primary); margin-top: 4px;">-</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Cliente</div>
+          <div id="sale-detail-customer" style="font-size: 13px; font-weight: 500; color: var(--ink-primary); margin-top: 4px;">Cliente Mostrador</div>
+        </div>
+        <div>
+          <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Medio de Pago & Estado</div>
+          <div style="display: flex; align-items: center; gap: 8px; margin-top: 4px;">
+            <span id="sale-detail-payment" class="badge-neutral" style="font-weight: 500;">Efectivo</span>
+            <span id="sale-detail-status-badge" class="badge-success">Confirmada</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Productos Comprados -->
+      <div style="margin-bottom: 18px;">
+        <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-bottom: 8px;">
+          Artículos Incluidos en esta Venta (<span id="sale-detail-items-count">0</span>)
+        </div>
+        <div class="table-responsive" style="border: 1px solid rgba(15, 23, 42, 0.08); border-radius: var(--radius-control);">
+          <table class="polaris-table" style="margin: 0; font-size: 13px;">
+            <thead>
+              <tr style="background: var(--surface-subtle);">
+                <th>Producto</th>
+                <th style="text-align: center;">Cantidad</th>
+                <th style="text-align: right;">Precio Unit.</th>
+                <th style="text-align: right;">Costo Unit.</th>
+                <th style="text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody id="sale-detail-items-tbody">
+              <!-- Inyectado dinámicamente -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Resumen Financiero y Margen -->
+      <div style="background: var(--surface-subtle); border-radius: var(--radius-control); padding: 18px; border: 1px solid rgba(15, 23, 42, 0.08);">
+        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-secondary); margin-bottom: 6px;">
+          <span>Subtotal Base:</span>
+          <span id="sale-detail-subtotal" class="price-cell">$ 0 COP</span>
+        </div>
+        <div id="sale-detail-discount-row" style="display: none; justify-content: space-between; font-size: 13px; color: var(--status-danger-text); margin-bottom: 6px;">
+          <span>Descuento Otorgado:</span>
+          <span id="sale-detail-discount" class="price-cell">-$ 0 COP</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-secondary); margin-bottom: 8px;">
+          <span>IVA Liquidado:</span>
+          <span id="sale-detail-vat" class="price-cell">$ 0 COP</span>
+        </div>
+        <div style="display: flex; justify-content: space-between; font-size: 15px; font-weight: 700; color: var(--ink-primary); border-top: 1px solid rgba(15, 23, 42, 0.1); padding-top: 10px; margin-bottom: 12px;">
+          <span>Total Pagado:</span>
+          <span id="sale-detail-total" class="price-cell" style="font-size: 20px; color: var(--accent-primary);">$ 0 COP</span>
+        </div>
+
+        <div style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-control); padding: 10px 14px; display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase;">Ganancia Bruta Real</div>
+            <div id="sale-detail-profit" style="font-size: 14px; font-weight: 700; color: #15803D; margin-top: 2px;">
+              $ 0 COP
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 11px; font-weight: 600; color: #166534; text-transform: uppercase;">Margen Comercial</div>
+            <div id="sale-detail-margin-pct" style="font-size: 15px; font-weight: 700; color: #15803D; margin-top: 2px;">
+              0.0 %
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="drawer-footer" style="display: flex; justify-content: space-between; align-items: center;">
+      <button type="button" id="btn-void-from-detail" class="btn btn-ghost" style="color: var(--status-danger-text); font-size: 13px;">
+        Anular Venta
+      </button>
+      <button type="button" class="btn btn-secondary" data-close-drawer="drawer-sale-detail">Cerrar</button>
+    </div>
   </aside>
 </div>
 {% endblock %}

@@ -151,8 +151,10 @@ class ProductCreateRequest(BaseModel):
 
 
 class ProductUpdateRequest(BaseModel):
+    sku: str | None = None
     name: str | None = None
     category: str | None = None
+    unit: str | None = None
     cost_price: str | float | int | None = None
     sale_price: str | float | int | None = None
     min_stock: str | float | int | None = None
@@ -204,6 +206,10 @@ def _serialize_sale(sale: Sale) -> dict[str, Any]:
             {
                 "id": it.id,
                 "product_id": it.product_id,
+                "product_name": it.product.name if it.product else "Producto",
+                "product_sku": it.product.sku if it.product else "-",
+                "product_unit": it.product.unit if it.product else "und",
+                "product_image_url": it.product.image_url if it.product else None,
                 "quantity": str(Decimal(str(it.quantity)).quantize(THREE_PLACES)),
                 "unit_price": str(Decimal(str(it.unit_price)).quantize(TWO_PLACES)),
                 "unit_cost_snapshot": str(Decimal(str(it.unit_cost_snapshot)).quantize(TWO_PLACES)),
@@ -242,7 +248,7 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
             try:
                 from app.core.models import User
                 from app.core.demo_seed import seed_contrast_demo_tenants
-                if db.query(User).count() == 0:
+                if not testing and db.query(User).count() == 0:
                     logging.getLogger("uvicorn.error").info("Base de datos sin usuarios: sembrando empresas demo [DEMO-FDC125]...")
                     seed_contrast_demo_tenants(db)
             except Exception as exc:
@@ -301,6 +307,90 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
             raise HTTPException(status_code=403, detail="Empresa inactiva.")
         return user, tenant
 
+    templates_dir = ROOT / "templates"
+    templates = Jinja2Templates(directory=str(templates_dir))
+
+    def format_cop_filter(val: Any) -> str:
+        if val is None or val == "" or str(val) == "Undefined":
+            return "$ 0"
+        try:
+            num = float(val)
+            rounded = int(round(num))
+            formatted = f"{rounded:,}".replace(",", ".")
+            return f"$ {formatted}"
+        except (ValueError, TypeError, Exception):
+            return f"$ {val}"
+
+    def format_qty_filter(val: Any, unit: str = "und") -> str:
+        if val is None or val == "":
+            return f"0 {unit}"
+        try:
+            num = float(val)
+            if num.is_integer():
+                return f"{int(num)} {unit}"
+            formatted = f"{num:.1f}".rstrip("0").rstrip(".")
+            return f"{formatted} {unit}"
+        except (ValueError, TypeError):
+            return f"{val} {unit}"
+
+    def format_date_es_filter(val: Any) -> str:
+        if not val:
+            return "-"
+        try:
+            if isinstance(val, str):
+                dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
+            elif isinstance(val, datetime):
+                dt = val
+            else:
+                return str(val)
+            months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
+            month_name = months[dt.month - 1]
+            hour_12 = dt.hour % 12 or 12
+            am_pm = "a. m." if dt.hour < 12 else "p. m."
+            return f"{dt.day} {month_name} {dt.year} · {hour_12}:{dt.minute:02d} {am_pm}"
+        except Exception:
+            return str(val)[:16]
+
+    def format_payment_label_filter(val: Any) -> str:
+        m = {
+            "cash": "Efectivo",
+            "card": "Tarjeta",
+            "transfer": "Transferencia",
+            "credit": "Crédito",
+            "other": "Otro",
+        }
+        return m.get(str(val or "").lower(), "Efectivo")
+
+    def format_pct_filter(val: Any, decimals: int = 1) -> str:
+        if val is None or val == "":
+            return "0 %"
+        try:
+            num = float(val) * 100
+            if decimals == 0:
+                return f"{int(round(num))} %"
+            return f"{num:.{decimals}f} %".replace(".", ",")
+        except Exception:
+            return f"{val} %"
+
+    def format_rnd_filter(val: Any, decimals: int = 0) -> str:
+        if val is None or val == "":
+            return "0"
+        try:
+            num = float(val)
+            if decimals == 0:
+                return str(int(round(num)))
+            return f"{num:.{decimals}f}".replace(".", ",")
+        except Exception:
+            return str(val)
+
+    templates.env.filters["cop"] = format_cop_filter
+    templates.env.filters["qty"] = format_qty_filter
+    templates.env.filters["date_es"] = format_date_es_filter
+    templates.env.filters["payment_label"] = format_payment_label_filter
+    templates.env.filters["pct"] = format_pct_filter
+    templates.env.filters["rnd"] = format_rnd_filter
+    login_templates = templates
+
     @application.get("/health")
     def health():
         return {"status": "ok", "service": "datapyme-empresarial"}
@@ -308,9 +398,31 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
     @application.exception_handler(StarletteHTTPException)
     async def html_login_redirect_handler(request: Request, exc: StarletteHTTPException):
         wants_html = "text/html" in request.headers.get("accept", "")
-        if exc.status_code == 401 and wants_html and not request.url.path.startswith("/api"):
-            root_path = request.scope.get("root_path", "").rstrip("/")
-            return RedirectResponse(f"{root_path}/login", status_code=303)
+        root_path = request.scope.get("root_path", "").rstrip("/")
+        if wants_html and not request.url.path.startswith("/api"):
+            if exc.status_code == 401:
+                return RedirectResponse(f"{root_path}/login", status_code=303)
+            if exc.status_code == 403:
+                raw_token = request.cookies.get(SESSION_COOKIE)
+                if raw_token:
+                    with SessionLocal() as sdb:
+                        tok_hash = sha256_hex(raw_token)
+                        sess = sdb.query(SessionToken).filter_by(token_hash=tok_hash).first()
+                        if sess and sess.revoked_at is None and _as_aware(sess.expires_at) > utcnow():
+                            u = sdb.get(User, sess.user_id)
+                            if u and u.role == "superadmin":
+                                return RedirectResponse(f"{root_path}/admin/impacto", status_code=303)
+            return templates.TemplateResponse(
+                request=request,
+                name="error.html",
+                context={
+                    "status_code": exc.status_code,
+                    "title": f"Acceso Restringido ({exc.status_code})" if exc.status_code == 403 else f"Página No Encontrada ({exc.status_code})",
+                    "detail": exc.detail if isinstance(exc.detail, str) else "No tiene permisos para acceder a esta vista o el recurso solicitado no existe.",
+                    "root_path": root_path,
+                },
+                status_code=exc.status_code,
+            )
         return await http_exception_handler(request, exc)
 
     @application.exception_handler(Exception)
@@ -323,15 +435,16 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
                 content={"detail": "Ocurrió un error inesperado al procesar la solicitud."},
             )
         root_path = request.scope.get("root_path", "").rstrip("/")
-        return HTMLResponse(
+        return templates.TemplateResponse(
+            request=request,
+            name="error.html",
+            context={
+                "status_code": 500,
+                "title": "Error del Servidor (500)",
+                "detail": "Se presentó un inconveniente temporal. El servidor sigue en línea y protegido contra caídas.",
+                "root_path": root_path,
+            },
             status_code=500,
-            content=f"""<!DOCTYPE html>
-<html lang="es"><head><meta charset="UTF-8"><title>Error del servidor · Datapyme Empresarial</title>
-<style>body {{ font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F8FAFC; color: #0F172A; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; }}
-.card {{ background: #fff; border: 1px solid rgba(15,23,42,0.1); border-radius: 16px; padding: 36px; max-width: 480px; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.06); text-align: center; }}
-h2 {{ color: #0F172A; margin: 0 0 12px; font-size: 20px; }} p {{ color: #64748B; font-size: 14px; line-height: 1.5; margin: 0 0 24px; }}
-a {{ display: inline-flex; align-items: center; justify-content: center; height: 40px; padding: 0 20px; background: #0D7A6F; color: #fff; font-weight: 500; font-size: 14px; border-radius: 8px; text-decoration: none; }}</style></head>
-<body><div class="card"><h2>Error inesperado</h2><p>Se presentó un inconveniente temporal. El servidor sigue en línea y protegido contra caídas.</p><a href="{root_path}/dashboard">Volver al panel</a></div></body></html>""",
         )
 
     def _authenticate(db: Session, request: Request, email: str, password: str) -> tuple[User, str]:
@@ -371,17 +484,23 @@ a {{ display: inline-flex; align-items: center; justify-content: center; height:
         user, raw_token = _authenticate(db, request, payload.email, payload.password)
         return {"access_token": raw_token, "role": user.role, "tenant_id": user.tenant_id}
 
-    login_templates = Jinja2Templates(directory=str(ROOT / "templates"))
-
     @application.get("/", include_in_schema=False)
-    def root_redirect(request: Request):
+    def root_redirect(request: Request, db: Session = Depends(get_db)):
         root_path = request.scope.get("root_path", "").rstrip("/")
+        raw_token = request.cookies.get(SESSION_COOKIE)
+        if raw_token:
+            tok_hash = sha256_hex(raw_token)
+            sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
+            if sess and sess.revoked_at is None and _as_aware(sess.expires_at) > utcnow():
+                user = db.get(User, sess.user_id)
+                if user and user.is_active and user.role == "superadmin":
+                    return RedirectResponse(f"{root_path}/admin/impacto", status_code=303)
         return RedirectResponse(f"{root_path}/dashboard", status_code=303)
 
     @application.get("/login", response_class=HTMLResponse, include_in_schema=False)
     def login_page(request: Request):
         root_path = request.scope.get("root_path", "").rstrip("/")
-        return login_templates.TemplateResponse(
+        return templates.TemplateResponse(
             request=request,
             name="login.html",
             context={"error": None, "root_path": root_path},
@@ -398,14 +517,14 @@ a {{ display: inline-flex; align-items: center; justify-content: center; height:
             user, raw_token = _authenticate(db, request, email, password)
         except HTTPException as exc:
             root_path = request.scope.get("root_path", "").rstrip("/")
-            return login_templates.TemplateResponse(
+            return templates.TemplateResponse(
                 request=request,
                 name="login.html",
                 context={"error": exc.detail, "root_path": root_path},
                 status_code=exc.status_code,
             )
         root_path = request.scope.get("root_path", "").rstrip("/")
-        target = f"{root_path}/api/admin/impact" if user.role == "superadmin" else f"{root_path}/dashboard"
+        target = f"{root_path}/admin/impacto" if user.role == "superadmin" else f"{root_path}/dashboard"
         redirect = RedirectResponse(target, status_code=303)
         is_https = (
             request.url.scheme == "https"
@@ -422,6 +541,41 @@ a {{ display: inline-flex; align-items: center; justify-content: center; height:
             path="/",
         )
         return redirect
+
+    @application.get("/admin/impacto", response_class=HTMLResponse, include_in_schema=False)
+    def render_superadmin_impact(
+        request: Request,
+        db: Session = Depends(get_db),
+    ):
+        root_path = request.scope.get("root_path", "").rstrip("/")
+        raw_token = request.cookies.get(SESSION_COOKIE)
+        if not raw_token:
+            auth_header = request.headers.get("authorization")
+            if auth_header and auth_header.startswith("Bearer "):
+                raw_token = auth_header.removeprefix("Bearer ").strip()
+        if not raw_token:
+            return RedirectResponse(f"{root_path}/login", status_code=303)
+        tok_hash = sha256_hex(raw_token)
+        sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
+        if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+            return RedirectResponse(f"{root_path}/login", status_code=303)
+        user = db.get(User, sess.user_id)
+        if not user or not user.is_active:
+            return RedirectResponse(f"{root_path}/login", status_code=303)
+        if user.role != "superadmin":
+            return RedirectResponse(f"{root_path}/dashboard", status_code=303)
+
+        telemetry = compute_platform_impact_telemetry(db=db, k_threshold=3)
+        return templates.TemplateResponse(
+            request=request,
+            name="superadmin_impact.html",
+            context={
+                "title": "Auditoría de Impacto (F-DC-125) · Datapyme Empresarial",
+                "current_user": user,
+                "telemetry": telemetry,
+                "root_path": root_path,
+            },
+        )
 
     @application.post("/logout", include_in_schema=False)
     def logout(request: Request, db: Session = Depends(get_db)):
@@ -702,6 +856,7 @@ a {{ display: inline-flex; align-items: center; justify-content: center; height:
         return serialize_product(prod)
 
     @application.patch("/api/products/{product_id}")
+    @application.put("/api/products/{product_id}")
     def update_product(
         product_id: str,
         payload: ProductUpdateRequest,
@@ -712,10 +867,22 @@ a {{ display: inline-flex; align-items: center; justify-content: center; height:
         prod = db.query(Product).filter_by(tenant_id=tenant.id, id=product_id).first()
         if not prod:
             raise HTTPException(status_code=404, detail="Producto no encontrado.")
+        if payload.sku is not None:
+            clean_sku = sanitize_cell_text(payload.sku, 64)
+            exist_sku = (
+                db.query(Product)
+                .filter(Product.tenant_id == tenant.id, Product.sku == clean_sku, Product.id != product_id)
+                .first()
+            )
+            if exist_sku:
+                raise HTTPException(status_code=409, detail="El SKU ya existe en otro producto del catálogo.")
+            prod.sku = clean_sku
         if payload.name is not None:
             prod.name = sanitize_cell_text(payload.name, 180)
         if payload.category is not None:
             prod.category = sanitize_cell_text(payload.category, 90)
+        if payload.unit is not None:
+            prod.unit = sanitize_cell_text(payload.unit, 20)
         if payload.cost_price is not None:
             prod.cost_price = parse_colombian_decimal(payload.cost_price, TWO_PLACES)
         if payload.sale_price is not None:
@@ -907,95 +1074,6 @@ a {{ display: inline-flex; align-items: center; justify-content: center; height:
         return result
 
     # --- SPRINT 3: ANALÍTICA EMPRESARIAL, KPIS Y DASHBOARD BENTO ADAPTATIVO (ACT. 3.4) ---
-
-    templates_dir = ROOT / "templates"
-    templates = Jinja2Templates(directory=str(templates_dir))
-
-    def format_cop_filter(val: Any) -> str:
-        if val is None or val == "" or str(val) == "Undefined":
-            return "$ 0"
-        try:
-            num = float(val)
-            rounded = int(round(num))
-            formatted = f"{rounded:,}".replace(",", ".")
-            return f"$ {formatted}"
-        except (ValueError, TypeError, Exception):
-            return f"$ {val}"
-
-    def format_qty_filter(val: Any, unit: str = "und") -> str:
-        if val is None or val == "":
-            return f"0 {unit}"
-        try:
-            num = float(val)
-            if num.is_integer():
-                return f"{int(num)} {unit}"
-            formatted = f"{num:.1f}".rstrip("0").rstrip(".")
-            return f"{formatted} {unit}"
-        except (ValueError, TypeError):
-            return f"{val} {unit}"
-
-    def format_date_es_filter(val: Any) -> str:
-        if not val:
-            return "-"
-        try:
-            if isinstance(val, str):
-                dt = datetime.fromisoformat(val.replace("Z", "+00:00"))
-            elif isinstance(val, datetime):
-                dt = val
-            else:
-                return str(val)
-            months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
-            month_name = months[dt.month - 1]
-            hour_12 = dt.hour % 12 or 12
-            am_pm = "a. m." if dt.hour < 12 else "p. m."
-            return f"{dt.day} {month_name} {dt.year} · {hour_12}:{dt.minute:02d} {am_pm}"
-        except Exception:
-            return str(val)[:16]
-
-    def format_payment_label_filter(val: Any) -> str:
-        m = {
-            "cash": "Efectivo",
-            "card": "Tarjeta",
-            "transfer": "Transferencia",
-            "credit": "Crédito",
-            "other": "Otro",
-        }
-        return m.get(str(val or "").lower(), "Efectivo")
-
-    def format_pct_filter(val: Any, decimals: int = 1) -> str:
-        if val is None or val == "":
-            return "0 %"
-        try:
-            num = float(val) * 100
-            if decimals == 0:
-                return f"{int(round(num))} %"
-            return f"{num:.{decimals}f} %".replace(".", ",")
-        except Exception:
-            return f"{val} %"
-
-    def format_rnd_filter(val: Any, decimals: int = 0) -> str:
-        if val is None or val == "":
-            return "0"
-        try:
-            num = float(val)
-            if decimals == 0:
-                return str(int(round(num)))
-            return f"{num:.{decimals}f}".replace(".", ",")
-        except Exception:
-            return str(val)
-
-    templates.env.filters["cop"] = format_cop_filter
-    templates.env.filters["qty"] = format_qty_filter
-    templates.env.filters["date_es"] = format_date_es_filter
-    templates.env.filters["payment_label"] = format_payment_label_filter
-    templates.env.filters["pct"] = format_pct_filter
-    templates.env.filters["rnd"] = format_rnd_filter
-    login_templates.env.filters["cop"] = format_cop_filter
-    login_templates.env.filters["qty"] = format_qty_filter
-    login_templates.env.filters["date_es"] = format_date_es_filter
-    login_templates.env.filters["payment_label"] = format_payment_label_filter
-    login_templates.env.filters["pct"] = format_pct_filter
-    login_templates.env.filters["rnd"] = format_rnd_filter
 
     @application.get("/api/kpis")
     def get_kpis_endpoint(

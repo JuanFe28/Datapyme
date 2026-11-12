@@ -875,6 +875,14 @@ textarea::placeholder {
   transform: translateX(0);
 }
 
+.drawer-panel form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
 .drawer-header {
   padding: 20px 28px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);

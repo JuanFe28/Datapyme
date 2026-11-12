@@ -242,6 +242,12 @@ class SaleItem(Base):
     line_total = Column(Numeric(14, 2), nullable=False)
 
     sale = relationship("Sale", back_populates="items")
+    product = relationship(
+        "Product",
+        foreign_keys=[tenant_id, product_id],
+        primaryjoin="and_(SaleItem.tenant_id == Product.tenant_id, SaleItem.product_id == Product.id)",
+        overlaps="items,sale",
+    )
 
     __table_args__ = (
         ForeignKeyConstraint(

@@ -230,6 +230,47 @@ document.addEventListener('DOMContentLoaded', () => {
       handleImportFileInspection(null, importSheetSelect.value)
     );
   }
+
+  // Conectar botones de edición de producto (Editar)
+  document.querySelectorAll('.btn-edit-product').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prodId = btn.getAttribute('data-prod-id');
+      if (prodId) openEditProductDrawer(prodId);
+    });
+  });
+
+  // Conectar botones de ver detalle de venta y links de número de venta
+  document.querySelectorAll('.btn-view-sale, .sale-number-link').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const saleId = btn.getAttribute('data-sale-id');
+      if (saleId) openSaleDetailDrawer(saleId);
+    });
+  });
+
+  // Formulario de edición de producto
+  const formEditProd = document.getElementById('form-edit-product');
+  if (formEditProd) formEditProd.addEventListener('submit', handleEditProductSubmit);
+
+  // Margen en vivo en edición de producto
+  const editCostInput = document.getElementById('edit-prod-cost');
+  const editPriceInput = document.getElementById('edit-prod-price');
+  if (editCostInput) editCostInput.addEventListener('input', calculateEditProductMargin);
+  if (editPriceInput) editPriceInput.addEventListener('input', calculateEditProductMargin);
+
+  // Imagen en edición de producto
+  const editImgFile = document.getElementById('edit-prod-image-file');
+  if (editImgFile) editImgFile.addEventListener('change', handleEditProductImageSelection);
+
+  // Toggle de ajuste de stock en edición
+  const editStockToggle = document.getElementById('edit-stock-toggle');
+  if (editStockToggle) {
+    editStockToggle.addEventListener('change', () => {
+      const adjFields = document.getElementById('edit-stock-adjustment-fields');
+      if (adjFields) adjFields.style.display = editStockToggle.checked ? 'block' : 'none';
+    });
+  }
 });
 
 // --- LÓGICA DE NAVEGACIÓN ENTRE MÓDULOS (MENÚ LATERAL Y BARRA MÓVIL) ---
@@ -1195,3 +1236,346 @@ async function voidSale(saleId) {
   }
 }
 window.voidSale = voidSale;
+
+// --- EDICIÓN DE PRODUCTOS EN CATÁLOGO Y KARDEX (F-DC-124) ---
+function calculateEditProductMargin() {
+  const cost = parseFloat(document.getElementById('edit-prod-cost')?.value) || 0;
+  const price = parseFloat(document.getElementById('edit-prod-price')?.value) || 0;
+  const profit = price - cost;
+  const marginPct = price > 0 ? (profit / price) * 100 : 0;
+
+  const profitEl = document.getElementById('edit-profit-display');
+  const marginEl = document.getElementById('edit-margin-pct-display');
+  const boxEl = document.getElementById('edit-margin-live-box');
+
+  if (profitEl) profitEl.textContent = `Ganancia: ${formatCOP(profit)} COP`;
+  if (marginEl) marginEl.textContent = `${marginPct.toFixed(1)} %`;
+
+  if (boxEl) {
+    if (profit < 0) {
+      boxEl.style.background = '#FEF2F2';
+      boxEl.style.borderColor = '#FECACA';
+      if (profitEl) profitEl.style.color = '#B91C1C';
+      if (marginEl) marginEl.style.color = '#B91C1C';
+    } else {
+      boxEl.style.background = '#F0FDF4';
+      boxEl.style.borderColor = '#BBF7D0';
+      if (profitEl) profitEl.style.color = '#15803D';
+      if (marginEl) marginEl.style.color = '#15803D';
+    }
+  }
+}
+window.calculateEditProductMargin = calculateEditProductMargin;
+
+function openEditProductDrawer(productId) {
+  const prod = (dashboardData.products || []).find((p) => p.id === productId);
+  if (!prod) {
+    showToast('Producto no encontrado en catálogo', 'error');
+    return;
+  }
+
+  document.getElementById('edit-prod-id').value = prod.id;
+  document.getElementById('edit-prod-sku').value = prod.sku || '';
+  document.getElementById('edit-prod-name').value = prod.name || '';
+  document.getElementById('edit-prod-category').value = prod.category || 'General';
+  document.getElementById('edit-prod-unit').value = prod.unit || 'und';
+  document.getElementById('edit-prod-cost').value = parseFloat(prod.cost_price) || 0;
+  document.getElementById('edit-prod-price').value = parseFloat(prod.sale_price) || 0;
+  document.getElementById('edit-prod-stock-display').value = `${prod.stock_qty || 0} ${prod.unit || 'und'}`;
+  document.getElementById('edit-prod-min-stock').value = parseFloat(prod.min_stock) || 0;
+  document.getElementById('edit-prod-image-url').value = prod.image_url || '';
+
+  const fileInput = document.getElementById('edit-prod-image-file');
+  if (fileInput) fileInput.value = '';
+  const statusEl = document.getElementById('edit-prod-img-upload-status');
+  if (statusEl) statusEl.textContent = prod.image_url ? 'Foto actual cargada. Selecciona otra para cambiarla.' : 'Sin imagen cargada.';
+
+  const previewBox = document.getElementById('edit-prod-img-preview-box');
+  if (previewBox) {
+    if (prod.image_url) {
+      previewBox.innerHTML = `<img src="${ROOT_PATH}${prod.image_url}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-control);">`;
+    } else {
+      previewBox.innerHTML = `<i data-lucide="image" style="width: 22px; height: 22px; color: var(--ink-muted);"></i>`;
+      if (window.lucide) lucide.createIcons();
+    }
+  }
+
+  const toggle = document.getElementById('edit-stock-toggle');
+  if (toggle) toggle.checked = false;
+  const adjFields = document.getElementById('edit-stock-adjustment-fields');
+  if (adjFields) adjFields.style.display = 'none';
+  const adjQty = document.getElementById('edit-adj-qty');
+  if (adjQty) adjQty.value = '';
+  const adjReason = document.getElementById('edit-adj-reason');
+  if (adjReason) adjReason.value = '';
+
+  calculateEditProductMargin();
+  openDrawer('drawer-edit-product');
+}
+window.openEditProductDrawer = openEditProductDrawer;
+
+async function handleEditProductImageSelection(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const statusEl = document.getElementById('edit-prod-img-upload-status');
+  const previewBox = document.getElementById('edit-prod-img-preview-box');
+  const urlHidden = document.getElementById('edit-prod-image-url');
+
+  if (statusEl) statusEl.textContent = 'Subiendo imagen...';
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const resp = await fetch(`${ROOT_PATH}/api/products/upload-image`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: formData,
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      if (urlHidden) urlHidden.value = data.image_url;
+      if (previewBox) {
+        previewBox.innerHTML = `<img src="${ROOT_PATH}${data.image_url}" alt="Preview" style="width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-control);">`;
+      }
+      if (statusEl) statusEl.textContent = 'Foto subida correctamente.';
+      showToast('Foto cargada exitosamente', 'success');
+    } else {
+      const err = await resp.json();
+      if (statusEl) statusEl.textContent = 'Error al subir la imagen.';
+      showToast(err.detail || 'Error al subir la imagen', 'error');
+    }
+  } catch (err) {
+    if (statusEl) statusEl.textContent = 'Error de conexión.';
+    showToast('Error de conexión al subir la imagen', 'error');
+  }
+}
+
+async function handleEditProductSubmit(e) {
+  e.preventDefault();
+  const btn = document.getElementById('btn-submit-edit-product');
+  if (btn) {
+    btn.disabled = true;
+    btn.textContent = 'Guardando...';
+  }
+
+  const prodId = document.getElementById('edit-prod-id').value;
+  const payload = {
+    sku: document.getElementById('edit-prod-sku').value,
+    name: document.getElementById('edit-prod-name').value,
+    category: document.getElementById('edit-prod-category').value,
+    unit: document.getElementById('edit-prod-unit').value,
+    cost_price: document.getElementById('edit-prod-cost').value,
+    sale_price: document.getElementById('edit-prod-price').value,
+    min_stock: document.getElementById('edit-prod-min-stock').value,
+    image_url: document.getElementById('edit-prod-image-url')?.value || null,
+  };
+
+  try {
+    const resp = await fetch(`${ROOT_PATH}/api/products/${prodId}`, {
+      method: 'PUT',
+      headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+      body: JSON.stringify(payload),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json();
+      showToast(err.detail || 'Error al actualizar el producto', 'error');
+      return;
+    }
+
+    const updatedProd = await resp.json();
+
+    const adjustToggle = document.getElementById('edit-stock-toggle');
+    const adjQtyVal = parseFloat(document.getElementById('edit-adj-qty')?.value);
+    if (adjustToggle && adjustToggle.checked && adjQtyVal > 0) {
+      const adjType = document.getElementById('edit-adj-type').value;
+      const adjReason = document.getElementById('edit-adj-reason')?.value || 'Ajuste manual desde edición de producto';
+      const movPayload = {
+        product_id: prodId,
+        movement_type: adjType,
+        quantity: adjQtyVal,
+        unit_cost: payload.cost_price,
+        reason: adjReason,
+      };
+      await fetch(`${ROOT_PATH}/api/inventory/movements`, {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        body: JSON.stringify(movPayload),
+      });
+    }
+
+    showToast('Producto actualizado exitosamente', 'success');
+    closeDrawer('drawer-edit-product');
+    setTimeout(() => location.reload(), 700);
+  } catch (err) {
+    showToast('Error de conexión con el servidor', 'error');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Guardar Cambios';
+    }
+  }
+}
+
+// --- DETALLE Y COMPROBANTE DE VENTA (F-DC-124) ---
+function formatDateEs(dateStr) {
+  if (!dateStr) return '-';
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+    const month = months[d.getMonth()];
+    let hour = d.getHours();
+    const minute = String(d.getMinutes()).padStart(2, '0');
+    const ampm = hour < 12 ? 'a. m.' : 'p. m.';
+    hour = hour % 12 || 12;
+    return `${d.getDate()} ${month} ${d.getFullYear()} · ${hour}:${minute} ${ampm}`;
+  } catch (e) {
+    return dateStr;
+  }
+}
+
+function formatPaymentLabel(method) {
+  const map = {
+    cash: 'Efectivo',
+    card: 'Tarjeta Débito / Crédito',
+    transfer: 'Transferencia Bancaria',
+    credit: 'Crédito Comercial',
+    other: 'Otro',
+  };
+  return map[method] || method || 'Efectivo';
+}
+
+async function openSaleDetailDrawer(saleId) {
+  let sale = (dashboardData.recent_sales || []).find((s) => s.id === saleId);
+  if (!sale || !sale.items) {
+    try {
+      const resp = await fetch(`${ROOT_PATH}/api/sales/${saleId}`, {
+        headers: getAuthHeaders(),
+      });
+      if (resp.ok) {
+        sale = await resp.json();
+      }
+    } catch (e) {
+      console.error('Error fetching sale detail:', e);
+    }
+  }
+
+  if (!sale) {
+    showToast('No se encontró el detalle de la venta solicitada', 'error');
+    return;
+  }
+
+  const numEl = document.getElementById('sale-detail-number');
+  if (numEl) numEl.textContent = `#${sale.sale_number}`;
+
+  const dateEl = document.getElementById('sale-detail-date');
+  if (dateEl) dateEl.textContent = formatDateEs(sale.occurred_at);
+
+  const custEl = document.getElementById('sale-detail-customer');
+  if (custEl) custEl.textContent = sale.customer_label || 'Cliente Mostrador';
+
+  const payEl = document.getElementById('sale-detail-payment');
+  if (payEl) payEl.textContent = formatPaymentLabel(sale.payment_method);
+
+  const badgeEl = document.getElementById('sale-detail-status-badge');
+  if (badgeEl) {
+    if (sale.status === 'voided') {
+      badgeEl.className = 'badge-danger';
+      badgeEl.textContent = 'Anulada';
+    } else {
+      badgeEl.className = 'badge-success';
+      badgeEl.textContent = 'Confirmada';
+    }
+  }
+
+  const itemsCountEl = document.getElementById('sale-detail-items-count');
+  if (itemsCountEl) itemsCountEl.textContent = (sale.items || []).length;
+
+  const tbody = document.getElementById('sale-detail-items-tbody');
+  if (tbody) {
+    tbody.innerHTML = '';
+    (sale.items || []).forEach((item) => {
+      const prod = (dashboardData.products || []).find((p) => p.id === item.product_id);
+      const prodName = item.product_name || (prod ? prod.name : 'Producto');
+      const prodSku = item.product_sku || (prod ? prod.sku : '-');
+      const prodUnit = item.product_unit || (prod ? prod.unit : 'und');
+      const imgUrl = item.product_image_url || (prod ? prod.image_url : null);
+
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            ${
+              imgUrl
+                ? `<img src="${ROOT_PATH}${imgUrl}" alt="${prodName}" class="product-avatar-img" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;">`
+                : `<div class="product-avatar-fallback" style="width: 30px; height: 30px; font-size: 11px; border-radius: 6px;" aria-hidden="true">${prodName.substring(0, 2).toUpperCase()}</div>`
+            }
+            <div>
+              <div style="font-weight: 600; color: var(--ink-primary); line-height: 1.2;">${prodName}</div>
+              <div style="font-size: 11px; color: var(--ink-muted); font-family: var(--font-mono);">${prodSku}</div>
+            </div>
+          </div>
+        </td>
+        <td style="text-align: center; font-weight: 600;">${item.quantity} ${prodUnit}</td>
+        <td class="price-cell" style="text-align: right;">${formatCOP(item.unit_price)}</td>
+        <td class="price-cell" style="text-align: right; color: var(--ink-muted);">${formatCOP(item.unit_cost_snapshot)}</td>
+        <td class="price-cell" style="text-align: right; font-weight: 600;">${formatCOP(item.line_total)}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const subtotalNum = parseFloat(sale.subtotal) || 0;
+  const vatNum = parseFloat(sale.vat_total) || 0;
+  const discountNum = parseFloat(sale.discount_total) || 0;
+  const totalNum = parseFloat(sale.total) || 0;
+  const cogsNum = parseFloat(sale.cogs_total) || 0;
+
+  const subtotalEl = document.getElementById('sale-detail-subtotal');
+  if (subtotalEl) subtotalEl.textContent = `${formatCOP(subtotalNum)} COP`;
+
+  const discRow = document.getElementById('sale-detail-discount-row');
+  const discEl = document.getElementById('sale-detail-discount');
+  if (discRow && discEl) {
+    if (discountNum > 0) {
+      discRow.style.display = 'flex';
+      discEl.textContent = `-${formatCOP(discountNum)} COP`;
+    } else {
+      discRow.style.display = 'none';
+    }
+  }
+
+  const vatEl = document.getElementById('sale-detail-vat');
+  if (vatEl) vatEl.textContent = `${formatCOP(vatNum)} COP`;
+
+  const totalEl = document.getElementById('sale-detail-total');
+  if (totalEl) totalEl.textContent = `${formatCOP(totalNum)} COP`;
+
+  const profitNum = subtotalNum - cogsNum;
+  const marginPct = subtotalNum > 0 ? (profitNum / subtotalNum) * 100 : 0;
+
+  const profitEl = document.getElementById('sale-detail-profit');
+  if (profitEl) profitEl.textContent = `${formatCOP(profitNum)} COP`;
+
+  const marginEl = document.getElementById('sale-detail-margin-pct');
+  if (marginEl) marginEl.textContent = `${marginPct.toFixed(1)} %`;
+
+  const voidBtn = document.getElementById('btn-void-from-detail');
+  if (voidBtn) {
+    if (sale.status === 'voided') {
+      voidBtn.style.display = 'none';
+    } else {
+      voidBtn.style.display = 'inline-flex';
+      voidBtn.onclick = () => {
+        closeDrawer('drawer-sale-detail');
+        voidSale(sale.id);
+      };
+    }
+  }
+
+  openDrawer('drawer-sale-detail');
+}
+window.openSaleDetailDrawer = openSaleDetailDrawer;
