@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>{{ title | default('Datapyme Empresarial — Analítica Comercial PyME') }}</title>
+  <link rel="stylesheet" href="{{ root_path | default('') }}/static/css/tokens.css">
+  <script src="{{ root_path | default('') }}/static/vendor/chart.umd.min.js"></script>
+</head>
+<body>
+  <!-- Header macOS/iOS Style con Segmented Control y Acciones -->
+  <header class="app-header">
+    <div class="header-left">
+      <div>
+        <h1 class="company-title">{{ company_name | default('Ferretería Cabecera S.A.S.') }}</h1>
+        <div class="company-meta">{{ tenant_name | default('Bucaramanga · Sector Comercial') }}</div>
+      </div>
+
+      {% if layout_config %}
+      <form method="post" action="{{ root_path | default('') }}/logout" class="mobile-logout-form" style="margin: 0;">
+        <button class="btn btn-ghost" type="submit" data-testid="logout-button-mobile" title="Cerrar sesión">
+          <i data-lucide="log-out" style="width: 16px; height: 16px;"></i>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+
+    <div class="header-actions">
+      {% if layout_config %}
+      <!-- Segmented Control estilo Apple (con data-testids para compatibilidad total) -->
+      <nav class="segmented-pill" data-testid="apple-view-switcher" data-view-mode="{{ layout_config.view_mode }}" data-primary-focus="{{ layout_config.primary_focus }}" data-density="{{ layout_config.density }}">
+        <a href="{{ root_path | default('') }}/dashboard?view_mode=personalized" 
+           data-testid="switch-to-personalized" 
+           class="segmented-option {% if layout_config.view_mode == 'personalized' %}active{% endif %}">
+          {% if layout_config.view_mode != 'personalized' %}Volver a vista personalizada{% else %}Vista Adaptada{% endif %}
+        </a>
+        <a href="{{ root_path | default('') }}/dashboard?view_mode=general" 
+           data-testid="switch-to-general" 
+           class="segmented-option {% if layout_config.view_mode == 'general' %}active{% endif %}">
+          {% if layout_config.view_mode == 'personalized' %}Cambiar a vista general{% else %}Vista General{% endif %}
+        </a>
+      </nav>
+      {% endif %}
+
+      <!-- Botones de Acción Inmediata (Abren Slide-Over Drawers) -->
+      <div class="header-action-buttons">
+        <button type="button" class="btn btn-secondary" data-open-drawer="drawer-import" onclick="openDrawer('drawer-import')" title="Carga masiva CSV/Excel">
+          <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+          <span>Importar Excel</span>
+        </button>
+
+        <button type="button" class="btn btn-primary" data-open-drawer="drawer-sale" onclick="openDrawer('drawer-sale')">
+          <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+          <span>+ Registrar Venta</span>
+        </button>
+      </div>
+
+      {% if layout_config %}
+      <form method="post" action="{{ root_path | default('') }}/logout" class="desktop-logout-form" style="margin: 0;">
+        <button class="btn btn-ghost" type="submit" data-testid="logout-button" title="Cerrar sesión segura">
+          <i data-lucide="log-out" style="width: 14px; height: 14px;"></i>
+        </button>
+      </form>
+      {% endif %}
+    </div>
+  </header>
+
+  <div class="app-layout-shell">
+    <!-- Sidebar minimalista estilo Linear (oculto en móvil) -->
+    <aside class="app-sidebar" data-testid="adaptive-sidebar">
+      <div style="font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-muted); margin-bottom: 12px; padding: 0 10px;">
+        Navegación Adaptativa
+      </div>
+      <nav>
+        <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px;" data-testid="nav-order-list">
+          {% if layout_config %}
+            {% set nav_map = {
+              'home': {'label': 'Panel Principal', 'icon': 'layout-dashboard'},
+              'inventory': {'label': 'Inventarios y Kardex', 'icon': 'boxes'},
+              'sales': {'label': 'Ventas y Facturación', 'icon': 'trending-up'},
+              'forecast': {'label': 'Proyección Estadística', 'icon': 'line-chart'},
+              'my_data': {'label': 'Mis Datos (Ley 1581)', 'icon': 'shield-check'}
+            } %}
+            {% for nav_item in layout_config.nav_order %}
+            {% set item_meta = nav_map.get(nav_item, {'label': nav_item|capitalize, 'icon': 'circle'}) %}
+            <li data-nav-item="{{ nav_item }}">
+              <a href="#section-{{ nav_item }}" 
+                 class="sidebar-nav-link {% if loop.first %}active{% endif %}"
+                 data-section="section-{{ nav_item }}"
+                 style="display: flex; align-items: center; gap: 10px; padding: 8px 12px; border-radius: var(--radius-control); font-size: 13px; font-weight: 500; text-decoration: none; transition: all 140ms ease;">
+                <i data-lucide="{{ item_meta.icon }}" style="width: 15px; height: 15px; flex-shrink: 0;"></i>
+                <span>{{ item_meta.label }}</span>
+              </a>
+            </li>
+            {% endfor %}
+          {% endif %}
+        </ul>
+      </nav>
+      
+      <div style="margin-top: 36px; padding: 12px; border-radius: var(--radius-control); background: var(--surface-subtle); border: 1px solid rgba(15, 23, 42, 0.05);">
+        <div style="font-size: 11px; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em;">Entorno Seguro</div>
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Aislamiento Multi-Tenant · Ley 1581</div>
+        <div style="font-size: 11px; color: var(--ink-muted); margin-top: 8px; border-top: 1px solid rgba(15, 23, 42, 0.06); padding-top: 6px; line-height: 1.4;">
+          Universitaria Tecnológica de Santander / Unidades Tecnológicas de Santander (UTS)
+        </div>
+      </div>
+    </aside>
+
+    <!-- Área de Trabajo Principal -->
+    <main class="app-main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <!-- Barra de Navegación Inferior Fija para Móvil (iOS / Apple HIG) -->
+  <nav class="mobile-bottom-bar" aria-label="Navegación Móvil">
+    <a href="#section-home" class="mobile-tab-item active" data-section="section-home">
+      <i data-lucide="layout-dashboard"></i>
+      <span>Inicio</span>
+    </a>
+    <a href="#section-inventory" class="mobile-tab-item" data-section="section-inventory">
+      <i data-lucide="boxes"></i>
+      <span>Inventario</span>
+    </a>
+    <a href="#section-sales" class="mobile-tab-item" data-section="section-sales">
+      <i data-lucide="trending-up"></i>
+      <span>Ventas</span>
+    </a>
+    <a href="#section-forecast" class="mobile-tab-item" data-section="section-forecast">
+      <i data-lucide="line-chart"></i>
+      <span>Proyección</span>
+    </a>
+    <a href="#section-my_data" class="mobile-tab-item" data-section="section-my_data">
+      <i data-lucide="shield-check"></i>
+      <span>Mis Datos</span>
+    </a>
+  </nav>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script src="{{ root_path | default('') }}/static/vendor/chart.umd.min.js"></script>
+  <script src="{{ root_path | default('') }}/static/vendor/lucide.min.js"></script>
+  <script src="{{ root_path | default('') }}/static/js/app.js" defer></script>
+</body>
+</html>

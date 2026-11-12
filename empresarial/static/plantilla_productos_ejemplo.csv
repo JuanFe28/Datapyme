@@ -1,0 +1,4 @@
+sku,name,category,unit,cost_price,sale_price,initial_stock,min_stock
+TAL-BOS-650,Taladro Percutor 650W,Herramientas,und,165000.00,230000.00,10,2
+CEM-ARG-50,Cemento Gris 50kg,Materiales,bulto,24500.00,32000.00,20,5
+PIN-VIN-05,Pintura Vinilo Tipo 1,Pinturas,galon,42000.00,59000.00,15,3

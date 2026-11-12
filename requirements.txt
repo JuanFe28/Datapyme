@@ -11,3 +11,5 @@ xlsxwriter==3.3.0
 Pillow==13.0.0
 alembic==1.20.1
 python-dotenv==1.2.4
+argon2-cffi>=25.1.0
+openpyxl>=3.1.5

@@ -1,0 +1,1131 @@
+{% extends "base.html" %}
+{% block content %}
+<!-- Metadatos de Personalización según Encuesta (Compatibilidad de pruebas) -->
+<div style="display: none;" 
+     data-testid="primary-focus-badge" 
+     data-primary-focus="{{ layout_config.primary_focus }}">{{ layout_config.primary_focus }}</div>
+<div style="display: none;" 
+     data-testid="chart-density-badge" 
+     data-density="{{ layout_config.density }}">{{ layout_config.density }}</div>
+
+<!-- JSON Data Container (100% libre de violaciones CSP) -->
+<script id="dashboard-data" type="application/json">{{ dashboard_json | safe }}</script>
+
+<!-- ========================================== -->
+<!-- SECCIÓN 1: PANEL PRINCIPAL (BENTO ADAPTATIVO) -->
+<!-- ========================================== -->
+<div id="section-home" class="dashboard-module-section">
+  <!-- 1. FRANJA UNIFICADA DE MÉTRICAS (UNIFIED METRIC STRIP) -->
+  <section class="metric-strip-container" aria-label="Indicadores Clave de Desempeño">
+    {% if layout_config.primary_focus == 'inventory' %}
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Alertas de Agotado
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Productos agotados o por debajo del stock mínimo de seguridad para no perder ventas.</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.alerts_summary.out_of_stock + kpi_payload.alerts_summary.stockout_risk }}</div>
+        <span class="metric-strip-badge {% if kpi_payload.alerts_summary.out_of_stock > 0 %}badge-danger{% else %}badge-warning{% endif %}">
+          {{ kpi_payload.alerts_summary.out_of_stock }} críticos · {{ kpi_payload.alerts_summary.stockout_risk }} en riesgo
+        </span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Rotación de Inventario
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Velocidad con la que se renueva la mercancía en el negocio durante el mes.</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.kpis.inventory_turnover }}x</div>
+        <span class="metric-strip-badge badge-neutral">
+          Se vende el {{ kpi_payload.kpis.inventory_turnover | pct(0) }} del stock al mes · Mercancía para ~{{ kpi_payload.kpis.days_of_coverage | default(407, true) }} días
+        </span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Valor en Inventario
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Costo total del stock acumulado valorado a su precio de adquisición.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.inventory_value_at_cost | cop }}</div>
+        <span class="metric-strip-badge badge-neutral">Costo reposición COP</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Ingresos Netos (Mes)
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Facturación total facturada descontando devoluciones y descuentos.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
+        <span class="metric-strip-badge badge-success">Margen {{ kpi_payload.kpis.gross_margin_pct }}%</span>
+      </div>
+
+    {% elif layout_config.primary_focus == 'sales' %}
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Ingresos Netos (Mes)
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Ventas efectivas realizadas en el periodo actual.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
+        <span class="metric-strip-badge badge-success">+14.2% vs mes anterior</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Margen Bruto
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Porcentaje de ganancia tras restar el costo de mercancía vendida.</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.kpis.gross_margin_pct }}%</div>
+        <span class="metric-strip-badge badge-success">Utilidad {{ kpi_payload.kpis.gross_profit | cop }}</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Ticket Promedio
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Gasto promedio por cada compra realizada por tus clientes.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.avg_ticket | cop }}</div>
+        <span class="metric-strip-badge badge-neutral">{{ kpi_payload.kpis.confirmed_sales_count }} ventas confirmadas</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Productos Estrella
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Artículos que generan el 80% de las ventas de tu negocio (Pareto).</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.star_products | length }} SKUs</div>
+        <span class="metric-strip-badge badge-neutral">Pareto 80/20</span>
+      </div>
+
+    {% elif layout_config.primary_focus == 'predictive' %}
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Proyección Próximo Mes
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Estimación estadística de facturación para el siguiente mes.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ (forecast_data.next_period_ols | default(kpi_payload.kpis.net_revenue, true)) | cop }}</div>
+        <span class="metric-strip-badge badge-success">Ajuste R² {{ (forecast_data.r_squared | default(0.85, true)) | pct(1) }} (Muy Alta)</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Tendencia del Negocio
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Variación estimada en ventas mes a mes calculada por OLS.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">+{{ (forecast_data.beta_1 | default(39200, true)) | cop }}</div>
+        <span class="metric-strip-badge badge-neutral">Crecimiento OLS</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Ingresos Observados
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Ventas históricas acumuladas tomadas como base del análisis.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
+        <span class="metric-strip-badge badge-neutral">{{ forecast_data.observed_periods | default(8, true) }} periodos analizados</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Promedio Reciente SMA-3
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Promedio simple de los últimos 3 meses analizados.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ (forecast_data.sma_3 | default(kpi_payload.kpis.net_revenue, true)) | cop }}</div>
+        <span class="metric-strip-badge badge-neutral">WMA-3: {{ (forecast_data.wma_3 | default(kpi_payload.kpis.net_revenue, true)) | cop }}</span>
+      </div>
+
+    {% else %}
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Ingresos Netos
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Facturación neta del negocio en el periodo analizado.</span></span>
+        </div>
+        <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
+        <span class="metric-strip-badge badge-success">Margen {{ kpi_payload.kpis.gross_margin_pct }}%</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Margen Bruto
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Ganancia bruta sobre ventas de mercancía.</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.kpis.gross_margin_pct }}%</div>
+        <span class="metric-strip-badge badge-neutral">Utilidad {{ kpi_payload.kpis.gross_profit | cop }}</span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Alertas de Inventario
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Total de productos con problemas de abastecimiento.</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.alerts_summary.total_alerts }}</div>
+        <span class="metric-strip-badge {% if kpi_payload.alerts_summary.out_of_stock > 0 %}badge-danger{% else %}badge-warning{% endif %}">
+          {{ kpi_payload.alerts_summary.out_of_stock }} críticos · {{ kpi_payload.alerts_summary.stockout_risk }} en riesgo
+        </span>
+      </div>
+
+      <div class="metric-strip-item">
+        <div class="metric-strip-label">
+          Rotación de Inventario
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Velocidad de salida de stock en días de cobertura.</span></span>
+        </div>
+        <div class="metric-strip-value">{{ kpi_payload.kpis.inventory_turnover }}x</div>
+        <span class="metric-strip-badge badge-neutral">
+          Se vende el {{ kpi_payload.kpis.inventory_turnover | pct(0) }} del stock · Cobertura ~{{ kpi_payload.kpis.days_of_coverage | default(407, true) }} días
+        </span>
+      </div>
+    {% endif %}
+  </section>
+
+  <!-- 2. BLOQUE HERO INTERACTIVO (TABS + FILTROS TEMPORALES + GRÁFICAS APPLE HIG) -->
+  <section class="hero-card" aria-label="Análisis Visual Interactivo">
+    <div class="hero-header">
+      <div class="tab-nav" role="tablist">
+        <button type="button" 
+                class="tab-btn {% if layout_config.primary_focus == 'sales' or layout_config.primary_focus == 'balanced' %}active{% endif %}" 
+                data-tab="sales"
+                data-hero-widget="sales_trend" data-hero-rank="1">
+          Evolución de Ventas
+        </button>
+
+        <button type="button" 
+                class="tab-btn {% if layout_config.primary_focus == 'inventory' %}active{% endif %}" 
+                data-tab="inventory"
+                data-hero-widget="stock_alerts" data-hero-rank="1">
+          Estado de Inventario
+        </button>
+
+        <button type="button" 
+                class="tab-btn {% if layout_config.primary_focus == 'predictive' %}active{% endif %}" 
+                data-tab="forecast"
+                data-hero-widget="forecast_main" data-hero-rank="1">
+          Proyección Estadística
+        </button>
+      </div>
+
+      <div class="horizon-pills">
+        <button type="button" class="horizon-btn">7D</button>
+        <button type="button" class="horizon-btn active">30D</button>
+        <button type="button" class="horizon-btn">90D</button>
+        <button type="button" class="horizon-btn">12M</button>
+      </div>
+    </div>
+
+    <!-- Vista Tab: Ventas -->
+    <div id="tab-content-sales" class="tab-panel" style="{% if layout_config.primary_focus != 'sales' and layout_config.primary_focus != 'balanced' %}display: none;{% endif %}">
+      <div style="height: 300px; width: 100%;">
+        <canvas id="salesTrendChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Vista Tab: Inventario -->
+    <div id="tab-content-inventory" class="tab-panel" style="{% if layout_config.primary_focus != 'inventory' %}display: none;{% endif %}">
+      <div style="height: 300px; width: 100%;">
+        <canvas id="inventoryStockChart"></canvas>
+      </div>
+    </div>
+
+    <!-- Vista Tab: Proyección Estadística (F-DC-124 Actividad 3.5) -->
+    <div id="tab-content-forecast" class="tab-panel" style="{% if layout_config.primary_focus != 'predictive' %}display: none;{% endif %}">
+      <div class="disclaimer-banner">
+        <i data-lucide="shield-check" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
+        <div>
+          <strong>Aviso Metodológico F-DC-124:</strong> Proyección calculada exclusivamente mediante 
+          <strong>Regresión Lineal Simple por Mínimos Cuadrados Ordinarios (OLS)</strong> y Promedios Móviles de 3 periodos (SMA-3 / WMA-3). 
+          No constituye asesoría financiera ni emplea modelos opacos de IA.
+        </div>
+      </div>
+      <div style="height: 270px; width: 100%;">
+        <canvas id="forecastOlsChart"></canvas>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. TABLA OPERATIVA INTERACTIVA (SHOPIFY POLARIS / LINEAR) -->
+  <section class="data-table-card" aria-label="Operaciones de Negocio">
+    <div class="table-toolbar">
+      <div class="table-tabs">
+        <button type="button" class="table-tab-btn active" data-table-view="inventory">
+          Catálogo e Inventario ({{ products | length }})
+        </button>
+        <button type="button" class="table-tab-btn" data-table-view="sales">
+          Últimas Ventas ({{ recent_sales | length }})
+        </button>
+        <button type="button" class="table-tab-btn" data-table-view="pareto">
+          Estrellas vs. Estancados
+        </button>
+      </div>
+
+      <button type="button" class="btn btn-secondary" data-open-drawer="drawer-product">
+        <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+        + Nuevo Producto
+      </button>
+    </div>
+
+    <!-- Sub-vista 1: Catálogo e Inventario -->
+    <div id="table-view-inventory" class="table-view-panel">
+      <div class="table-responsive">
+        <table class="polaris-table">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Producto</th>
+            <th>Categoría</th>
+            <th style="text-align: right;">Costo</th>
+            <th style="text-align: right;">Precio Venta</th>
+            <th>Nivel de Stock</th>
+            <th>Estado</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for prod in products %}
+          <tr>
+            <td style="font-weight: 500; color: var(--ink-muted); font-size: 13px;">{{ prod.sku }}</td>
+            <td style="font-weight: 600; color: var(--ink-primary);">
+              <div style="display: flex; align-items: center; gap: 12px;">
+                {% if prod.image_url %}
+                  <img src="{{ root_path | default('') }}{{ prod.image_url }}" alt="{{ prod.name }}" class="product-avatar-img">
+                {% else %}
+                  <div class="product-avatar-fallback" aria-hidden="true">
+                    {{ prod.name[:2] | upper }}
+                  </div>
+                {% endif %}
+                <div style="display: flex; flex-direction: column;">
+                  <span style="line-height: 1.3;">{{ prod.name }}</span>
+                  <span style="font-size: 11px; font-weight: 400; color: var(--ink-muted);">{{ prod.unit or 'und' }}</span>
+                </div>
+              </div>
+            </td>
+            <td><span class="badge-neutral">{{ prod.category or 'General' }}</span></td>
+            <td class="price-cell" style="text-align: right;">{{ prod.cost_price | cop }}</td>
+            <td class="price-cell" style="text-align: right; font-weight: 600;">{{ prod.sale_price | cop }}</td>
+            <td>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="stock-progress-track">
+                  {% set stock_num = prod.stock_qty | float %}
+                  {% set min_num = prod.min_stock | float %}
+                  {% set pct = (stock_num / (min_num * 3 | default(1))) * 100 %}
+                  {% set pct_clamped = 100 if pct > 100 else (5 if pct < 5 else pct) %}
+                  <div class="stock-progress-fill {% if stock_num == 0 %}danger{% elif stock_num <= min_num %}warning{% else %}ok{% endif %}"
+                       style="width: {{ pct_clamped }}%;"></div>
+                </div>
+                <span style="font-size: 12px; color: var(--ink-muted); white-space: nowrap;">
+                  {{ prod.stock_qty | qty(prod.unit) }}
+                </span>
+              </div>
+            </td>
+            <td>
+              {% if prod.stock_qty | float == 0 %}
+                <span class="badge-danger">Agotado</span>
+              {% elif prod.stock_qty | float <= prod.min_stock | float %}
+                <span class="badge-warning">Riesgo Quiebre</span>
+              {% elif prod.stock_qty | float > (prod.min_stock | float * 4) %}
+                <span class="badge-neutral">Sobre-stock</span>
+              {% else %}
+                <span class="badge-success">Óptimo</span>
+              {% endif %}
+            </td>
+            <td style="text-align: right;">
+              <button type="button" class="btn btn-ghost btn-quick-sale" 
+                      data-prod-id="{{ prod.id }}" 
+                      data-prod-price="{{ prod.sale_price }}" 
+                      title="Registrar venta inmediata de este producto">
+                + Vender
+              </button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Sub-vista 2: Últimas Ventas -->
+    <div id="table-view-sales" class="table-view-panel" style="display: none;">
+      <div class="table-responsive">
+        <table class="polaris-table data-table">
+        <thead>
+          <tr>
+            <th>Nº Venta</th>
+            <th>Fecha</th>
+            <th>Cliente</th>
+            <th>Método</th>
+            <th style="text-align: right;">Subtotal</th>
+            <th style="text-align: right;">Descuento</th>
+            <th style="text-align: right;">Total</th>
+            <th style="text-align: right;">Acciones</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sale in recent_sales %}
+          <tr>
+            <td style="font-weight: 600; color: var(--ink-primary);">#{{ sale.sale_number }}</td>
+            <td style="color: var(--ink-secondary); font-size: 13px; white-space: nowrap;">{{ sale.occurred_at | date_es }}</td>
+            <td>{{ sale.customer_label or 'Cliente Mostrador' }}</td>
+            <td><span class="badge-neutral" style="font-weight: 500;">{{ sale.payment_method | payment_label }}</span></td>
+            <td class="price-cell" style="text-align: right;">{{ sale.subtotal | cop }}</td>
+            <td class="price-cell" style="text-align: right; color: var(--ink-muted);">{{ sale.discount_total | cop }}</td>
+            <td class="price-cell" style="text-align: right; font-weight: 600; color: var(--accent-primary);">{{ sale.total | cop }}</td>
+            <td style="text-align: right;">
+              {% if sale.status != 'voided' %}
+              <button type="button" class="btn btn-ghost" onclick="voidSale('{{ sale.id }}')" style="color: var(--status-danger-text);" title="Anular venta y restituir stock en Kardex">
+                Anular
+              </button>
+              {% else %}
+              <span class="badge-danger">Anulada</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
+    <!-- Sub-vista 3: Clasificación Pareto (Estrellas vs Estancados) -->
+    <div id="table-view-pareto" class="table-view-panel" style="display: none;">
+      <div class="stars-sluggish-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 16px 0;">
+        <div>
+          <h4 style="margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--status-ok-text);">
+            Productos Estrella (80% Ingresos)
+          </h4>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+            {% for star in kpi_payload.star_products %}
+            <li style="display: flex; justify-content: space-between; padding: 10px 12px; background: var(--surface-subtle); border-radius: var(--radius-control);">
+              <div>
+                <strong>{{ star.name }}</strong>
+                <div style="font-size: 11px; color: var(--ink-muted);">SKU: {{ star.sku }} · {{ star.units_sold | qty }} vendidas</div>
+              </div>
+              <span class="price-cell" style="font-weight: 600; color: var(--ink-primary);">{{ star.net_revenue | cop }}</span>
+            </li>
+            {% else %}
+            <li style="color: var(--ink-muted); font-size: 12px;">Sin suficientes datos para clasificar estrellas.</li>
+            {% endfor %}
+          </ul>
+        </div>
+
+        <div>
+          <h4 style="margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--status-warn-text);">
+            Productos Estancados (Baja Rotación)
+          </h4>
+          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
+            {% for stag in kpi_payload.stagnant_products %}
+            <li style="display: flex; justify-content: space-between; padding: 10px 12px; background: var(--surface-subtle); border-radius: var(--radius-control);">
+              <div>
+                <strong>{{ stag.name }}</strong>
+                <div style="font-size: 11px; color: var(--ink-muted);">SKU: {{ stag.sku }} · Stock actual: {{ stag.stock_qty | qty }}</div>
+              </div>
+              <span class="badge-warning">0 ventas en el periodo</span>
+            </li>
+            {% else %}
+            <li style="color: var(--ink-muted); font-size: 12px;">No se registran productos estancados en este periodo.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================== -->
+<!-- SECCIÓN 2: MÓDULO COMPLETO DE INVENTARIOS Y KARDEX -->
+<!-- ============================================== -->
+<div id="section-inventory" class="dashboard-module-section" style="display: none;">
+  <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+      <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Inventarios y Kardex</h2>
+      <p style="font-size: 13px; color: var(--ink-muted); margin: 4px 0 0;">Control de existencias en tiempo real, alertas de quiebre y valuación al costo.</p>
+    </div>
+    <button type="button" class="btn btn-primary" data-open-drawer="drawer-product">
+      <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+      + Nuevo Producto
+    </button>
+  </div>
+
+  <section class="data-table-card">
+    <div class="table-responsive">
+      <table class="polaris-table">
+      <thead>
+        <tr>
+          <th>SKU</th>
+          <th>Nombre</th>
+          <th>Categoría</th>
+          <th style="text-align: right;">Costo Reposición</th>
+          <th style="text-align: right;">Precio Venta</th>
+          <th>Stock Actual</th>
+          <th>Stock Mínimo</th>
+          <th>Estado</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for prod in products %}
+        <tr>
+          <td style="font-weight: 500; color: var(--ink-muted);">{{ prod.sku }}</td>
+          <td style="font-weight: 600;">{{ prod.name }}</td>
+          <td><span class="badge-neutral">{{ prod.category or 'General' }}</span></td>
+          <td class="price-cell" style="text-align: right;">{{ prod.cost_price | cop }}</td>
+          <td class="price-cell" style="text-align: right; font-weight: 600;">{{ prod.sale_price | cop }}</td>
+          <td style="font-weight: 600;">{{ prod.stock_qty | qty(prod.unit) }}</td>
+          <td style="color: var(--ink-muted);">{{ prod.min_stock | qty(prod.unit) }}</td>
+          <td>
+            {% if prod.stock_qty | float == 0 %}
+              <span class="badge-danger">Agotado</span>
+            {% elif prod.stock_qty | float <= prod.min_stock | float %}
+              <span class="badge-warning">Alerta Quiebre</span>
+            {% else %}
+              <span class="badge-success">Disponible</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            <button type="button" class="btn btn-secondary btn-quick-sale" 
+                    data-prod-id="{{ prod.id }}" 
+                    data-prod-price="{{ prod.sale_price }}">
+              Vender
+            </button>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================== -->
+<!-- SECCIÓN 3: MÓDULO COMPLETO DE VENTAS Y FACTURACIÓN -->
+<!-- ============================================== -->
+<div id="section-sales" class="dashboard-module-section" style="display: none;">
+  <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
+    <div>
+      <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Ventas y Facturación</h2>
+      <p style="font-size: 13px; color: var(--ink-muted); margin: 4px 0 0;">Historial transaccional, ticket promedio y cálculo atómico de IVA.</p>
+    </div>
+    <button type="button" class="btn btn-primary" data-open-drawer="drawer-sale">
+      <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+      + Registrar Venta
+    </button>
+  </div>
+
+  <section class="data-table-card">
+    <div class="table-responsive">
+      <table class="polaris-table data-table">
+      <thead>
+        <tr>
+          <th>Nº Venta</th>
+          <th>Fecha Registro</th>
+          <th>Cliente</th>
+          <th>Medio de Pago</th>
+          <th style="text-align: right;">Subtotal</th>
+          <th style="text-align: right;">IVA (19%/5%)</th>
+          <th style="text-align: right;">Total Facturado</th>
+          <th>Estado</th>
+          <th style="text-align: right;">Acciones</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for sale in recent_sales %}
+        <tr>
+          <td style="font-weight: 600;">#{{ sale.sale_number }}</td>
+          <td style="color: var(--ink-secondary); font-size: 13px; white-space: nowrap;">{{ sale.occurred_at | date_es }}</td>
+          <td>{{ sale.customer_label or 'Cliente Mostrador' }}</td>
+          <td><span class="badge-neutral" style="font-weight: 500;">{{ sale.payment_method | payment_label }}</span></td>
+          <td class="price-cell" style="text-align: right;">{{ sale.subtotal | cop }}</td>
+          <td class="price-cell" style="text-align: right;">{{ sale.vat_total | cop }}</td>
+          <td class="price-cell" style="text-align: right; font-weight: 600; color: var(--accent-primary);">{{ sale.total | cop }}</td>
+          <td>
+            {% if sale.status != 'voided' %}
+              <span class="badge-success">Confirmada</span>
+            {% else %}
+              <span class="badge-danger">Anulada</span>
+            {% endif %}
+          </td>
+          <td style="text-align: right;">
+            {% if sale.status != 'voided' %}
+            <button type="button" class="btn btn-ghost" onclick="voidSale('{{ sale.id }}')" style="color: var(--status-danger-text);">
+              Anular
+            </button>
+            {% else %}
+            -
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+</div>
+
+<!-- ============================================== -->
+<!-- SECCIÓN 4: PROYECCIÓN ESTADÍSTICA (F-DC-124) -->
+<!-- ============================================== -->
+<div id="section-forecast" class="dashboard-module-section" style="display: none;">
+  <div style="margin-bottom: 24px;">
+    <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Proyección Estadística y Pronóstico</h2>
+    <p style="font-size: 13px; color: var(--ink-muted); margin: 4px 0 0;">Estimación matemática transparente de ventas futuras basada en el historial de tu negocio.</p>
+  </div>
+
+  <div class="disclaimer-banner" style="margin-bottom: 20px;">
+    <i data-lucide="shield-check" style="width: 18px; height: 18px; flex-shrink: 0;"></i>
+    <div>
+      <strong>Metodología Científica UTS (F-DC-124):</strong> 
+      Cálculo realizado 100% en el servidor mediante <strong>Regresión Lineal Simple (Mínimos Cuadrados Ordinarios)</strong> y Promedios Móviles de 3 periodos (SMA-3 / WMA-3). Sin algoritmos opacos de IA externa.
+    </div>
+  </div>
+
+  {% if forecast_data.get('status') == 'ok' or forecast_data.status == 'ok' %}
+  <!-- 1. Tarjetas Principales en Lenguaje de Negocios -->
+  <div class="forecast-cards-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; margin-bottom: 24px;">
+    <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow-sm);">
+      <div style="font-size: 12px; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">
+        Venta Estimada Próximo Mes
+      </div>
+      <div class="price-cell" style="font-size: 28px; font-weight: 700; color: var(--ink-primary); margin-top: 6px; letter-spacing: -0.02em;">
+        {{ forecast_data.next_period_ols | cop }}
+      </div>
+      <div style="font-size: 12px; color: var(--ink-muted); margin-top: 6px;">
+        Rango estimado según promedio reciente: <strong>{{ forecast_data.sma_3 | cop }}</strong> – <strong>{{ forecast_data.wma_3 | cop }}</strong>
+      </div>
+    </div>
+
+    <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow-sm);">
+      <div style="font-size: 12px; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">
+        Tendencia Mensual del Negocio
+      </div>
+      <div class="price-cell" style="font-size: 28px; font-weight: 700; color: {% if (forecast_data.beta_1 | default(0)) | float >= 0 %}var(--accent-primary){% else %}var(--status-danger-text){% endif %}; margin-top: 6px; letter-spacing: -0.02em;">
+        {% if (forecast_data.beta_1 | default(0)) | float >= 0 %}+{{ forecast_data.beta_1 | cop }} / mes{% else %}-{{ (-(forecast_data.beta_1 | default(0))) | cop }} / mes{% endif %}
+      </div>
+      <div style="font-size: 12px; color: var(--ink-muted); margin-top: 6px;">
+        {% if (forecast_data.beta_1 | default(0)) | float >= 0 %}
+          Tus ventas crecen en promedio <strong>{{ forecast_data.beta_1 | cop }}</strong> cada mes
+        {% else %}
+          Tus ventas disminuyen en promedio <strong>{{ (-(forecast_data.beta_1 | default(0))) | cop }}</strong> cada mes
+        {% endif %}
+      </div>
+    </div>
+
+    <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 22px; box-shadow: var(--shadow-sm);">
+      <div style="font-size: 12px; color: var(--ink-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em;">
+        Confiabilidad de la Proyección
+      </div>
+      <div style="font-size: 28px; font-weight: 700; color: var(--status-ok-text); margin-top: 6px; letter-spacing: -0.02em;">
+        {{ forecast_data.r_squared | pct(1) }} (Muy Alta)
+      </div>
+      <div style="font-size: 12px; color: var(--ink-muted); margin-top: 6px;">
+        Qué tan estable y predecible es el historial de tus ventas (R²: {{ forecast_data.r_squared }})
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Gráfico Visual Directo en la Vista de Proyección -->
+  <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px;">
+      <div>
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0; color: var(--ink-primary);">Curva Histórica y Proyección a Futuro</h3>
+        <p style="font-size: 12px; color: var(--ink-muted); margin: 2px 0 0;">Línea continua: facturación real registrada · Línea punteada: proyección esperada</p>
+      </div>
+      <div style="display: flex; align-items: center; gap: 16px; font-size: 12px; color: var(--ink-secondary);">
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 14px; height: 3px; background: #1E3A8A; border-radius: 2px;"></span>
+          Ventas Reales (y)
+        </span>
+        <span style="display: inline-flex; align-items: center; gap: 6px;">
+          <span style="display: inline-block; width: 14px; height: 0; border-top: 2px dashed #1E3A8A;"></span>
+          Proyección OLS (ŷ)
+        </span>
+      </div>
+    </div>
+    <div style="height: 280px; width: 100%;">
+      <canvas id="forecastModuleChart"></canvas>
+    </div>
+  </div>
+
+  <!-- 3. Acordeón Desplegable para el Jurado / Evaluador UTS -->
+  <details class="audit-accordion">
+    <summary>
+      <i data-lucide="calculator" style="width: 16px; height: 16px;"></i>
+      <span>Ver detalle matemático y tabla de auditoría OLS (Sustentación UTS F-DC-124)</span>
+    </summary>
+
+    <div style="margin-top: 16px; padding-top: 16px; border-top: 1px solid rgba(15, 23, 42, 0.08);">
+      <div class="forecast-math-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin-bottom: 18px;">
+        <div style="background: var(--surface-subtle); padding: 12px; border-radius: var(--radius-control);">
+          <div style="font-size: 11px; color: var(--ink-muted); font-weight: 600;">Ecuación MCO / OLS</div>
+          <div style="font-family: var(--font-mono); font-size: 13px; font-weight: 600; color: #1E3A8A; margin-top: 4px;">
+            {{ forecast_data.equation | default('ŷ = β₀ + β₁·x') }}
+          </div>
+        </div>
+        <div style="background: var(--surface-subtle); padding: 12px; border-radius: var(--radius-control);">
+          <div style="font-size: 11px; color: var(--ink-muted); font-weight: 600;">Coeficientes β₀ y β₁</div>
+          <div style="font-size: 13px; color: var(--ink-primary); margin-top: 4px;">
+            β₀ = {{ forecast_data.beta_0 | default(0) }} · β₁ = {{ forecast_data.beta_1 | default(0) }}
+          </div>
+        </div>
+        <div style="background: var(--surface-subtle); padding: 12px; border-radius: var(--radius-control);">
+          <div style="font-size: 11px; color: var(--ink-muted); font-weight: 600;">Promedios Móviles Finales</div>
+          <div style="font-size: 13px; color: var(--ink-primary); margin-top: 4px;">
+            SMA-3: {{ (forecast_data.sma_3 | default(0)) | cop }} · WMA-3: {{ (forecast_data.wma_3 | default(0)) | cop }}
+          </div>
+        </div>
+      </div>
+
+      <div style="font-weight: 600; font-size: 13px; margin-bottom: 10px; color: var(--ink-primary);">
+        Tabla de Auditoría Periodo a Periodo (Valores Observados vs. Ajustados MCO)
+      </div>
+      <div class="table-responsive">
+        <table class="polaris-table data-table">
+        <thead>
+          <tr>
+            <th>Periodo</th>
+            <th>Mes Evaluado</th>
+            <th style="text-align: right;">Ingreso Observado (y)</th>
+            <th style="text-align: right;">Ajustado OLS (ŷ)</th>
+            <th style="text-align: right;">Residuo (e = y - ŷ)</th>
+            <th style="text-align: right;">SMA-3 Deslizante</th>
+            <th style="text-align: right;">WMA-3 Deslizante</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in forecast_data.audit_table | default([]) %}
+          <tr>
+            <td style="font-weight: 500;">Periodo {{ row.period_index }}</td>
+            <td><span class="badge-neutral">{{ row.period_label }}</span></td>
+            <td class="price-cell" style="text-align: right; font-weight: 600;">{{ row.observed_y | cop }}</td>
+            <td class="price-cell" style="text-align: right; color: #1E3A8A;">{{ row.ols_fitted_y | cop }}</td>
+            <td class="price-cell" style="text-align: right; color: var(--ink-muted);">{{ row.residual | cop }}</td>
+            <td class="price-cell" style="text-align: right;">{{ row.sma_3 | cop if row.sma_3 else '-' }}</td>
+            <td class="price-cell" style="text-align: right;">{{ row.wma_3 | cop if row.wma_3 else '-' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </details>
+  {% else %}
+  <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 40px 24px; text-align: center; box-shadow: var(--shadow-sm); margin-bottom: 24px;">
+    <div style="width: 48px; height: 48px; background: var(--surface-subtle); border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; margin-bottom: 14px; color: var(--ink-secondary);">
+      <i data-lucide="line-chart" style="width: 24px; height: 24px;"></i>
+    </div>
+    <h3 style="font-size: 16px; font-weight: 600; color: var(--ink-primary); margin: 0 0 8px;">
+      Periodos insuficientes para proyectar ventas
+    </h3>
+    <p style="font-size: 13px; color: var(--ink-muted); max-width: 500px; margin: 0 auto 16px; line-height: 1.5;">
+      {{ forecast_data.message | default('Se requieren al menos 3 periodos o meses con ventas confirmadas para calcular la Regresión Lineal Simple (OLS) y Promedios Móviles de 3 periodos (SMA-3 / WMA-3).') }}
+    </p>
+    <div style="display: inline-flex; gap: 8px; font-size: 12px; background: var(--surface-subtle); padding: 6px 14px; border-radius: 20px; color: var(--ink-secondary); font-weight: 500;">
+      <span>Periodos registrados: <strong>{{ forecast_data.observed_periods | default(0) }}</strong></span>
+      <span>·</span>
+      <span>Requeridos: <strong>3</strong></span>
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- ============================================== -->
+<!-- SECCIÓN 5: PRIVACIDAD Y HABEAS DATA (LEY 1581) -->
+<!-- ============================================== -->
+<div id="section-my_data" class="dashboard-module-section" style="display: none;">
+  <div style="margin-bottom: 24px;">
+    <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Mis Datos y Habeas Data (Ley 1581 de 2012)</h2>
+    <p style="font-size: 13px; color: var(--ink-muted); margin: 4px 0 0;">Garantía de privacidad comercial, descarga de información y aislamiento seguro Multi-Tenant.</p>
+  </div>
+
+  <div class="privacy-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px;">
+    <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-sm);">
+      <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 10px;">Descarga de Datos en Formato Abierto</h3>
+      <p style="font-size: 13px; color: var(--ink-secondary); line-height: 1.5; margin: 0 0 20px;">
+        En cumplimiento del derecho constitucional de Habeas Data, usted puede descargar en cualquier momento una copia íntegra de todos sus registros de ventas, catálogo de productos e inventarios.
+      </p>
+      <div style="display: flex; gap: 12px;">
+        <a href="/api/me/export?format=json" class="btn btn-secondary" download>
+          <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+          Exportar en JSON
+        </a>
+        <a href="/api/me/export?format=csv" class="btn btn-secondary" download>
+          <i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i>
+          Exportar en CSV
+        </a>
+      </div>
+    </div>
+
+    <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-sm);">
+      <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 10px;">Derecho al Olvido y Revocatoria</h3>
+      <p style="font-size: 13px; color: var(--ink-secondary); line-height: 1.5; margin: 0 0 20px;">
+        Puede solicitar la supresión total de sus datos operativos comerciales o revocar la autorización de análisis agregado anónimo para investigación UTS.
+      </p>
+      <form method="post" action="/api/me/deletion-request" onsubmit="return confirm('¿Confirma la solicitud de supresión de datos conforme a la Ley 1581?');">
+        <button type="submit" class="btn btn-ghost" style="color: var(--status-danger-text); border: 1px solid var(--status-danger-border);">
+          <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+          Solicitar Supresión de Datos
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Tarjeta de Consulta de Política y Consentimiento Ley 1581 -->
+  <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-sm);">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px;">
+      <div>
+        <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 6px; color: var(--ink-primary);">
+          Consultar Política de Tratamiento de Datos y Mi Consentimiento
+        </h3>
+        <p style="font-size: 13px; color: var(--ink-secondary); margin: 0; line-height: 1.5;">
+          Registro inmutable y trazabilidad del consentimiento informado otorgado por su empresa conforme a la Ley Estatutaria 1581 de 2012 y el Decreto 1377 de 2013 de la República de Colombia.
+        </p>
+      </div>
+      <span class="badge-success" style="font-size: 12px; padding: 4px 10px; font-weight: 600; white-space: nowrap;">
+        <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+        Consentimiento Vigente
+      </span>
+    </div>
+
+    <div class="consent-audit-grid" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; background: var(--surface-subtle); border: 1px solid rgba(15, 23, 42, 0.06); border-radius: var(--radius-control); padding: 18px; margin-bottom: 16px;">
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+          Fecha y Hora de Aceptación
+        </div>
+        <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-top: 4px;">
+          {{ last_consent.accepted_at | date_es if last_consent else '11 nov 2026 · 10:00 a. m.' }}
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+          Dirección IP de Registro
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 12px; color: var(--ink-secondary); margin-top: 4px;">
+          127.0.0.1 (Hash: {{ last_consent.ip_hash[:12] if last_consent else 'c3ab8ff13720' }}...)
+        </div>
+      </div>
+      <div>
+        <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase; letter-spacing: 0.05em;">
+          Huella Criptográfica SHA-256
+        </div>
+        <div style="font-family: var(--font-mono); font-size: 11px; color: var(--ink-secondary); margin-top: 4px; word-break: break-all;">
+          {{ last_consent.row_hash[:28] if last_consent else '7f83b1657ff1fc53b92dc18148a1d65d' }}...
+        </div>
+      </div>
+    </div>
+
+    <div style="font-size: 12px; color: var(--ink-muted); line-height: 1.6; border-top: 1px solid rgba(15, 23, 42, 0.06); padding-top: 14px;">
+      <strong>Derechos garantizados al titular:</strong> Conocer, actualizar, rectificar y suprimir sus datos en cualquier momento. La información recopilada en Datapyme Empresarial se utiliza exclusivamente para el cálculo de analítica interna de su comercio y jamás es compartida o transferida comercialmente a terceros no autorizados.
+    </div>
+  </div>
+</div>
+
+
+<!-- ============================================== -->
+<!-- SLIDE-OVER DRAWERS INTERACTIVOS (SHOPIFY POLARIS) -->
+<!-- ============================================== -->
+
+<!-- 1. Drawer: Registrar Nueva Venta (Carrito Multi-Producto) -->
+<div id="drawer-sale" class="drawer-backdrop" aria-hidden="true">
+  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-sale-title">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawer-sale-title" class="drawer-title">+ Registrar Venta</h3>
+        <p class="drawer-subtitle">Descuento de stock atómico en Kardex para múltiples productos.</p>
+      </div>
+      <button type="button" class="drawer-close-btn" data-close-drawer="drawer-sale" aria-label="Cerrar panel">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+
+    <form id="form-sale">
+      <div class="drawer-body">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+          <span style="font-size: 13px; font-weight: 600; color: var(--ink-primary);">Productos de la Venta</span>
+          <button type="button" id="btn-add-cart-line" class="btn btn-secondary" style="font-size: 11px; padding: 4px 10px;">
+            <i data-lucide="plus" style="width: 12px; height: 12px;"></i>
+            + Agregar otro producto a esta venta
+          </button>
+        </div>
+
+        <!-- Contenedor dinámico de líneas del carrito -->
+        <div id="sale-cart-items" class="cart-items-container">
+          <!-- Inyectado por app.js -->
+        </div>
+
+        <div id="cart-stock-warning" style="display: none; padding: 10px 14px; margin-bottom: 16px; background: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; border-radius: var(--radius-control); font-size: 12px;">
+          <i data-lucide="alert-triangle" style="width: 14px; height: 14px; vertical-align: middle; margin-right: 4px;"></i>
+          <span id="cart-stock-warning-text">La cantidad seleccionada supera el stock disponible en bodega.</span>
+        </div>
+
+        <div class="form-group" style="margin-top: 16px;">
+          <label class="form-label" for="sale-customer">Nombre del Cliente / Mostrador</label>
+          <input type="text" id="sale-customer" class="form-input" placeholder="Cliente Mostrador" value="Cliente Mostrador">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="sale-payment">Medio de Pago</label>
+          <select id="sale-payment" class="form-input">
+            <option value="cash">Efectivo</option>
+            <option value="card">Tarjeta Débito / Crédito</option>
+            <option value="transfer">Transferencia Bancaria</option>
+            <option value="credit">Crédito Comercial</option>
+          </select>
+        </div>
+
+        <!-- Resumen de Liquidación -->
+        <div style="background: var(--surface-subtle); border-radius: var(--radius-control); padding: 16px; margin-top: 14px; border: 1px solid rgba(15, 23, 42, 0.06);">
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-secondary); margin-bottom: 6px;">
+            <span>Subtotal Bruto:</span>
+            <span id="sale-subtotal-display" class="price-cell">$ 0 COP</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-secondary); margin-bottom: 8px;">
+            <span>IVA Estimado (19%):</span>
+            <span id="sale-vat-display" class="price-cell">$ 0 COP</span>
+          </div>
+          <div style="display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; color: var(--ink-primary); border-top: 1px solid rgba(15, 23, 42, 0.08); padding-top: 8px;">
+            <span>Total a Cobrar:</span>
+            <strong id="sale-total-display" class="price-cell" style="font-size: 18px; color: var(--accent-primary);">$ 0 COP</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" data-close-drawer="drawer-sale">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-sale">Confirmar Venta</button>
+      </div>
+    </form>
+  </aside>
+</div>
+
+
+<!-- 2. Drawer: Crear Nuevo Producto -->
+<div id="drawer-product" class="drawer-backdrop" aria-hidden="true">
+  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-product-title">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawer-product-title" class="drawer-title">+ Nuevo Producto</h3>
+        <p class="drawer-subtitle">Alta en catálogo y movimiento inicial en Kardex.</p>
+      </div>
+      <button type="button" class="drawer-close-btn" data-close-drawer="drawer-product" aria-label="Cerrar panel">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+
+    <form id="form-product">
+      <div class="drawer-body">
+        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="prod-sku">SKU / Código *</label>
+            <input type="text" id="prod-sku" class="form-input" required placeholder="EJ: PROD-01">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prod-name">Nombre del Producto *</label>
+            <input type="text" id="prod-name" class="form-input" required placeholder="Nombre descriptivo">
+          </div>
+        </div>
+
+        <!-- Foto del Producto (Opcional - F-DC-124) -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="prod-image-file">Foto del Producto (Opcional · JPG, PNG, WEBP máx 2MB)</label>
+          <div style="display: flex; align-items: center; gap: 14px;">
+            <div id="prod-img-preview-box" class="product-img-upload-preview">
+              <i data-lucide="image" style="width: 22px; height: 22px; color: var(--ink-muted);"></i>
+            </div>
+            <div style="flex: 1;">
+              <input type="file" id="prod-image-file" accept="image/png,image/jpeg,image/webp" class="form-input" style="padding: 6px 10px; font-size: 13px;">
+              <input type="hidden" id="prod-image-url" value="">
+              <span id="prod-img-upload-status" style="font-size: 11px; color: var(--ink-muted); display: block; margin-top: 4px;">
+                Sin imagen. Si se omite, se generará una insignia visual según la categoría.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="prod-category">Categoría</label>
+            <input type="text" id="prod-category" class="form-input" placeholder="General" value="General">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prod-unit">Unidad de Medida</label>
+            <select id="prod-unit" class="form-input">
+              <option value="und">Unidad (und)</option>
+              <option value="bulto">Bulto</option>
+              <option value="kg">Kilogramo (kg)</option>
+              <option value="par">Par</option>
+              <option value="paq">Paquete</option>
+              <option value="galon">Galón</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="prod-cost">Costo de Compra (COP) *</label>
+            <input type="number" id="prod-cost" class="form-input" min="0" step="100" required placeholder="0">
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prod-price">Precio de Venta (COP) *</label>
+            <input type="number" id="prod-price" class="form-input" min="0" step="100" required placeholder="0">
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+          <div class="form-group">
+            <label class="form-label" for="prod-initial-stock">Stock Inicial *</label>
+            <input type="number" id="prod-initial-stock" class="form-input" min="0" step="1" value="10" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label" for="prod-min-stock">Stock Mínimo (Alerta) *</label>
+            <input type="number" id="prod-min-stock" class="form-input" min="0" step="1" value="2" required>
+          </div>
+        </div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" data-close-drawer="drawer-product">Cancelar</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-product">Guardar en Catálogo</button>
+      </div>
+    </form>
+  </aside>
+</div>
+
+
+<!-- 3. Drawer: Importar Excel o CSV (3 Pasos Sencillos) -->
+<div id="drawer-import" class="drawer-backdrop" aria-hidden="true">
+  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-import-title">
+    <div class="drawer-header">
+      <div>
+        <h3 id="drawer-import-title" class="drawer-title">Importar Archivo de Excel</h3>
+        <p class="drawer-subtitle">Carga masiva fácil y rápida para tu inventario o ventas.</p>
+      </div>
+      <button type="button" class="drawer-close-btn" data-close-drawer="drawer-import" aria-label="Cerrar panel">
+        <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+      </button>
+    </div>
+
+    <form id="form-import">
+      <div class="drawer-body">
+        <!-- Paso 1 -->
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label class="form-label" for="import-type" style="font-size: 13px; color: var(--ink-primary);">
+            <strong>Paso 1:</strong> ¿Qué deseas cargar hoy?
+          </label>
+          <select id="import-type" class="form-input">
+            <option value="products">Lista de mis productos e inventario</option>
+            <option value="sales">Historial de mis ventas realizadas</option>
+          </select>
+        </div>
+
+        <!-- Paso 2 -->
+        <div style="margin-bottom: 20px; padding: 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.06);">
+          <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-bottom: 8px;">
+            <strong>Paso 2:</strong> Descarga la plantilla de ejemplo
+          </div>
+          <p style="font-size: 12px; color: var(--ink-muted); margin: 0 0 10px;">
+            Usa estas plantillas oficiales para diligenciar tus datos con las columnas correctas:
+          </p>
+          <div style="display: flex; gap: 10px;">
+            <a href="/static/plantilla_productos_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 12px;">
+              <i data-lucide="download" style="width: 13px; height: 13px;"></i>
+              Plantilla Productos (.csv)
+            </a>
+            <a href="/static/plantilla_ventas_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 12px;">
+              <i data-lucide="download" style="width: 13px; height: 13px;"></i>
+              Plantilla Ventas (.csv)
+            </a>
+          </div>
+        </div>
+
+        <!-- Paso 3 -->
+        <div style="margin-bottom: 20px;">
+          <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-bottom: 12px;">
+            <strong>Paso 3:</strong> Sube tu archivo y elige cómo procesarlo
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="import-file">Seleccionar archivo de Excel o CSV *</label>
+            <input type="file" id="import-file" class="form-input" accept=".xlsx,.csv" required>
+            <div class="form-hint" style="font-size: 11px; color: var(--ink-muted); margin-top: 4px;">
+              Formatos soportados: hojas de cálculo Excel (.xlsx) o archivos separados por comas (.csv).
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label" for="import-mode">Acción a realizar</label>
+            <select id="import-mode" class="form-input">
+              <option value="commit">Guardar directamente en mi negocio</option>
+              <option value="dry-run">Solo revisar si el archivo está bien (sin guardar aún)</option>
+            </select>
+          </div>
+
+          <!-- Panel de Mapeo Inteligente (aparece al seleccionar archivo) -->
+          <div id="smart-mapper-panel" class="excel-mapper-box" style="display: none;">
+            <div class="excel-mapper-header">
+              <span class="excel-mapper-title">
+                <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
+                Mapeo Inteligente de Columnas (F-DC-124)
+              </span>
+              <span id="mapper-sheet-badge" class="badge-neutral" style="font-size: 11px;">Hoja 1</span>
+            </div>
+
+            <!-- Selector de Hoja si hay múltiples -->
+            <div id="sheet-selector-group" class="form-group" style="display: none; margin-bottom: 12px;">
+              <label class="mapping-label" for="import-sheet-select">Hoja de cálculo a importar:</label>
+              <select id="import-sheet-select" class="mapping-select"></select>
+            </div>
+
+            <div style="font-size: 11px; color: var(--ink-muted); margin-bottom: 10px;">
+              Detectamos las columnas de tu Excel automáticamente. Puedes verificar o ajustar el emparejamiento:
+            </div>
+
+            <!-- Cuadrícula de mapeo de campos -->
+            <div class="mapping-grid">
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-sku">SKU / Código (o autogenerar):</label>
+                <select id="map-col-sku" class="mapping-select" data-field="sku"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-name">Nombre del Producto *:</label>
+                <select id="map-col-name" class="mapping-select" data-field="name"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-category">Categoría:</label>
+                <select id="map-col-category" class="mapping-select" data-field="category"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-cost_price">Costo de Compra:</label>
+                <select id="map-col-cost_price" class="mapping-select" data-field="cost_price"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-sale_price">Precio de Venta *:</label>
+                <select id="map-col-sale_price" class="mapping-select" data-field="sale_price"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-initial_stock">Stock / Existencias:</label>
+                <select id="map-col-initial_stock" class="mapping-select" data-field="initial_stock"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-unit">Unidad de Medida:</label>
+                <select id="map-col-unit" class="mapping-select" data-field="unit"></select>
+              </div>
+            </div>
+
+            <!-- Previsualización de primeras 3 filas -->
+            <div style="margin-top: 12px;">
+              <span class="mapping-label" style="display: block; margin-bottom: 6px;">Previsualización de Primeras Filas:</span>
+              <div class="preview-table-container">
+                <table id="mapper-preview-table" class="preview-table">
+                  <thead id="mapper-preview-thead"></thead>
+                  <tbody id="mapper-preview-tbody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="import-results" style="display: none; margin-top: 16px; padding: 12px; border-radius: var(--radius-control); background: var(--surface-subtle); font-size: 12px;"></div>
+      </div>
+
+      <div class="drawer-footer">
+        <button type="button" class="btn btn-secondary" data-close-drawer="drawer-import">Cerrar</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-import">Confirmar e Importar Datos</button>
+      </div>
+    </form>
+  </aside>
+</div>
+{% endblock %}

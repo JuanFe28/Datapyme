@@ -1,0 +1,62 @@
+name: datapyme_empresarial
+
+# Stack aislado para Oracle Cloud (convive con Research Studio, Transporte y Documind):
+# - Red propia (empresarial_net); NO se une a ninguna red de otros proyectos.
+# - Sin puertos publicos: la app escucha solo en 127.0.0.1:8210 y se expone por tunel HTTPS.
+# - Sin tocar los puertos 80/443 (ocupados por otro proxy).
+services:
+  empresarial_db:
+    image: postgres:16-alpine
+    container_name: datapyme_empresarial_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: datapyme_empresarial
+      POSTGRES_USER: datapyme_emp
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Defina POSTGRES_PASSWORD en .env}
+    volumes:
+      - empresarial_pgdata:/var/lib/postgresql/data
+    networks:
+      - empresarial_net
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U datapyme_emp -d datapyme_empresarial"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+
+  empresarial_app:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: datapyme_empresarial_app
+    restart: unless-stopped
+    depends_on:
+      empresarial_db:
+        condition: service_healthy
+    environment:
+      APP_ENV: production
+      DATABASE_URL: postgresql+psycopg://datapyme_emp:${POSTGRES_PASSWORD}@empresarial_db:5432/datapyme_empresarial
+      SESSION_SECRET: ${SESSION_SECRET:?Defina SESSION_SECRET en .env}
+    ports:
+      - "127.0.0.1:8210:8010"
+    networks:
+      - empresarial_net
+    mem_limit: 768m
+
+  empresarial_tunnel:
+    image: cloudflare/cloudflared:latest
+    container_name: datapyme_empresarial_tunnel
+    restart: unless-stopped
+    command: tunnel --no-autoupdate --url http://empresarial_app:8010
+    depends_on:
+      - empresarial_app
+    networks:
+      - empresarial_net
+    mem_limit: 128m
+
+volumes:
+  empresarial_pgdata:
+
+networks:
+  empresarial_net:
+    driver: bridge

@@ -14,3 +14,8 @@ dist/
 htmlcov/
 USO_PRIVADO_EQUIPO.txt
 .github/
+*.png
+*.log
+.ruff_cache/
+empresarial/static/uploads/tenants/
+

@@ -1,0 +1,10 @@
+[project]
+name = "datapyme-empresarial"
+version = "0.1.0"
+requires-python = ">=3.12"
+
+[tool.ruff]
+line-length = 105
+
+[tool.ruff.lint]
+ignore = ["B008"]

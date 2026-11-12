@@ -71,6 +71,12 @@ def create_app(database_url=None,testing=False):
         response=render(request,'error.html',status_code=error.status_code,title='Revisar solicitud',message=error.detail,code=error.status_code)
         if error.headers: response.headers.update(error.headers)
         return response
+    @application.exception_handler(Exception)
+    async def unhandled_error(request,error):
+        logging.getLogger('uvicorn.error').exception(f'Error no controlado en {request.url.path}: {error}')
+        if request.url.path.startswith('/api/'):
+            return JSONResponse({'detail':'Ocurrió un error inesperado al procesar la solicitud.'},500)
+        return render(request,'error.html',status_code=500,title='Error del servidor',message='El servidor encontró un inconveniente temporal.',code=500)
     @application.get('/health')
     def health(): return {'status':'ok'}
     @application.get('/ready')
@@ -90,6 +96,22 @@ def create_app(database_url=None,testing=False):
     from research.public_routes import router as public_router
     for router in (auth_router,research_router,project_router,export_router,public_router): application.include_router(router)
     application.mount('/static',StaticFiles(directory=str(ROOT/'static')),name='static')
+    try:
+        import sys
+        empresarial_dir = ROOT / 'empresarial'
+        if empresarial_dir.exists():
+            root_app_mod = sys.modules.get('app')
+            sys.modules.pop('app', None)
+            emp_path_str = str(empresarial_dir.resolve())
+            if emp_path_str not in sys.path:
+                sys.path.insert(0, emp_path_str)
+            from app.main import create_app as create_empresarial_app
+            empresarial_app = create_empresarial_app()
+            if root_app_mod is not None:
+                sys.modules['app'] = root_app_mod
+            application.mount('/empresarial', empresarial_app)
+    except Exception as exc:
+        logging.getLogger('uvicorn.error').warning(f'No fue posible montar Datapyme Empresarial: {exc}')
     return application
 
 app=create_app()

@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Datapyme Empresarial | Ferretería Cabecera S.A.S.</title>
+<!-- Google Fonts & Material Symbols -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&amp;family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "primary-fixed": "#a9f0e4",
+            "on-background": "#2a3432",
+            "surface-container-highest": "#dae5e2",
+            "primary-fixed-dim": "#9be2d6",
+            "on-surface": "#2a3432",
+            "on-secondary-fixed": "#2b4440",
+            "on-secondary": "#e3fff9",
+            "tertiary-fixed-dim": "#9dcee3",
+            "on-error-container": "#6e0a12",
+            "tertiary-dim": "#26596c",
+            "surface-container-lowest": "#ffffff",
+            "on-surface-variant": "#56615f",
+            "surface-bright": "#f6faf8",
+            "primary": "#1f6a61",
+            "on-tertiary-fixed": "#003b4c",
+            "secondary-fixed-dim": "#bedad4",
+            "on-tertiary": "#f2faff",
+            "outline-variant": "#a9b4b1",
+            "error-container": "#fa746f",
+            "error": "#a83836",
+            "error-dim": "#67040d",
+            "inverse-primary": "#b1f9ed",
+            "secondary-dim": "#3f5854",
+            "surface": "#f6faf8",
+            "on-primary-container": "#075c54",
+            "inverse-on-surface": "#999e9c",
+            "surface-container-high": "#e1eae7",
+            "outline": "#727d7a",
+            "surface-dim": "#d1dcd9",
+            "on-tertiary-fixed-variant": "#25586b",
+            "secondary-fixed": "#cce8e2",
+            "on-primary": "#e2fff9",
+            "background": "#f6faf8",
+            "secondary-container": "#cce8e2",
+            "on-secondary-container": "#3d5652",
+            "primary-dim": "#0a5e55",
+            "on-secondary-fixed-variant": "#47605c",
+            "inverse-surface": "#0a0f0e",
+            "surface-container-low": "#eef5f2",
+            "surface-variant": "#dae5e2",
+            "on-error": "#fff7f6",
+            "tertiary-fixed": "#aadcf2",
+            "surface-tint": "#1f6a61",
+            "secondary": "#4b645f",
+            "primary-container": "#a9f0e4",
+            "on-primary-fixed-variant": "#19665d",
+            "on-primary-fixed": "#004841",
+            "tertiary-container": "#aadcf2",
+            "surface-container": "#e7f0ed",
+            "tertiary": "#346578",
+            "on-tertiary-container": "#1a4f61"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          "fontFamily": {
+            "headline": ["Inter", "sans-serif"],
+            "display": ["Inter", "sans-serif"],
+            "body": ["Inter", "sans-serif"],
+            "label": ["Inter", "sans-serif"]
+          }
+        },
+      },
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 18px;
+      line-height: 1;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-full bg-surface text-on-surface font-body antialiased selection:bg-primary selection:text-on-primary">
+<!-- Side Navigation Bar (Anchored Component) -->
+<aside class="h-screen w-64 flex flex-col fixed left-0 top-0 z-40 bg-surface-container-lowest border-r border-outline-variant/20">
+<div class="w-64 h-full flex flex-col justify-between p-4">
+<!-- Top Section -->
+<div class="space-y-6">
+<!-- Brand & Company Header -->
+<div class="px-2 pt-2">
+<div class="flex items-center gap-2 mb-2">
+<span class="inline-flex items-center justify-center px-2 py-0.5 rounded text-[11px] font-semibold bg-primary-container text-on-primary-container tracking-wide">
+              Datapyme Empresarial
+            </span>
+</div>
+<h1 class="text-base font-bold text-on-surface tracking-tight">
+            Ferretería Cabecera
+          </h1>
+<p class="text-xs text-on-surface-variant font-medium">
+            NIT 900.842.119-4 · Bucaramanga
+          </p>
+</div>
+<!-- Action Button -->
+<button class="w-full flex items-center justify-center gap-2 px-3 py-2.5 rounded-lg bg-primary hover:bg-primary-dim text-on-primary font-medium text-xs shadow-sm transition-colors active:scale-[0.99]" type="button">
+<span class="material-symbols-outlined text-[16px]">add_circle</span>
+<span>Nuevo Movimiento</span>
+</button>
+<!-- Navigation Tabs -->
+<nav class="space-y-1">
+<!-- Active: Resumen General -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-container-high text-primary font-semibold text-xs transition-colors" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span>Resumen General</span>
+</a>
+<!-- Inactive: Inventario & Stock -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium text-xs hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">inventory_2</span>
+<span>Inventario &amp; Stock</span>
+</a>
+<!-- Inactive: Pronóstico OLS -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium text-xs hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">trending_up</span>
+<span>Pronóstico OLS</span>
+</a>
+<!-- Inactive: Alertas de Reorden -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium text-xs hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">notification_important</span>
+<span class="flex-1">Alertas de Reorden</span>
+<span class="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-error-container text-on-error-container tabular-nums">4</span>
+</a>
+<!-- Inactive: Reportes Financieros -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium text-xs hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">account_balance</span>
+<span>Reportes Financieros</span>
+</a>
+<!-- Inactive: Configuración -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium text-xs hover:bg-surface-container transition-colors" href="#">
+<span class="material-symbols-outlined">settings</span>
+<span>Configuración</span>
+</a>
+</nav>
+</div>
+<!-- Bottom Profile & Support -->
+<div class="pt-4 border-t border-outline-variant/20 space-y-3">
+<nav class="space-y-1">
+<a class="flex items-center gap-3 px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs font-medium transition-colors" href="#">
+<span class="material-symbols-outlined">help</span>
+<span>Centro de Soporte</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container text-xs font-medium transition-colors" href="#">
+<span class="material-symbols-outlined">logout</span>
+<span>Salir</span>
+</a>
+</nav>
+<!-- Sede & Operator Info Card -->
+<div class="p-2.5 rounded-lg bg-surface-container-low flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed text-on-secondary-fixed flex items-center justify-center font-bold text-xs tabular-nums">
+            CM
+          </div>
+<div class="flex-1 min-w-0">
+<p class="text-xs font-semibold text-on-surface truncate">Carlos Mendoza</p>
+<p class="text-[11px] text-on-surface-variant truncate">Sede Cabecera Cra 33</p>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- Top Sticky Navigation Bar -->
+<header class="docked full-width top-0 sticky z-30 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20">
+<div class="flex items-center justify-between h-16 px-8 ml-64">
+<!-- Left: Apple-style Diagnostic View Switcher Pill -->
+<div class="flex items-center gap-3">
+<div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/30 text-xs">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-on-surface-variant font-normal">Vista personalizada:</span>
+<span class="font-semibold text-primary">Prioridad Inventarios</span>
+<span class="text-outline-variant">·</span>
+<button class="text-primary hover:underline font-medium focus:outline-none" type="button">
+            [Cambiar vista]
+          </button>
+</div>
+</div>
+<!-- Center / Search Input -->
+<div class="w-72 relative">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-on-surface-variant pointer-events-none">search</span>
+<input class="w-full pl-9 pr-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-lg text-xs text-on-surface placeholder:text-outline focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="Buscar SKU, referencia o proveedor..." type="text"/>
+</div>
+<!-- Right Trailing Controls -->
+<div class="flex items-center gap-3">
+<!-- Date Selector Pill -->
+<div class="flex items-center gap-2 px-3 py-1.5 bg-surface-container-lowest border border-outline-variant/30 rounded-lg text-xs text-on-surface-variant font-medium">
+<span class="material-symbols-outlined text-[16px]">calendar_today</span>
+<span>Últimos 30 días · Mayo 2024</span>
+</div>
+<!-- Health Metric Badge -->
+<div class="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 text-xs">
+<span class="text-on-surface-variant">Diagnóstico Salud:</span>
+<span class="font-bold tabular-nums text-primary">94.2%</span>
+</div>
+<!-- Trailing Action Icons -->
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors" title="Ajustes" type="button">
+<span class="material-symbols-outlined">tune</span>
+</button>
+<button class="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors relative" title="Notificaciones" type="button">
+<span class="material-symbols-outlined">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-error"></span>
+</button>
+<!-- Primary Export Action -->
+<button class="flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30 hover:bg-surface-container text-primary font-medium text-xs shadow-xs transition-colors" type="button">
+<span class="material-symbols-outlined text-[16px]">download</span>
+<span>Descargar Reporte COP</span>
+</button>
+</div>
+</div>
+</header>
+<!-- Main Content Canvas (12-column Bento Grid) -->
+<main class="ml-64 p-8 max-w-7xl mx-auto space-y-6">
+<!-- Row 1: Hero Bento Row (8 cols + 4 cols) -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- Left 8-col Bento Card: Alertas Críticas de Stock -->
+<article class="lg:col-span-8 bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs">
+<div class="flex items-start justify-between pb-4 border-b border-outline-variant/10">
+<div>
+<div class="flex items-center gap-2">
+<span class="p-1 rounded bg-error/10 text-error flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">warning</span>
+</span>
+<h2 class="text-sm font-bold text-on-surface tracking-tight">Alertas Críticas de Stock y Reorden</h2>
+</div>
+<p class="text-xs text-on-surface-variant mt-1">
+              4 ítems requieren acción inmediata para evitar quiebre de stock en mostrador
+            </p>
+</div>
+<a class="text-xs font-semibold text-primary hover:underline flex items-center gap-1" href="#">
+            Ver todos los 23 SKU
+            <span class="material-symbols-outlined text-[14px]">arrow_forward</span>
+</a>
+</div>
+<!-- High-density Data Table -->
+<div class="overflow-x-auto mt-3">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="text-[11px] font-semibold text-outline uppercase tracking-wider border-b border-outline-variant/10">
+<th class="py-2.5 px-3">Producto &amp; Referencia</th>
+<th class="py-2.5 px-3 text-right">Stock Actual</th>
+<th class="py-2.5 px-3 text-right">Mínimo</th>
+<th class="py-2.5 px-3 text-right">Cobertura</th>
+<th class="py-2.5 px-3 text-center">Estado</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 text-xs">
+<!-- Item 1 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="py-3 px-3">
+<div class="font-medium text-on-surface">Cemento Gris Argos 50kg</div>
+<div class="text-[11px] text-outline tabular-nums">SKU: ARG-50KG</div>
+</td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-error">
+                  18 bultos
+                </td>
+<td class="py-3 px-3 text-right tabular-nums text-on-surface-variant">
+                  60 bultos
+                </td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-on-surface">
+                  3.2 días
+                </td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-error/10 text-error">
+<span class="material-symbols-outlined text-[13px]">emergency</span>
+                    Riesgo de quiebre
+                  </span>
+</td>
+</tr>
+<!-- Item 2 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="py-3 px-3">
+<div class="font-medium text-on-surface">Varilla Corrugada 1/2 pulgada 6m Diaco</div>
+<div class="text-[11px] text-outline tabular-nums">SKU: DIA-12-6M</div>
+</td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-error">
+                  42 und
+                </td>
+<td class="py-3 px-3 text-right tabular-nums text-on-surface-variant">
+                  120 und
+                </td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-on-surface">
+                  4.1 días
+                </td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-error/10 text-error">
+<span class="material-symbols-outlined text-[13px]">emergency</span>
+                    Riesgo de quiebre
+                  </span>
+</td>
+</tr>
+<!-- Item 3 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="py-3 px-3">
+<div class="font-medium text-on-surface">Pintura Viniltex Blanco Caneca Corbeta</div>
+<div class="text-[11px] text-outline tabular-nums">SKU: VIN-CAN-BL</div>
+</td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-tertiary">
+                  94 canecas
+                </td>
+<td class="py-3 px-3 text-right tabular-nums text-on-surface-variant">
+                  25 canecas
+                </td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-on-surface">
+                  64 días
+                </td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-tertiary-container/50 text-on-tertiary-container">
+<span class="material-symbols-outlined text-[13px]">trending_up</span>
+                    Sobreinventario
+                  </span>
+</td>
+</tr>
+<!-- Item 4 -->
+<tr class="hover:bg-surface-bright transition-colors">
+<td class="py-3 px-3">
+<div class="font-medium text-on-surface">Tubo PVC Sanitario 3 pulgada Pavco</div>
+<div class="text-[11px] text-outline tabular-nums">SKU: PAV-PVC-3IN</div>
+</td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-error">
+                  12 tubos
+                </td>
+<td class="py-3 px-3 text-right tabular-nums text-on-surface-variant">
+                  45 tubos
+                </td>
+<td class="py-3 px-3 text-right tabular-nums font-semibold text-on-surface">
+                  2.8 días
+                </td>
+<td class="py-3 px-3 text-center">
+<span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-error/10 text-error">
+<span class="material-symbols-outlined text-[13px]">emergency</span>
+                    Riesgo de quiebre
+                  </span>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+</article>
+<!-- Right 4-col Bento Card: Rotación y Cobertura -->
+<article class="lg:col-span-4 bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between h-full">
+<div>
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant/10">
+<h2 class="text-sm font-bold text-on-surface tracking-tight">Rotación y Cobertura</h2>
+<span class="material-symbols-outlined text-outline">tune</span>
+</div>
+<!-- Top Aggregates -->
+<div class="grid grid-cols-2 gap-4 mt-4 pb-4 border-b border-outline-variant/10">
+<div>
+<p class="text-[11px] text-on-surface-variant font-medium">Rotación Anualizada</p>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-2xl font-bold text-on-surface tabular-nums">4.2x</span>
+<span class="text-[11px] font-semibold text-primary tabular-nums">+0.4x</span>
+</div>
+<p class="text-[10px] text-outline mt-0.5">vs trimestre ant.</p>
+</div>
+<div>
+<p class="text-[11px] text-on-surface-variant font-medium">Cobertura General</p>
+<div class="flex items-baseline gap-1 mt-1">
+<span class="text-2xl font-bold text-on-surface tabular-nums">28</span>
+<span class="text-xs text-on-surface-variant">días</span>
+</div>
+<p class="text-[10px] text-outline mt-0.5">promedio global</p>
+</div>
+</div>
+<!-- Category Breakdown Progress Bars -->
+<div class="mt-4 space-y-3.5">
+<p class="text-xs font-semibold text-on-surface">Desglose por Categoría Clave</p>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="text-on-surface-variant">Obra Gris</span>
+<span class="font-semibold text-on-surface tabular-nums">68% rotación óptima</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-primary rounded-full" style="width: 68%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="text-on-surface-variant">Tubería &amp; PVC</span>
+<span class="font-semibold text-error tabular-nums">44% en reposición</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-error-container rounded-full" style="width: 44%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="text-on-surface-variant">Pinturas</span>
+<span class="font-semibold text-tertiary tabular-nums">89% sobrestockeado</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-tertiary rounded-full" style="width: 89%;"></div>
+</div>
+</div>
+<div>
+<div class="flex justify-between text-xs mb-1">
+<span class="text-on-surface-variant">Herramientas Manuales</span>
+<span class="font-semibold text-secondary tabular-nums">52% balanceado</span>
+</div>
+<div class="w-full h-2 rounded-full bg-surface-container overflow-hidden">
+<div class="h-full bg-secondary rounded-full" style="width: 52%;"></div>
+</div>
+</div>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant/10 text-right">
+<span class="text-[11px] text-outline">Actualizado hoy 08:30 AM</span>
+</div>
+</article>
+</section>
+<!-- Row 2: Expanded Priority KPIs Row (Apple Card Aesthetics) -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Priority Card 1 -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+            Productos en Riesgo de Quiebre
+          </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-primary-container text-on-primary-container tabular-nums">
+            -2 vs mes anterior
+          </span>
+</div>
+<div class="mt-3">
+<div class="text-3xl font-extrabold text-on-surface tabular-nums tracking-tight">
+            7 SKU
+          </div>
+<div class="mt-2 flex items-center gap-1.5 text-xs text-error font-medium">
+<span class="material-symbols-outlined text-[15px]">report_problem</span>
+<span>Impacto potencial: <strong class="tabular-nums font-semibold">$ 8.400.000 COP</strong></span>
+</div>
+</div>
+</article>
+<!-- Priority Card 2 -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+            Rotación de Inventario
+          </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-secondary-container text-on-secondary-container">
+            Eficiencia alta
+          </span>
+</div>
+<div class="mt-3">
+<div class="text-3xl font-extrabold text-on-surface tabular-nums tracking-tight">
+            4.2x
+          </div>
+<div class="mt-2 flex items-center gap-1 text-xs text-on-surface-variant">
+<span>Promedio sector ferretero: <span class="font-semibold text-on-surface tabular-nums">3.5x</span></span>
+<span class="text-outline">·</span>
+<span class="text-primary font-medium">Eficiencia alta en bodega</span>
+</div>
+</div>
+</article>
+<!-- Priority Card 3 -->
+<article class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs relative overflow-hidden">
+<div class="flex items-center justify-between">
+<span class="text-xs font-semibold text-on-surface-variant uppercase tracking-wide">
+            Capital en Sobreinventario
+          </span>
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold bg-error/10 text-error tabular-nums">
+            +5.2% vs mes anterior
+          </span>
+</div>
+<div class="mt-3">
+<div class="text-3xl font-extrabold text-on-surface tabular-nums tracking-tight">
+            $ 14.850.000 <span class="text-sm font-semibold text-on-surface-variant">COP</span>
+</div>
+<div class="mt-2 flex items-center gap-1.5 text-xs text-tertiary font-medium">
+<span class="material-symbols-outlined text-[15px]">campaign</span>
+<span>3 promociones de liquidación sugeridas</span>
+</div>
+</div>
+</article>
+</section>
+<!-- Row 3: Secondary Compact KPIs & Linear Regression OLS Teaser -->
+<section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- Left 5-col: 3 Compact Financial KPI cards -->
+<div class="lg:col-span-5 flex flex-col justify-between gap-4">
+<!-- Compact KPI 1 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-4 shadow-xs flex items-center justify-between">
+<div>
+<span class="text-xs text-on-surface-variant font-medium">Ingresos del Mes</span>
+<div class="text-xl font-bold text-on-surface tabular-nums tracking-tight mt-0.5">
+              $ 68.420.000 <span class="text-xs font-normal text-outline">COP</span>
+</div>
+</div>
+<div class="text-right">
+<span class="inline-flex items-center text-xs font-semibold text-primary tabular-nums">
+              +8.3% vs meta
+            </span>
+<p class="text-[11px] text-outline mt-0.5">Cumplimiento 108%</p>
+</div>
+</div>
+<!-- Compact KPI 2 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-4 shadow-xs flex items-center justify-between">
+<div>
+<span class="text-xs text-on-surface-variant font-medium">Margen Bruto</span>
+<div class="text-xl font-bold text-on-surface tabular-nums tracking-tight mt-0.5">
+              31,4 %
+            </div>
+</div>
+<div class="text-right">
+<span class="inline-flex items-center text-xs font-semibold text-primary tabular-nums">
+              +1.2 pp
+            </span>
+<p class="text-[11px] text-outline mt-0.5">vs mes anterior</p>
+</div>
+</div>
+<!-- Compact KPI 3 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-4 shadow-xs flex items-center justify-between">
+<div>
+<span class="text-xs text-on-surface-variant font-medium">Ticket Promedio</span>
+<div class="text-xl font-bold text-on-surface tabular-nums tracking-tight mt-0.5">
+              $ 142.500 <span class="text-xs font-normal text-outline">COP</span>
+</div>
+</div>
+<div class="text-right">
+<span class="text-xs font-semibold text-on-surface tabular-nums">
+              280 transacciones
+            </span>
+<p class="text-[11px] text-outline mt-0.5">registradas en POS</p>
+</div>
+</div>
+</div>
+<!-- Right 7-col: Linear Regression OLS Forecast Teaser Card -->
+<article class="lg:col-span-7 bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between">
+<div>
+<!-- Header -->
+<div class="flex items-start justify-between pb-3 border-b border-outline-variant/10">
+<div>
+<div class="flex items-center gap-2">
+<span class="p-1 rounded bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-[18px]">query_stats</span>
+</span>
+<h3 class="text-sm font-bold text-on-surface tracking-tight">Proyección de Ventas Próximo Mes (Modelo OLS)</h3>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">Regresión MCO calibrada con factores de estacionalidad comercial regional</p>
+</div>
+<span class="text-xs font-medium px-2 py-0.5 rounded bg-surface-container text-on-surface">Junio 2024</span>
+</div>
+<!-- Main Metric & Model Stats -->
+<div class="mt-4 flex flex-wrap items-baseline justify-between gap-4">
+<div>
+<div class="text-2xl font-extrabold text-primary tabular-nums tracking-tight">
+                $ 71.900.000 <span class="text-sm font-medium text-on-surface">COP</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">
+                Estimación esperada <span class="text-outline">·</span> Rango: $ 69.2M – $ 74.6M
+              </p>
+</div>
+<div class="flex items-center gap-3">
+<div class="px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 text-right">
+<div class="text-xs font-bold text-on-surface tabular-nums">R² = 0,89</div>
+<div class="text-[10px] text-on-surface-variant">Confianza 95%</div>
+</div>
+<div class="px-3 py-1.5 rounded-lg bg-surface-container-low border border-outline-variant/20 text-right">
+<div class="text-xs font-bold text-on-surface tabular-nums">p &lt; 0.001</div>
+<div class="text-[10px] text-on-surface-variant">Significancia F</div>
+</div>
+</div>
+</div>
+<!-- Sparkline / Mini Trend Visualization -->
+<div class="mt-4 pt-3 pb-1">
+<div class="flex items-center justify-between text-[11px] text-outline mb-1 tabular-nums">
+<span>Ene (Real)</span>
+<span>Mar</span>
+<span>May</span>
+<span class="text-primary font-semibold">Jun (Pronóstico OLS)</span>
+</div>
+<!-- Simplified Crisp Linear Sparkline with CSS -->
+<div class="relative h-12 w-full flex items-end">
+<div class="absolute inset-0 flex items-center">
+<div class="w-full border-b border-dashed border-outline-variant/30"></div>
+</div>
+<!-- Simulated bars/trend points for visual clean SaaS fidelity -->
+<div class="w-full flex items-end justify-between z-10 px-2 h-full">
+<div class="flex flex-col items-center gap-1">
+<div class="w-2 rounded-t bg-secondary-fixed-dim" style="height: 24px;"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-2 rounded-t bg-secondary-fixed-dim" style="height: 28px;"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-2 rounded-t bg-secondary-fixed-dim" style="height: 26px;"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-2 rounded-t bg-secondary-fixed-dim" style="height: 34px;"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-2 rounded-t bg-primary-fixed-dim" style="height: 38px;"></div>
+</div>
+<div class="flex flex-col items-center gap-1">
+<div class="w-2.5 rounded-t bg-primary border-t-2 border-primary" style="height: 44px;"></div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Methodological Disclaimer Banner -->
+<div class="mt-4 p-3 rounded-lg bg-surface-container border border-outline-variant/20 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-on-surface-variant shrink-0 mt-0.5">info</span>
+<p class="text-[11px] leading-relaxed text-on-surface-variant">
+            Estimación calculada mediante regresión lineal multivariada por Mínimos Cuadrados Ordinarios (OLS) basada en el histórico de 18 meses de facturación electrónica DIAN de Ferretería Cabecera S.A.S.
+          </p>
+</div>
+</article>
+</section>
+</main>
+</body></html>

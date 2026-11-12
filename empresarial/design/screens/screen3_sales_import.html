@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-slate-50" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Datapyme Empresarial - Gestión Operativa de Ventas y Carga Histórica</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "secondary-fixed": "#cce8e2",
+            "inverse-on-surface": "#999e9c",
+            "on-primary-fixed-variant": "#19665d",
+            "surface-container-lowest": "#ffffff",
+            "on-primary-container": "#075c54",
+            "on-tertiary": "#f2faff",
+            "surface-container-low": "#eef5f2",
+            "on-error": "#fff7f6",
+            "tertiary": "#346578",
+            "on-primary-fixed": "#004841",
+            "tertiary-fixed-dim": "#9dcee3",
+            "primary-container": "#a9f0e4",
+            "on-tertiary-fixed": "#003b4c",
+            "surface": "#f6faf8",
+            "on-tertiary-container": "#1a4f61",
+            "error-container": "#fa746f",
+            "surface-tint": "#1f6a61",
+            "on-primary": "#e2fff9",
+            "secondary": "#4b645f",
+            "primary": "#1f6a61",
+            "on-secondary": "#e3fff9",
+            "on-background": "#2a3432",
+            "surface-bright": "#f6faf8",
+            "tertiary-fixed": "#aadcf2",
+            "secondary-dim": "#3f5854",
+            "on-secondary-fixed-variant": "#47605c",
+            "tertiary-dim": "#26596c",
+            "surface-dim": "#d1dcd9",
+            "surface-container-highest": "#dae5e2",
+            "on-surface-variant": "#56615f",
+            "on-secondary-container": "#3d5652",
+            "error": "#a83836",
+            "surface-container-high": "#e1eae7",
+            "on-tertiary-fixed-variant": "#25586b",
+            "background": "#f6faf8",
+            "tertiary-container": "#aadcf2",
+            "primary-fixed": "#a9f0e4",
+            "outline": "#727d7a",
+            "outline-variant": "#a9b4b1",
+            "on-error-container": "#6e0a12",
+            "error-dim": "#67040d",
+            "primary-dim": "#0a5e55",
+            "on-surface": "#2a3432",
+            "surface-container": "#e7f0ed",
+            "inverse-surface": "#0a0f0e",
+            "surface-variant": "#dae5e2",
+            "inverse-primary": "#b1f9ed",
+            "secondary-container": "#cce8e2",
+            "secondary-fixed-dim": "#bedad4",
+            "primary-fixed-dim": "#9be2d6",
+            "on-secondary-fixed": "#2b4440"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Inter", "sans-serif"],
+            display: ["Inter", "sans-serif"],
+            body: ["Inter", "sans-serif"],
+            label: ["Inter", "sans-serif"]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .font-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="bg-background text-on-surface font-body antialiased min-h-screen flex selection:bg-primary-container selection:text-on-primary-container">
+<!-- Side Navigation Bar (Shared Component Anchor) -->
+<aside class="h-screen w-64 flex flex-col fixed left-0 top-0 z-40 bg-surface-container-lowest border-r border-outline-variant/20">
+<div class="w-64 h-full flex flex-col justify-between p-4">
+<!-- Header Brand -->
+<div>
+<div class="flex items-center gap-3 px-2 py-3 mb-4">
+<div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-on-primary shadow-sm">
+<span class="material-symbols-outlined text-2xl" data-icon="storefront">storefront</span>
+</div>
+<div class="flex flex-col overflow-hidden">
+<span class="text-base font-bold text-on-surface tracking-tight truncate">Ferretería Cabecera</span>
+<span class="text-xs text-on-surface-variant font-medium">Datapyme Empresarial</span>
+</div>
+</div>
+<!-- CTA Nuevo Movimiento -->
+<button class="w-full mb-5 py-2.5 px-3 rounded-lg bg-primary hover:bg-primary-dim text-on-primary text-sm font-semibold flex items-center justify-center gap-2 shadow-sm transition-colors duration-150 active:scale-[0.99]">
+<span class="material-symbols-outlined text-lg" data-icon="add_circle">add_circle</span>
+<span>Nuevo Movimiento</span>
+</button>
+<!-- Navigation Links -->
+<nav class="space-y-1">
+<!-- 1. Resumen General -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="dashboard">dashboard</span>
+<span>Resumen General</span>
+</a>
+<!-- 2. Inventario & Stock -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="inventory_2">inventory_2</span>
+<span>Inventario &amp; Stock</span>
+</a>
+<!-- Active Page Intent: Gestión de Ventas / Facturación -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-container-high text-primary font-semibold text-sm" href="#">
+<span class="material-symbols-outlined text-xl text-primary" data-icon="point_of_sale" style="font-variation-settings: 'FILL' 1;">point_of_sale</span>
+<div class="flex items-center justify-between w-full">
+<span>Gestión de Ventas</span>
+<span class="text-[10px] font-bold tracking-wide uppercase px-1.5 py-0.5 rounded bg-primary-container text-on-primary-container">Act. 3.3</span>
+</div>
+</a>
+<!-- 3. Pronóstico OLS -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="trending_up">trending_up</span>
+<span>Pronóstico OLS</span>
+</a>
+<!-- 4. Alertas de Reorden -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="notification_important">notification_important</span>
+<span class="flex-1">Alertas de Reorden</span>
+<span class="text-xs bg-error-container text-on-error-container font-semibold px-1.5 py-0.2 rounded-full">3</span>
+</a>
+<!-- 5. Reportes Financieros -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="account_balance">account_balance</span>
+<span>Reportes Financieros</span>
+</a>
+<!-- 6. Configuración -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="settings">settings</span>
+<span>Configuración</span>
+</a>
+</nav>
+</div>
+<!-- Footer SideBar -->
+<div class="pt-4 border-t border-outline-variant/20 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="help">help</span>
+<span>Centro de Soporte</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-error hover:bg-surface-container transition-colors duration-150 font-medium text-sm" href="#">
+<span class="material-symbols-outlined text-xl" data-icon="logout">logout</span>
+<span>Salir</span>
+</a>
+</div>
+</div>
+</aside>
+<!-- Main Content Wrapper with TopNavBar -->
+<div class="flex-1 flex flex-col pl-64 min-w-0">
+<!-- TopNavBar (Shared Component Anchor) -->
+<header class="docked full-width top-0 sticky z-30 bg-surface/80 backdrop-blur-md border-b border-outline-variant/20">
+<div class="flex items-center justify-between h-16 px-8">
+<!-- Search bar on left with breadcrumb context -->
+<div class="flex items-center gap-6">
+<div class="flex flex-col">
+<span class="text-[11px] font-semibold tracking-wider text-outline uppercase font-label">ACT. 3.3 · Módulo Comercial y Facturación</span>
+<span class="text-sm font-bold text-on-surface">Ventas &amp; Carga Masiva</span>
+</div>
+<div class="relative w-80">
+<span class="material-symbols-outlined absolute left-3 top-2.5 text-outline text-lg" data-icon="search">search</span>
+<input class="w-full bg-surface-container-low pl-9 pr-4 py-1.5 text-xs text-on-surface placeholder:text-outline-variant rounded-lg border border-outline-variant/30 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all" placeholder="Buscar SKU, folio factura o cliente..." type="text"/>
+</div>
+</div>
+<!-- Trailing actions & indicators -->
+<div class="flex items-center gap-3">
+<!-- Diagnostic pill -->
+<div class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-full bg-secondary-container/60 border border-secondary/20">
+<span class="inline-block w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-xs font-semibold text-on-secondary-container">Diagnóstico Salud 94.2%</span>
+</div>
+<!-- Secondary icon action: tune -->
+<button class="w-9 h-9 rounded-lg border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors" title="Filtros de auditoría">
+<span class="material-symbols-outlined text-xl" data-icon="tune">tune</span>
+</button>
+<!-- Secondary icon action: notifications -->
+<button class="w-9 h-9 rounded-lg border border-outline-variant/30 flex items-center justify-center text-on-surface-variant hover:bg-surface-container-high transition-colors relative" title="Notificaciones">
+<span class="material-symbols-outlined text-xl" data-icon="notifications">notifications</span>
+<span class="absolute top-2 right-2 w-2 h-2 rounded-full bg-error"></span>
+</button>
+<!-- Primary export CTA -->
+<button class="flex items-center gap-2 px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-on-surface hover:bg-surface-container-high transition-colors shadow-sm">
+<span class="material-symbols-outlined text-base" data-icon="file_download">file_download</span>
+<span>Descargar Reporte COP</span>
+</button>
+<!-- Director Operativo Avatar & profile -->
+<div class="flex items-center gap-2.5 pl-3 border-l border-outline-variant/20">
+<div class="w-9 h-9 rounded-full bg-primary-container text-on-primary-container font-bold flex items-center justify-center text-xs ring-1 ring-primary/20">
+              DO
+            </div>
+<div class="hidden xl:flex flex-col text-left">
+<span class="text-xs font-semibold text-on-surface leading-tight">Director Operativo</span>
+<span class="text-[10px] text-outline leading-tight">Bucaramanga, Col</span>
+</div>
+</div>
+</div>
+</div>
+</header>
+<!-- Page Body Content Canvas -->
+<main class="flex-1 p-8 space-y-6">
+<!-- Header Area -->
+<section class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+<div>
+<h1 class="text-2xl font-bold tracking-tight text-on-surface">Gestión Operativa de Ventas y Carga Histórica</h1>
+<p class="text-sm text-on-surface-variant mt-1">Registro transaccional con afectación atómica de Kardex (PEPS), homologación de medios de pago e importación masiva sanitizada.</p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-3.5 py-2 text-xs font-semibold rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-on-surface hover:bg-surface-container-high transition-colors shadow-sm">
+<span class="material-symbols-outlined text-base" data-icon="fact_check">fact_check</span>
+<span>Auditoría de Arqueo</span>
+</button>
+<button class="flex items-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-primary hover:bg-primary-dim text-on-primary transition-colors shadow-sm active:scale-[0.99]">
+<span class="material-symbols-outlined text-base" data-icon="flash_on">flash_on</span>
+<span>Nueva Venta Rápida (F2)</span>
+</button>
+</div>
+</section>
+<!-- 1. Top Summary Row (3 Bento KPI Cards - 12 Columns Grid) -->
+<section class="grid grid-cols-1 md:grid-cols-3 gap-5">
+<!-- Card 1: Ventas del Periodo -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-semibold uppercase tracking-wider text-outline">Ventas del Periodo</p>
+<h2 class="text-2xl font-bold text-on-surface tracking-tight mt-1 font-tabular">$ 68.420.000 <span class="text-xs font-medium text-outline">COP</span></h2>
+</div>
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" data-icon="trending_up">trending_up</span>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant/15 flex items-center justify-between text-xs">
+<span class="inline-flex items-center gap-1 font-semibold text-primary font-tabular">
+<span class="material-symbols-outlined text-sm" data-icon="arrow_upward">arrow_upward</span> +8.3% vs mes ant.
+            </span>
+<span class="text-on-surface-variant truncate">280 transacciones · 0 rechazos</span>
+</div>
+</div>
+<!-- Card 2: Ticket Promedio -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-semibold uppercase tracking-wider text-outline">Ticket Promedio</p>
+<h2 class="text-2xl font-bold text-on-surface tracking-tight mt-1 font-tabular">$ 244.357 <span class="text-xs font-medium text-outline">COP</span></h2>
+</div>
+<div class="w-10 h-10 rounded-lg bg-secondary-container text-on-secondary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" data-icon="receipt_long">receipt_long</span>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant/15 flex items-center justify-between text-xs">
+<span class="inline-flex items-center gap-1 font-semibold text-primary font-tabular">
+<span class="material-symbols-outlined text-sm" data-icon="verified">verified</span> +1.8% optimización
+            </span>
+<span class="text-on-surface-variant truncate">Demanda: Obra Gris y PVC</span>
+</div>
+</div>
+<!-- Card 3: Margen Bruto Estimado -->
+<div class="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant/30 shadow-sm flex flex-col justify-between">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-semibold uppercase tracking-wider text-outline">Margen Bruto Estimado</p>
+<h2 class="text-2xl font-bold text-on-surface tracking-tight mt-1 font-tabular">31,4 %</h2>
+</div>
+<div class="w-10 h-10 rounded-lg bg-tertiary-container text-on-tertiary-container flex items-center justify-center">
+<span class="material-symbols-outlined text-xl" data-icon="pie_chart">pie_chart</span>
+</div>
+</div>
+<div class="mt-4 pt-3 border-t border-outline-variant/15 flex items-center justify-between text-xs">
+<span class="text-on-surface-variant font-tabular">
+<strong class="font-semibold text-on-surface">$ 21.483.880 COP</strong> utilidad contable s/ PEPS
+            </span>
+</div>
+</div>
+</section>
+<!-- 2. Main Body Bento Layout (12 Cols: 7 Col Table, 5 Col Side Stack) -->
+<section class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+<!-- Left 7 Cols: Historial de Transacciones de Venta -->
+<div class="xl:col-span-7 bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm flex flex-col overflow-hidden">
+<!-- Toolbar Header -->
+<div class="p-4 border-b border-outline-variant/20 flex flex-col gap-3">
+<div class="flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl" data-icon="history">history</span>
+<h3 class="text-base font-bold text-on-surface tracking-tight">Historial de Transacciones de Venta</h3>
+</div>
+<div class="flex items-center gap-2">
+<span class="text-xs text-outline font-medium">Filtro:</span>
+<div class="inline-flex rounded-lg border border-outline-variant/30 p-0.5 bg-surface-container-low text-xs">
+<button class="px-2.5 py-1 rounded bg-surface-container-lowest font-medium text-on-surface shadow-xs">Todas</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface">Completada</button>
+<button class="px-2.5 py-1 rounded text-on-surface-variant hover:text-on-surface">Reversada</button>
+</div>
+</div>
+</div>
+<!-- Search & Secondary Filters -->
+<div class="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
+<div class="relative">
+<span class="material-symbols-outlined absolute left-2.5 top-2.5 text-outline text-base" data-icon="search">search</span>
+<input class="w-full pl-8 pr-3 py-1.5 text-xs bg-surface border border-outline-variant/30 rounded-lg text-on-surface placeholder:text-outline-variant focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Buscar folio, cliente, ref..." type="text"/>
+</div>
+<div>
+<select class="w-full py-1.5 px-2.5 text-xs bg-surface border border-outline-variant/30 rounded-lg text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+<option>Últimos 30 días · Mayo 2024</option>
+<option>Semana actual</option>
+<option>Trimestre en curso (Q2)</option>
+</select>
+</div>
+<div>
+<select class="w-full py-1.5 px-2.5 text-xs bg-surface border border-outline-variant/30 rounded-lg text-on-surface focus:outline-none focus:ring-1 focus:ring-primary">
+<option>Todos los medios</option>
+<option>Efectivo</option>
+<option>Transferencia Bancolombia</option>
+<option>Datáfono PSE</option>
+<option>Crédito Comercial 30d</option>
+</select>
+</div>
+</div>
+</div>
+<!-- Professional Data Table -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse text-xs">
+<thead>
+<tr class="border-b border-outline-variant/20 bg-surface-container-low/50 text-outline uppercase font-semibold tracking-wider">
+<th class="py-3 px-3">N° Folio</th>
+<th class="py-3 px-3">Fecha/Hora</th>
+<th class="py-3 px-3">Cliente / Tercero</th>
+<th class="py-3 px-3">Método</th>
+<th class="py-3 px-3 text-right">Total COP</th>
+<th class="py-3 px-3 text-right">COGS PEPS</th>
+<th class="py-3 px-3 text-center">Estado</th>
+<th class="py-3 px-3 text-center">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/15 text-on-surface">
+<!-- Row 1 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="py-2.5 px-3 font-semibold text-primary font-tabular">FAC-2024-0891</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-tabular whitespace-nowrap">24/05 09:14</td>
+<td class="py-2.5 px-3">
+<span class="font-medium">Constructora Bucaramanga S.A.S.</span>
+<span class="block text-[10px] text-outline">15 bultos Cemento Gris Argos</span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-container font-medium">
+                      Bancolombia
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right font-bold font-tabular text-on-surface">$ 523.500</td>
+<td class="py-2.5 px-3 text-right text-outline font-tabular">$ 360.000</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-container/70 text-on-primary-container">
+                      Completada
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<button class="text-outline hover:text-primary p-1 rounded transition-colors" title="Ver detalle">
+<span class="material-symbols-outlined text-base" data-icon="visibility">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 2 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="py-2.5 px-3 font-semibold text-primary font-tabular">FAC-2024-0890</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-tabular whitespace-nowrap">24/05 08:42</td>
+<td class="py-2.5 px-3">
+<span class="font-medium">Contratista Obra Civil #88</span>
+<span class="block text-[10px] text-outline">Varilla Corrugada 1/2 Diaco (30u)</span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-container font-medium">
+                      Crédito 30d
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right font-bold font-tabular text-on-surface">$ 1.140.000</td>
+<td class="py-2.5 px-3 text-right text-outline font-tabular">$ 810.000</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-container/70 text-on-primary-container">
+                      Completada
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<button class="text-outline hover:text-primary p-1 rounded transition-colors" title="Ver detalle">
+<span class="material-symbols-outlined text-base" data-icon="visibility">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 3 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="py-2.5 px-3 font-semibold text-primary font-tabular">FAC-2024-0889</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-tabular whitespace-nowrap">24/05 08:15</td>
+<td class="py-2.5 px-3">
+<span class="font-medium">Cliente Mostrador #1042</span>
+<span class="block text-[10px] text-outline">Galón Pintura Viniltex Blanco</span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-container font-medium">
+                      Efectivo
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right font-bold font-tabular text-on-surface">$ 84.900</td>
+<td class="py-2.5 px-3 text-right text-outline font-tabular">$ 58.200</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-container/70 text-on-primary-container">
+                      Completada
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<button class="text-outline hover:text-primary p-1 rounded transition-colors" title="Ver detalle">
+<span class="material-symbols-outlined text-base" data-icon="visibility">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 4 (Anulada) -->
+<tr class="hover:bg-surface-container-low/30 transition-colors bg-error-container/5">
+<td class="py-2.5 px-3 font-semibold text-error font-tabular">FAC-2024-0888</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-tabular whitespace-nowrap">23/05 17:30</td>
+<td class="py-2.5 px-3">
+<span class="font-medium line-through text-outline">Instalador Hidráulico #215</span>
+<span class="block text-[10px] text-error font-medium">Tubo Sanitario 3" Pavco (6u) - Revertido</span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-container font-medium">
+                      Datáfono
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right font-bold font-tabular text-outline line-through">$ 198.000</td>
+<td class="py-2.5 px-3 text-right text-outline font-tabular">$ 134.000</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-error-container/30 text-error">
+                      Anulada / Revertida
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<button class="text-error hover:text-error-dim p-1 rounded transition-colors" title="Auditoría reversa">
+<span class="material-symbols-outlined text-base" data-icon="history_toggle_off">history_toggle_off</span>
+</button>
+</td>
+</tr>
+<!-- Row 5 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="py-2.5 px-3 font-semibold text-primary font-tabular">FAC-2024-0887</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-tabular whitespace-nowrap">23/05 16:11</td>
+<td class="py-2.5 px-3">
+<span class="font-medium">Cliente Mostrador #1041</span>
+<span class="block text-[10px] text-outline">Disco Corte Diamantado 4-1/2" DeWalt</span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-container font-medium">
+                      Efectivo
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right font-bold font-tabular text-on-surface">$ 42.000</td>
+<td class="py-2.5 px-3 text-right text-outline font-tabular">$ 26.500</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-container/70 text-on-primary-container">
+                      Completada
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<button class="text-outline hover:text-primary p-1 rounded transition-colors" title="Ver detalle">
+<span class="material-symbols-outlined text-base" data-icon="visibility">visibility</span>
+</button>
+</td>
+</tr>
+<!-- Row 6 -->
+<tr class="hover:bg-surface-container-low/30 transition-colors">
+<td class="py-2.5 px-3 font-semibold text-primary font-tabular">FAC-2024-0886</td>
+<td class="py-2.5 px-3 text-on-surface-variant font-tabular whitespace-nowrap">23/05 14:55</td>
+<td class="py-2.5 px-3">
+<span class="font-medium">Obras &amp; Acabados San Pío</span>
+<span class="block text-[10px] text-outline">Pegacor Gris Corona 25kg (8u)</span>
+</td>
+<td class="py-2.5 px-3">
+<span class="inline-flex items-center gap-1 text-[11px] px-2 py-0.5 rounded bg-surface-container font-medium">
+                      PSE Datafono
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-right font-bold font-tabular text-on-surface">$ 212.000</td>
+<td class="py-2.5 px-3 text-right text-outline font-tabular">$ 148.000</td>
+<td class="py-2.5 px-3 text-center">
+<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-semibold bg-primary-container/70 text-on-primary-container">
+                      Completada
+                    </span>
+</td>
+<td class="py-2.5 px-3 text-center">
+<button class="text-outline hover:text-primary p-1 rounded transition-colors" title="Ver detalle">
+<span class="material-symbols-outlined text-base" data-icon="visibility">visibility</span>
+</button>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pagination Footer -->
+<div class="p-3 border-t border-outline-variant/20 flex items-center justify-between text-xs bg-surface-container-low/30">
+<span class="text-on-surface-variant font-tabular">Mostrando <strong>1 - 6</strong> de 280 ventas registradas</span>
+<div class="flex items-center gap-1">
+<button class="px-2 py-1 border border-outline-variant/30 rounded bg-surface-container-lowest text-outline hover:text-on-surface disabled:opacity-50" disabled="">
+<span class="material-symbols-outlined text-sm align-middle" data-icon="chevron_left">chevron_left</span>
+</button>
+<button class="px-2.5 py-1 rounded bg-primary text-on-primary font-bold">1</button>
+<button class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant font-medium">2</button>
+<button class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant font-medium">3</button>
+<span class="px-1 text-outline">...</span>
+<button class="px-2.5 py-1 rounded hover:bg-surface-container text-on-surface-variant font-medium">47</button>
+<button class="px-2 py-1 border border-outline-variant/30 rounded bg-surface-container-lowest text-on-surface hover:bg-surface-container">
+<span class="material-symbols-outlined text-sm align-middle" data-icon="chevron_right">chevron_right</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Right 5 Cols: Split Stack (Nueva Venta + Carga Masiva) -->
+<div class="xl:col-span-5 space-y-6">
+<!-- Top Card: Registrar Nueva Venta Operativa -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 space-y-4">
+<div class="flex items-start justify-between">
+<div>
+<div class="flex items-center gap-2">
+<h3 class="text-base font-bold text-on-surface tracking-tight">Registrar Nueva Venta Operativa</h3>
+<span class="text-[10px] font-bold px-2 py-0.5 rounded bg-primary-container text-on-primary-container">Descuento Atómico</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">Afectación inmediata sobre inventario físico y Kardex PEPS.</p>
+</div>
+<span class="material-symbols-outlined text-primary text-2xl" data-icon="shopping_cart_checkout">shopping_cart_checkout</span>
+</div>
+<!-- Product search / select -->
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface">Seleccionar Producto &amp; Stock Disponible</label>
+<div class="relative">
+<select class="w-full text-xs bg-surface-container-low border border-outline-variant/30 rounded-lg p-2.5 text-on-surface focus:outline-none focus:ring-1 focus:ring-primary font-medium">
+<option selected="">ARG-50KG · Cemento Gris Argos 50kg (Stock disp: 60 bultos)</option>
+<option>DIA-12MM · Varilla Corrugada 1/2 Diaco (Stock disp: 140 unidades)</option>
+<option>PAV-3SAN · Tubo Sanitario 3" Pavco 6m (Stock disp: 32 unidades)</option>
+<option>VIN-BLAN · Pintura Viniltex Blanco Galón (Stock disp: 24 galones)</option>
+</select>
+</div>
+</div>
+<!-- Inputs: Cantidad & Precio Unitario -->
+<div class="grid grid-cols-2 gap-3">
+<div>
+<label class="text-xs font-semibold text-on-surface">Cantidad (Bultos)</label>
+<div class="relative mt-1">
+<input class="w-full text-xs bg-surface border border-outline-variant/30 rounded-lg py-2 px-3 text-on-surface font-tabular focus:outline-none focus:ring-1 focus:ring-primary" max="60" min="1" type="number" value="5"/>
+<span class="absolute right-2.5 top-2 text-[11px] text-outline">u.</span>
+</div>
+</div>
+<div>
+<label class="text-xs font-semibold text-on-surface">Precio Unit. (COP)</label>
+<div class="relative mt-1">
+<input class="w-full text-xs bg-surface border border-outline-variant/30 rounded-lg py-2 px-3 text-on-surface font-tabular focus:outline-none focus:ring-1 focus:ring-primary font-semibold" type="text" value="34.900"/>
+<span class="absolute right-2.5 top-2 text-[11px] text-outline">COP</span>
+</div>
+</div>
+</div>
+<!-- Financial Summary Box -->
+<div class="rounded-lg bg-surface-container-low p-3.5 border border-outline-variant/20 space-y-2">
+<div class="flex justify-between text-xs text-on-surface-variant font-tabular">
+<span>Subtotal base</span>
+<span>$ 146.639 COP</span>
+</div>
+<div class="flex justify-between text-xs text-on-surface-variant font-tabular">
+<span>IVA (19% régimen ordinario)</span>
+<span>$ 27.861 COP</span>
+</div>
+<div class="pt-2 border-t border-outline-variant/20 flex items-center justify-between">
+<span class="text-xs font-bold text-on-surface">Total Venta Facturada:</span>
+<span class="text-lg font-extrabold text-primary font-tabular tracking-tight">$ 174.500 <span class="text-xs font-normal text-outline">COP</span></span>
+</div>
+</div>
+<!-- Payment Method Chips -->
+<div class="space-y-1.5">
+<label class="text-xs font-semibold text-on-surface">Medio de Pago Homologado</label>
+<div class="grid grid-cols-4 gap-1.5 text-xs text-center">
+<label class="cursor-pointer">
+<input checked="" class="peer sr-only" name="payment" type="radio"/>
+<div class="py-1.5 px-2 rounded-lg border border-outline-variant/30 bg-surface peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary font-medium transition-colors">
+                    Efectivo
+                  </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="payment" type="radio"/>
+<div class="py-1.5 px-2 rounded-lg border border-outline-variant/30 bg-surface peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary font-medium transition-colors truncate">
+                    Bancolombia
+                  </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="payment" type="radio"/>
+<div class="py-1.5 px-2 rounded-lg border border-outline-variant/30 bg-surface peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary font-medium transition-colors">
+                    Tarjeta
+                  </div>
+</label>
+<label class="cursor-pointer">
+<input class="peer sr-only" name="payment" type="radio"/>
+<div class="py-1.5 px-2 rounded-lg border border-outline-variant/30 bg-surface peer-checked:bg-primary peer-checked:text-on-primary peer-checked:border-primary font-medium transition-colors">
+                    Crédito 30d
+                  </div>
+</label>
+</div>
+</div>
+<!-- Stock impact status banner -->
+<div class="p-2.5 rounded-lg bg-surface-container flex items-center gap-2.5 text-xs text-on-surface-variant">
+<span class="material-symbols-outlined text-primary text-base" data-icon="inventory">inventory</span>
+<span>Stock proyectado post-venta: <strong class="text-on-surface font-tabular">55 bultos</strong> (Nivel de reorden seguro).</span>
+</div>
+<!-- Primary Action CTA -->
+<button class="w-full py-2.5 px-4 rounded-lg bg-primary hover:bg-primary-dim text-on-primary font-semibold text-xs flex items-center justify-center gap-2 shadow-sm transition-colors active:scale-[0.99]">
+<span class="material-symbols-outlined text-base" data-icon="check_circle">check_circle</span>
+<span>Confirmar Venta y Descontar Stock</span>
+</button>
+</div>
+<!-- Bottom Card: Importar Histórico de Ventas CSV / Excel -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/30 shadow-sm p-5 space-y-4">
+<div class="flex items-start justify-between">
+<div>
+<h3 class="text-base font-bold text-on-surface tracking-tight">Importar Histórico de Ventas CSV / Excel</h3>
+<p class="text-xs text-on-surface-variant mt-0.5">Ingesta masiva y homologación de folios contables con validación de integridad.</p>
+</div>
+<span class="material-symbols-outlined text-secondary text-2xl" data-icon="upload_file">upload_file</span>
+</div>
+<!-- Drag & Drop Zone -->
+<div class="border-2 border-dashed border-outline-variant/40 rounded-xl p-5 text-center bg-surface-container-low/40 hover:bg-surface-container-low transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-3xl text-outline mb-1" data-icon="cloud_upload">cloud_upload</span>
+<p class="text-xs font-semibold text-on-surface">Arrastre archivo .xlsx o .csv aquí</p>
+<p class="text-[11px] text-outline mt-0.5">Máximo 10.000 líneas transaccionales por lote</p>
+</div>
+<!-- Live Pre-Validation Box -->
+<div class="p-3 rounded-lg bg-secondary-container/50 border border-secondary/20 text-xs space-y-1">
+<div class="flex items-center gap-1.5 text-on-secondary-container font-semibold">
+<span class="material-symbols-outlined text-sm text-primary" data-icon="verified_user">verified_user</span>
+<span>Pre-validación de Lote Superada</span>
+</div>
+<p class="text-[11px] text-on-secondary-variant leading-relaxed">
+                ✓ <strong>120 filas válidas</strong> listas para ingesta · 0 errores de stock · Sanitización OWASP completada (protección contra inyecciones de fórmulas y caracteres maliciosos).
+              </p>
+</div>
+<!-- Import Action Buttons -->
+<div class="flex flex-col sm:flex-row items-center gap-2 pt-1">
+<button class="w-full sm:w-1/2 py-2 px-3 border border-outline-variant/30 hover:bg-surface-container-low rounded-lg text-xs font-medium text-on-surface flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="download">download</span>
+<span>Descargar Plantilla</span>
+</button>
+<button class="w-full sm:w-1/2 py-2 px-3 bg-secondary hover:bg-secondary-dim rounded-lg text-xs font-semibold text-on-secondary flex items-center justify-center gap-1.5 transition-colors">
+<span class="material-symbols-outlined text-sm" data-icon="publish">publish</span>
+<span>Confirmar Ingesta</span>
+</button>
+</div>
+</div>
+</div>
+</section>
+</main>
+</div>
+</body></html>

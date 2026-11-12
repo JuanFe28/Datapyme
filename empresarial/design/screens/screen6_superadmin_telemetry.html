@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-surface" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>SuperAdmin Anonymized Platform Impact Dashboard &amp; Habeas Data Audit - Datapyme</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&amp;family=JetBrains+Mono:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          colors: {
+            "tertiary-container": "#aadcf2",
+            "surface-container-low": "#eef5f2",
+            "on-surface-variant": "#56615f",
+            "primary-fixed-dim": "#9be2d6",
+            "primary-container": "#a9f0e4",
+            "inverse-primary": "#b1f9ed",
+            "primary": "#1f6a61",
+            "secondary-dim": "#3f5854",
+            "primary-fixed": "#a9f0e4",
+            "error": "#a83836",
+            "on-secondary-fixed": "#2b4440",
+            "surface-dim": "#d1dcd9",
+            "inverse-on-surface": "#999e9c",
+            "secondary": "#4b645f",
+            "secondary-fixed": "#cce8e2",
+            "error-container": "#fa746f",
+            "on-secondary": "#e3fff9",
+            "on-surface": "#2a3432",
+            "inverse-surface": "#0a0f0e",
+            "surface-bright": "#f6faf8",
+            "on-tertiary": "#f2faff",
+            "on-tertiary-fixed-variant": "#25586b",
+            "on-error-container": "#6e0a12",
+            "surface-variant": "#dae5e2",
+            "surface": "#f6faf8",
+            "on-tertiary-container": "#1a4f61",
+            "tertiary": "#346578",
+            "secondary-fixed-dim": "#bedad4",
+            "on-primary-fixed-variant": "#19665d",
+            "surface-tint": "#1f6a61",
+            "on-background": "#2a3432",
+            "on-primary": "#e2fff9",
+            "tertiary-fixed": "#aadcf2",
+            "background": "#f6faf8",
+            "surface-container-highest": "#dae5e2",
+            "surface-container-high": "#e1eae7",
+            "on-primary-fixed": "#004841",
+            "error-dim": "#67040d",
+            "tertiary-dim": "#26596c",
+            "surface-container-lowest": "#ffffff",
+            "tertiary-fixed-dim": "#9dcee3",
+            "outline-variant": "#a9b4b1",
+            "on-secondary-container": "#3d5652",
+            "on-secondary-fixed-variant": "#47605c",
+            "on-primary-container": "#075c54",
+            "primary-dim": "#0a5e55",
+            "surface-container": "#e7f0ed",
+            "outline": "#727d7a",
+            "secondary-container": "#cce8e2",
+            "on-error": "#fff7f6",
+            "on-tertiary-fixed": "#003b4c",
+            /* Enterprise Governance Accent (Deep Trust Indigo) */
+            "trust-indigo": "#243B6B",
+            "trust-indigo-dim": "#1B2D52"
+          },
+          borderRadius: {
+            "DEFAULT": "0.25rem",
+            "lg": "0.5rem",
+            "xl": "0.75rem",
+            "full": "9999px"
+          },
+          fontFamily: {
+            headline: ["Inter", "sans-serif"],
+            display: ["Inter", "sans-serif"],
+            body: ["Inter", "sans-serif"],
+            label: ["Inter", "sans-serif"],
+            mono: ["'JetBrains Mono'", "monospace"]
+          }
+        },
+      },
+    }
+  </script>
+</head>
+<body class="h-full bg-surface text-on-surface antialiased font-body flex overflow-hidden">
+<!-- ========================================================================= -->
+<!-- SIDEBAR NAVIGATION (Conforme a Shared Components JSON)                   -->
+<!-- ========================================================================= -->
+<aside class="h-screen w-64 flex flex-col fixed left-0 top-0 z-40 bg-surface-container-lowest border-r border-outline-variant/20 select-none">
+<div class="w-64 h-full flex flex-col justify-between p-4">
+<!-- Top Section: Header & Tenant Identity -->
+<div class="flex flex-col gap-6">
+<!-- Brand / System Title -->
+<div class="flex items-center gap-3 px-2 pt-1">
+<div class="w-9 h-9 rounded-lg bg-trust-indigo text-white flex items-center justify-center font-bold text-base shadow-sm">
+<span class="material-symbols-outlined text-[20px]" data-icon="shield_lock">shield_lock</span>
+</div>
+<div class="flex flex-col min-w-0">
+<div class="flex items-center gap-1.5">
+<span class="text-sm font-bold text-on-surface tracking-tight">Datapyme</span>
+<span class="text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded bg-surface-container text-tertiary">SuperAdmin</span>
+</div>
+<span class="text-[11px] text-on-surface-variant font-medium truncate">Auditoría F-DC-125</span>
+</div>
+</div>
+<!-- SuperAdmin Direct Action CTA -->
+<div class="px-1">
+<div class="bg-surface-container-low border border-outline-variant/20 rounded-lg p-2.5 flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary animate-pulse"></span>
+<span class="text-xs font-semibold text-on-surface">k-Anonimato Activo</span>
+</div>
+<span class="text-[11px] font-mono text-primary font-bold">k ≥ 3</span>
+</div>
+</div>
+<!-- Navigation Links (Active mapping: Alertas de Reorden / Auditoría Habeas Data & Impacto) -->
+<nav class="flex flex-col gap-1">
+<!-- Item 1: Resumen General -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="dashboard">dashboard</span>
+<span class="text-xs">Resumen General</span>
+</a>
+<!-- Item 2: Inventario & Stock -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="inventory_2">inventory_2</span>
+<span class="text-xs">Inventario &amp; Stock</span>
+</a>
+<!-- Item 3: Pronóstico OLS -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="trending_up">trending_up</span>
+<span class="text-xs">Pronóstico OLS</span>
+</a>
+<!-- Item 4: ACTIVE STATE -> Auditoría Habeas Data & Impacto F-DC-125 -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg bg-surface-container-high text-primary font-semibold transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="notification_important">notification_important</span>
+<span class="text-xs">Alertas de Reorden</span>
+</a>
+<!-- Item 5: Reportes Financieros -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="account_balance">account_balance</span>
+<span class="text-xs">Reportes Financieros</span>
+</a>
+<!-- Item 6: Configuración -->
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150 active:scale-[0.99]" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="settings">settings</span>
+<span class="text-xs">Configuración</span>
+</a>
+</nav>
+</div>
+<!-- Bottom / Footer Navigation Links -->
+<div class="flex flex-col gap-3 pt-4 border-t border-outline-variant/20">
+<!-- Statutory Notice Card -->
+<div class="p-2.5 rounded-lg bg-surface-container border border-outline-variant/20 text-[11px] leading-relaxed text-on-surface-variant">
+<div class="flex items-center gap-1.5 font-semibold text-on-surface mb-1">
+<span class="material-symbols-outlined text-[14px] text-tertiary" data-icon="verified_user">verified_user</span>
+<span>Ley 1581 de 2012</span>
+</div>
+<p class="text-[10px] text-outline">Datos disociados y protegidos por hash de una sola vía. Sin PII ni NITs comerciales expuestos.</p>
+</div>
+<nav class="flex flex-col gap-1">
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="help">help</span>
+<span class="text-xs">Centro de Soporte</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2 rounded-lg text-on-surface-variant font-medium hover:bg-surface-container transition-colors duration-150" href="#">
+<span class="material-symbols-outlined text-[20px]" data-icon="logout">logout</span>
+<span class="text-xs">Salir</span>
+</a>
+</nav>
+</div>
+</div>
+</aside>
+<!-- ========================================================================= -->
+<!-- MAIN CONTENT CANVAS WRAPPER                                               -->
+<!-- ========================================================================= -->
+<div class="flex-1 flex flex-col pl-64 overflow-y-auto min-h-screen">
+<!-- ========================================================================= -->
+<!-- TOPBAR NAVIGATION (Conforme a Shared Components JSON)                     -->
+<!-- ========================================================================= -->
+<header class="sticky top-0 z-30 h-16 bg-surface/85 backdrop-blur-md border-b border-outline-variant/20 px-8 flex items-center justify-between">
+<!-- Title & Privacy Shield Badges -->
+<div class="flex items-center gap-4">
+<div>
+<h1 class="text-base font-bold text-on-surface tracking-tight leading-tight">Telemetría de Impacto Anonimizada</h1>
+<p class="text-xs text-on-surface-variant">Consola SuperAdmin &amp; Auditoría F-DC-125 (Autores Telemetría &amp; Habeas Data Audit)</p>
+</div>
+<!-- Apple-like Privacy Pill -->
+<div class="hidden xl:flex items-center gap-2 px-3 py-1 rounded-full bg-surface-container border border-outline-variant/30 text-xs text-on-surface font-medium shadow-xs">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<span class="material-symbols-outlined text-[16px] text-primary" data-icon="verified">verified</span>
+<span class="font-mono text-[11px] text-primary-dim font-semibold">k-Anonimato Activo (k ≥ 3)</span>
+<span class="text-outline-variant">|</span>
+<span class="text-[11px] text-on-surface-variant font-mono">Ley 1581/2012</span>
+<span class="text-outline-variant">|</span>
+<span class="text-[11px] text-secondary font-medium">Cero PII / Cero NIT</span>
+</div>
+</div>
+<!-- Trailing Controls & SuperAdmin Profile -->
+<div class="flex items-center gap-3">
+<!-- Date Selector Pill (Apple Segmented Style) -->
+<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-lowest border border-outline-variant/30 text-xs font-medium text-on-surface hover:bg-surface-container transition-colors cursor-pointer">
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="calendar_today">calendar_today</span>
+<span>Últimos 180 días · H1 2024</span>
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="expand_more">expand_more</span>
+</div>
+<!-- Trailing Primary Action -->
+<button class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg bg-trust-indigo text-white text-xs font-semibold hover:bg-trust-indigo-dim transition-colors shadow-xs">
+<span class="material-symbols-outlined text-[16px]" data-icon="download">download</span>
+<span>Exportar Informe Metodológico F-DC-125</span>
+</button>
+<!-- Divider -->
+<div class="h-6 w-[1px] bg-outline-variant/30"></div>
+<!-- Icon Actions -->
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors" title="Ajustes de Parámetros k-Anonimato">
+<span class="material-symbols-outlined text-[20px]" data-icon="tune">tune</span>
+</button>
+<button class="w-8 h-8 rounded-lg flex items-center justify-center text-on-surface-variant hover:bg-surface-container transition-colors relative" title="Alertas de Cumplimiento">
+<span class="material-symbols-outlined text-[20px]" data-icon="notifications">notifications</span>
+<span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-primary rounded-full"></span>
+</button>
+<!-- Auditor Delegado SuperAdmin Profile -->
+<div class="flex items-center gap-2 pl-2">
+<div class="w-8 h-8 rounded-lg bg-surface-container-high border border-outline-variant/40 flex items-center justify-center text-trust-indigo font-mono text-xs font-bold">
+            SA
+          </div>
+<div class="flex flex-col text-left">
+<span class="text-xs font-semibold text-on-surface leading-tight">Auditor Delegado</span>
+<span class="text-[10px] font-mono text-on-surface-variant">#SA-09 (Santander)</span>
+</div>
+</div>
+</div>
+</header>
+<!-- ========================================================================= -->
+<!-- BENTO GRID CONTENT SECTION                                                -->
+<!-- ========================================================================= -->
+<main class="flex-1 p-8 space-y-6 max-w-7xl w-full mx-auto">
+<!-- Regulatory Banner / Context Anchor -->
+<div class="bg-surface-container-lowest border border-outline-variant/20 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 shadow-xs">
+<div class="flex items-start gap-3">
+<div class="p-2 rounded-lg bg-secondary-container/50 text-secondary mt-0.5">
+<span class="material-symbols-outlined text-[22px]" data-icon="verified_user">verified_user</span>
+</div>
+<div>
+<div class="flex items-center gap-2">
+<h2 class="text-xs font-bold text-on-surface tracking-wide uppercase">Protocolo de Anonimización Diferencial F-DC-125</h2>
+<span class="px-2 py-0.5 rounded text-[10px] font-mono bg-primary-container/40 text-on-primary-container font-semibold">Auditado: Conforme</span>
+</div>
+<p class="text-xs text-on-surface-variant mt-0.5">
+              Todos los datos presentados corresponden a agregaciones matemáticas sobre micro y pequeñas empresas de Santander, Colombia. Se aplica supresión estricta de celdas con tamaño muestral &lt; 3 y ofuscación criptográfica unidireccional.
+            </p>
+</div>
+</div>
+<div class="flex items-center gap-4 text-xs font-mono text-outline shrink-0">
+<span>Último Ciclo OLS: <strong class="text-on-surface">2024-05-24 16:42 UTC</strong></span>
+<span class="text-outline-variant">|</span>
+<span>Hash Global: <strong class="text-on-surface font-mono">e3b0c4...89b1</strong></span>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- ROW 1: 4 EXPANDED KPI CARDS (BENTO 12-COL: 3-3-3-3)                       -->
+<!-- ========================================================================= -->
+<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+<!-- KPI Card 1: Empresas Activas -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between hover:border-outline-variant/50 transition-colors">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-medium text-on-surface-variant">Empresas Comerciales Activas</p>
+<p class="text-[11px] text-outline font-mono mt-0.5">Tenants Operativos Santander</p>
+</div>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-trust-indigo">
+<span class="material-symbols-outlined text-[18px]" data-icon="store">store</span>
+</div>
+</div>
+<div class="mt-4">
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold tracking-tight text-on-surface font-headline tabular-nums">14</span>
+<span class="text-xs font-semibold text-primary inline-flex items-center">
+<span class="material-symbols-outlined text-[14px]" data-icon="arrow_upward">arrow_upward</span>
+                +3 vs mes ant.
+              </span>
+</div>
+<div class="mt-2 pt-2 border-t border-outline-variant/10 flex items-center justify-between text-[11px] text-on-surface-variant">
+<span>PII expuesta:</span>
+<span class="font-mono font-semibold text-primary">0 registros (0.0%)</span>
+</div>
+</div>
+</div>
+<!-- KPI Card 2: Volumen Bruto Transaccionado -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between hover:border-outline-variant/50 transition-colors">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-medium text-on-surface-variant">Volumen Transaccionado Agregado</p>
+<p class="text-[11px] text-outline font-mono mt-0.5">Post-Anonimización H1 2024</p>
+</div>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary">
+<span class="material-symbols-outlined text-[18px]" data-icon="payments">payments</span>
+</div>
+</div>
+<div class="mt-4">
+<div class="flex items-baseline gap-1">
+<span class="text-2xl font-bold tracking-tight text-on-surface font-headline tabular-nums">$ 842.150.000</span>
+<span class="text-xs font-semibold text-outline-variant">COP</span>
+</div>
+<div class="mt-2 pt-2 border-t border-outline-variant/10 flex items-center justify-between text-[11px] text-on-surface-variant">
+<span>Dispersión estocástica:</span>
+<span class="font-mono text-outline font-medium">σ ± 4.2%</span>
+</div>
+</div>
+</div>
+<!-- KPI Card 3: Alertas de Stock Mitigadas -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between hover:border-outline-variant/50 transition-colors">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-medium text-on-surface-variant">Alertas de Stock Mitigadas</p>
+<p class="text-[11px] text-outline font-mono mt-0.5">Detección OLS Pre-quiebre</p>
+</div>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-secondary">
+<span class="material-symbols-outlined text-[18px]" data-icon="notification_important">notification_important</span>
+</div>
+</div>
+<div class="mt-4">
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold tracking-tight text-on-surface font-headline tabular-nums">186</span>
+<span class="text-xs font-semibold text-primary font-mono">94.6% resueltas</span>
+</div>
+<div class="mt-2 pt-2 border-t border-outline-variant/10 flex items-center justify-between text-[11px] text-on-surface-variant">
+<span>Riesgo de desabasto:</span>
+<span class="font-medium text-secondary">Controlado (&lt; 5.4%)</span>
+</div>
+</div>
+</div>
+<!-- KPI Card 4: Horas Operativas Ahorradas -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between hover:border-outline-variant/50 transition-colors">
+<div class="flex items-start justify-between">
+<div>
+<p class="text-xs font-medium text-on-surface-variant">Horas Operativas Ahorradas</p>
+<p class="text-[11px] text-outline font-mono mt-0.5">vs. Línea Base Manual (M24)</p>
+</div>
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-trust-indigo">
+<span class="material-symbols-outlined text-[18px]" data-icon="schedule">schedule</span>
+</div>
+</div>
+<div class="mt-4">
+<div class="flex items-baseline gap-2">
+<span class="text-3xl font-bold tracking-tight text-on-surface font-headline tabular-nums">1.420</span>
+<span class="text-xs font-semibold text-on-surface-variant">horas acum.</span>
+</div>
+<div class="mt-2 pt-2 border-t border-outline-variant/10 flex items-center justify-between text-[11px] text-on-surface-variant">
+<span>Rendimiento por empresa:</span>
+<span class="font-mono font-medium text-primary">~101.4 hrs/mes</span>
+</div>
+</div>
+</div>
+</div>
+<!-- ========================================================================= -->
+<!-- ROW 2: 2 KEY BENTO BLOCKS (7 COLUMNS + 5 COLUMNS)                         -->
+<!-- ========================================================================= -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+<!-- ======================================================================= -->
+<!-- LEFT BLOCK (7 COLUMNS): IMPACTO AGREGADO POR SUBSECTOR CIIU           -->
+<!-- ======================================================================= -->
+<div class="lg:col-span-7 bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-6 shadow-xs flex flex-col justify-between">
+<div>
+<!-- Section Header -->
+<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 border-b border-outline-variant/20">
+<div>
+<h3 class="text-sm font-bold text-on-surface tracking-tight">Impacto Agregado por Subsector Comercial CIIU</h3>
+<p class="text-xs text-on-surface-variant mt-0.5">
+                  Agrupación según Clasificación Industrial Internacional Uniforme Rev. 4 A.C. Regla de k-anonimato (k ≥ 3).
+                </p>
+</div>
+<div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-surface-container text-[11px] font-mono text-on-surface-variant border border-outline-variant/20">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="security">security</span>
+<span>k ≥ 3 Requerido</span>
+</div>
+</div>
+<!-- Table of Sectors -->
+<div class="mt-4 overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="border-b border-outline-variant/20 text-[11px] font-semibold text-outline uppercase tracking-wider">
+<th class="py-2.5 pr-3">Subsector Económico (CIIU)</th>
+<th class="py-2.5 px-3 text-center">k (Nodos)</th>
+<th class="py-2.5 px-3 text-right">Ventas Acumuladas</th>
+<th class="py-2.5 px-3 text-right">Reducción Quiebres</th>
+<th class="py-2.5 pl-3 text-right">Ahorro Horas</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-outline-variant/10 text-xs">
+<!-- Sector 1: Ferreterías -->
+<tr class="hover:bg-surface-container/40 transition-colors">
+<td class="py-3 pr-3 font-medium text-on-surface">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-trust-indigo"></span>
+<div>
+<div class="font-bold text-on-surface">G4752 · Ferreterías &amp; Materiales</div>
+<span class="text-[10px] text-outline">Bucaramanga, Floridablanca &amp; Girón</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-3 text-center">
+<span class="px-2 py-0.5 rounded font-mono font-semibold text-[11px] bg-secondary-container/60 text-on-secondary-container">
+                        k = 6
+                      </span>
+</td>
+<td class="py-3 px-3 text-right font-mono tabular-nums font-semibold text-on-surface">
+                      $ 412.800.000
+                    </td>
+<td class="py-3 px-3 text-right font-mono tabular-nums text-primary font-bold">
+                      -42.8%
+                    </td>
+<td class="py-3 pl-3 text-right font-mono tabular-nums text-on-surface">
+                      610 hrs
+                    </td>
+</tr>
+<!-- Sector 2: Minimercados -->
+<tr class="hover:bg-surface-container/40 transition-colors">
+<td class="py-3 pr-3 font-medium text-on-surface">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+<div>
+<div class="font-bold text-on-surface">G4711 · Minimercados &amp; Autoservicios</div>
+<span class="text-[10px] text-outline">Área Metropolitana Santander</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-3 text-center">
+<span class="px-2 py-0.5 rounded font-mono font-semibold text-[11px] bg-secondary-container/60 text-on-secondary-container">
+                        k = 4
+                      </span>
+</td>
+<td class="py-3 px-3 text-right font-mono tabular-nums font-semibold text-on-surface">
+                      $ 284.100.000
+                    </td>
+<td class="py-3 px-3 text-right font-mono tabular-nums text-primary font-bold">
+                      -38.1%
+                    </td>
+<td class="py-3 pl-3 text-right font-mono tabular-nums text-on-surface">
+                      490 hrs
+                    </td>
+</tr>
+<!-- Sector 3: Boutiques & Calzado -->
+<tr class="hover:bg-surface-container/40 transition-colors">
+<td class="py-3 pr-3 font-medium text-on-surface">
+<div class="flex items-center gap-2">
+<span class="w-2 h-2 rounded-full bg-tertiary"></span>
+<div>
+<div class="font-bold text-on-surface">G4771 · Boutiques &amp; Calzado Comercial</div>
+<span class="text-[10px] text-outline">Cabecera &amp; Centros Comerciales</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-3 text-center">
+<span class="px-2 py-0.5 rounded font-mono font-semibold text-[11px] bg-secondary-container/60 text-on-secondary-container">
+                        k = 3
+                      </span>
+</td>
+<td class="py-3 px-3 text-right font-mono tabular-nums font-semibold text-on-surface">
+                      $ 145.250.000
+                    </td>
+<td class="py-3 px-3 text-right font-mono tabular-nums text-primary font-bold">
+                      -29.4%
+                    </td>
+<td class="py-3 pl-3 text-right font-mono tabular-nums text-on-surface">
+                      320 hrs
+                    </td>
+</tr>
+<!-- Sector 4: Suprimido por k-anonimato (k=1) -->
+<tr class="bg-surface-container/20">
+<td class="py-3 pr-3">
+<div class="flex items-center gap-2 opacity-75">
+<span class="w-2 h-2 rounded-full bg-outline-variant"></span>
+<div>
+<div class="font-bold text-on-surface-variant line-through decoration-outline">G4530 · Repuestos Automotrices</div>
+<span class="text-[10px] text-error font-mono font-semibold">Suprimido por regla k &lt; 3</span>
+</div>
+</div>
+</td>
+<td class="py-3 px-3 text-center">
+<span class="px-2 py-0.5 rounded font-mono font-semibold text-[11px] bg-error-container/20 text-error">
+                        k = 1
+                      </span>
+</td>
+<!-- Hachured / Masked cells -->
+<td class="py-3 px-3" colspan="3">
+<div class="relative w-full h-7 rounded border border-outline-variant/30 bg-surface-container-high/60 overflow-hidden flex items-center justify-center">
+<div class="absolute inset-0 bg-[radial-gradient(#a9b4b1_1px,transparent_1px)] [background-size:8px_8px] opacity-40"></div>
+<span class="relative text-[10px] font-mono text-outline font-medium tracking-tight">
+                          [RESERVADO ALGORÍTMICAMENTE · PROTECCIÓN HABEAS DATA]
+                        </span>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Visual Bar Distribution -->
+<div class="mt-6 space-y-2">
+<div class="flex items-center justify-between text-xs text-on-surface-variant font-medium">
+<span>Distribución Porcentual del Volumen Bruto por Sector Homologado</span>
+<span class="font-mono text-[11px] text-outline tabular-nums">Total Divulgado: $ 842.15M COP</span>
+</div>
+<div class="w-full h-3 rounded-full bg-surface-container overflow-hidden flex">
+<div class="h-full bg-trust-indigo" style="width: 49.0%" title="G4752 Ferreterías (49.0%)"></div>
+<div class="h-full bg-primary" style="width: 33.7%" title="G4711 Minimercados (33.7%)"></div>
+<div class="h-full bg-tertiary" style="width: 17.3%" title="G4771 Boutiques (17.3%)"></div>
+</div>
+<div class="flex items-center justify-between text-[10px] text-outline font-mono pt-1">
+<span>Ferreterías: 49.0%</span>
+<span>Minimercados: 33.7%</span>
+<span>Boutiques: 17.3%</span>
+</div>
+</div>
+</div>
+<!-- Bottom Technical Note on Differential Privacy -->
+<div class="mt-6 p-3 rounded-lg bg-surface-container-low border border-outline-variant/20 flex items-start gap-2.5">
+<span class="material-symbols-outlined text-[16px] text-tertiary mt-0.5" data-icon="info">info</span>
+<p class="text-[11px] text-on-surface-variant leading-relaxed">
+<strong>Nota Metodológica F-DC-125:</strong> Para el subsector <em>G4530</em>, al existir únicamente 1 empresa inscrita en la muestra piloto, la publicación de cifras permitiría deducir su facturación individual por ingeniería inversa de saldos globales. El motor ejecuta supresión celular automática respetando el artículo 15 de la Constitución Política y Ley Estatutaria 1581 de 2012.
+            </p>
+</div>
+</div>
+<!-- ======================================================================= -->
+<!-- RIGHT BLOCK (5 COLUMNS): CRIPTOGRAFÍA & EXPORTACIÓN                   -->
+<!-- ======================================================================= -->
+<div class="lg:col-span-5 space-y-6">
+<!-- Section A: Hashes SHA-256 Verifier -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs flex flex-col justify-between">
+<div>
+<!-- Header -->
+<div class="flex items-center justify-between pb-3 border-b border-outline-variant/20">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[18px] text-trust-indigo" data-icon="lock">lock</span>
+<h3 class="text-xs font-bold text-on-surface uppercase tracking-wide">Cadena Criptográfica SHA-256</h3>
+</div>
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono bg-primary-container/40 text-on-primary-container font-semibold">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                  14/14 Nodos Válidos
+                </span>
+</div>
+<p class="text-xs text-on-surface-variant mt-2">
+                Registro inmutable de consentimientos firmados para el tratamiento de datos y telemetría de inventarios.
+              </p>
+<!-- Sequential Monospace Hashes List -->
+<div class="mt-3.5 space-y-2.5">
+<!-- Block #014 -->
+<div class="p-2.5 rounded-lg bg-surface-container-low border border-outline-variant/20 font-mono text-[11px]">
+<div class="flex items-center justify-between text-on-surface-variant mb-1">
+<span class="font-bold text-trust-indigo">Bloque #014 [Último]</span>
+<span class="text-[10px] text-outline">2024-05-24 16:42 UTC</span>
+</div>
+<div class="text-[10px] text-on-surface space-y-0.5">
+<div><span class="text-outline">prev:</span> 7f8a9e6b41c09...c41d</div>
+<div><span class="text-outline">hash:</span> <strong class="text-primary font-semibold">d3a91b2289ef3...e582</strong></div>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary font-sans">
+<span>Estado: Firma Verificada</span>
+<span class="font-mono text-primary font-bold">OK · 0 discrepancias</span>
+</div>
+</div>
+<!-- Block #013 -->
+<div class="p-2.5 rounded-lg bg-surface-container-low/70 border border-outline-variant/20 font-mono text-[11px]">
+<div class="flex items-center justify-between text-on-surface-variant mb-1">
+<span class="font-bold text-on-surface">Bloque #013</span>
+<span class="text-[10px] text-outline">2024-05-22 09:15 UTC</span>
+</div>
+<div class="text-[10px] text-on-surface space-y-0.5">
+<div><span class="text-outline">prev:</span> 3b12dce8a2091...f910</div>
+<div><span class="text-outline">hash:</span> 7f8a9e6b41c09...c41d</div>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary font-sans">
+<span>Estado: Firma Verificada</span>
+<span class="font-mono text-primary font-bold">OK</span>
+</div>
+</div>
+<!-- Block #012 -->
+<div class="p-2.5 rounded-lg bg-surface-container-low/40 border border-outline-variant/20 font-mono text-[11px]">
+<div class="flex items-center justify-between text-on-surface-variant mb-1">
+<span class="font-bold text-outline">Bloque #012</span>
+<span class="text-[10px] text-outline">2024-05-18 11:30 UTC</span>
+</div>
+<div class="text-[10px] text-on-surface space-y-0.5">
+<div><span class="text-outline">prev:</span> a04e5572fc109...998b</div>
+<div><span class="text-outline">hash:</span> 3b12dce8a2091...f910</div>
+</div>
+<div class="mt-1 flex items-center justify-between text-[10px] text-secondary font-sans">
+<span>Estado: Firma Verificada</span>
+<span class="font-mono text-primary font-bold">OK</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Footer check note -->
+<div class="mt-3 pt-3 border-t border-outline-variant/15 flex items-center justify-between text-[11px] text-outline">
+<span class="flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px] text-primary" data-icon="check_circle">check_circle</span>
+                Auditado hace 4 min
+              </span>
+<span class="font-mono text-[10px]">Cero colisiones SHA-256</span>
+</div>
+</div>
+<!-- Section B: Exportador Oficial F-DC-125 -->
+<div class="bg-surface-container-lowest rounded-xl border border-outline-variant/20 p-5 shadow-xs">
+<div class="flex items-center gap-2 pb-3 border-b border-outline-variant/20">
+<span class="material-symbols-outlined text-[18px] text-trust-indigo" data-icon="terminal">terminal</span>
+<h3 class="text-xs font-bold text-on-surface uppercase tracking-wide">Exportador Metodológico F-DC-125</h3>
+</div>
+<p class="text-xs text-on-surface-variant mt-2 mb-3">
+              Generación de anexos auditables para radicación institucional ante comité evaluador y entes de control.
+            </p>
+<div class="space-y-2">
+<!-- Export 1 -->
+<button class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container border border-outline-variant/20 text-xs font-medium text-on-surface transition-colors">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-trust-indigo" data-icon="table_view">table_view</span>
+<span>Matriz Anonimizada (.CSV RFC 4180)</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Export 2 -->
+<button class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container border border-outline-variant/20 text-xs font-medium text-on-surface transition-colors">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-secondary" data-icon="integration_instructions">integration_instructions</span>
+<span>Tablas Markdown F-DC-125 (.md)</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="arrow_forward">arrow_forward</span>
+</button>
+<!-- Export 3 -->
+<button class="w-full flex items-center justify-between px-3 py-2 rounded-lg bg-surface-container-low hover:bg-surface-container border border-outline-variant/20 text-xs font-medium text-on-surface transition-colors">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px] text-tertiary" data-icon="picture_as_pdf">picture_as_pdf</span>
+<span>Memoria Criptográfica (.PDF Certificado)</span>
+</div>
+<span class="material-symbols-outlined text-[16px] text-outline" data-icon="arrow_forward">arrow_forward</span>
+</button>
+</div>
+<!-- Compliance Checkbox -->
+<div class="mt-4 pt-3 border-t border-outline-variant/15 flex items-start gap-2">
+<input checked="" class="mt-0.5 rounded text-trust-indigo focus:ring-trust-indigo h-3.5 w-3.5 border-outline-variant/40" id="crypto-seal" type="checkbox"/>
+<label class="text-[11px] text-on-surface-variant leading-tight select-none cursor-pointer" for="crypto-seal">
+                Ofuscar identificadores temporales de sesión y sellar el lote con hash de compromiso criptográfico.
+              </label>
+</div>
+</div>
+</div>
+</div>
+</main>
+<!-- Footer System Status Bar -->
+<footer class="mt-auto border-t border-outline-variant/20 bg-surface-container-lowest/80 px-8 py-3 flex flex-col sm:flex-row items-center justify-between text-xs text-outline font-mono">
+<div class="flex items-center gap-3">
+<span>Instancia: <strong class="text-on-surface">Datapyme Santander v3.4.1</strong></span>
+<span>·</span>
+<span>Módulo: <strong class="text-on-surface">SuperAdmin Telemetry &amp; Compliance</strong></span>
+</div>
+<div class="flex items-center gap-4 mt-2 sm:mt-0">
+<span class="inline-flex items-center gap-1.5 text-primary">
+<span class="w-2 h-2 rounded-full bg-primary"></span>
+          Conexión Segura TLS 1.3
+        </span>
+<span>Código Certificación: <strong>F-DC-125-REV4</strong></span>
+</div>
+</footer>
+</div>
+</body></html>
