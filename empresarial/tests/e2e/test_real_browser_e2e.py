@@ -22,22 +22,22 @@ import pytest
 import uvicorn
 from playwright.sync_api import Page, expect
 
-BASE_URL = os.environ.get("DATAPYME_TEST_URL", "http://127.0.0.1:8010")
+BASE_URL = os.environ.get("DATAPYME_TEST_URL", "http://127.0.0.1:8000")
 ARTIFACTS_DIR = Path(r"C:\Users\juanf\.gemini\antigravity\brain\46e60f00-dd8e-472a-98a1-c0a401f7e5ca")
 
 
 @pytest.fixture(scope="session", autouse=True)
 def live_server():
-    """Garantiza que el servidor FastAPI esté corriendo en 127.0.0.1:8010 durante la sesión de pruebas."""
+    """Garantiza que el servidor FastAPI esté corriendo en 127.0.0.1:8000 durante la sesión de pruebas."""
     sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    is_open = sock.connect_ex(("127.0.0.1", 8010)) == 0
+    is_open = sock.connect_ex(("127.0.0.1", 8000)) == 0
     sock.close()
 
     if not is_open:
         from app.main import create_app
         test_app = create_app()
-        config = uvicorn.Config(test_app, host="127.0.0.1", port=8010, log_level="error")
+        config = uvicorn.Config(test_app, host="127.0.0.1", port=8000, log_level="error")
         server = uvicorn.Server(config)
         t = threading.Thread(target=server.run, daemon=True)
         t.start()
@@ -284,11 +284,9 @@ def test_05_multi_product_cart_in_sale_drawer(page: Page):
     if options_count > 1:
         select_2.select_option(index=1)
 
-    # Modificar cantidades
-    qty_1 = rows.nth(0).locator("input.cart-quantity-input")
-    qty_2 = rows.nth(1).locator("input.cart-quantity-input")
-    qty_1.fill("1")
-    qty_2.fill("2")
+    # Modificar cantidades con selectores frescos tras el re-renderizado
+    page.locator("#sale-cart-items .cart-item-row").nth(0).locator("input.cart-quantity-input").fill("1")
+    page.locator("#sale-cart-items .cart-item-row").nth(1).locator("input.cart-quantity-input").fill("2")
 
     # Verificar que el total a cobrar se actualizó dinámicamente sumando ambos productos
     total_display = page.locator("#sale-total-display")

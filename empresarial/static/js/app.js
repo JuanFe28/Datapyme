@@ -805,7 +805,7 @@ function calculateCartTotals() {
   rows.forEach((row, idx) => {
     if (cartLines[idx]) {
       const lineTotal = (cartLines[idx].quantity || 1) * (cartLines[idx].unit_price || 0);
-      const subtotalCol = row.children[2];
+      const subtotalCol = row.querySelector('.price-cell');
       if (subtotalCol) subtotalCol.textContent = formatCOP(lineTotal);
     }
   });

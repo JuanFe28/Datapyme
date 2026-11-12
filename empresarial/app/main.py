@@ -227,12 +227,27 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
         Base.metadata.create_all(bind=engine)
         with engine.connect() as conn:
             try:
-                cols = [r[1] for r in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
-                if cols and "image_url" not in cols:
-                    conn.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(512)"))
+                if engine.dialect.name == "sqlite":
+                    cols = [r[1] for r in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
+                    if cols and "image_url" not in cols:
+                        conn.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(512)"))
+                        conn.commit()
+                elif engine.dialect.name == "postgresql":
+                    conn.execute(text("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(512)"))
                     conn.commit()
             except Exception as exc:
                 logging.getLogger("uvicorn.error").warning(f"Auto-migración products.image_url: {exc}")
+
+        with SessionLocal() as db:
+            try:
+                from app.core.models import User
+                from app.core.demo_seed import seed_contrast_demo_tenants
+                if db.query(User).count() == 0:
+                    logging.getLogger("uvicorn.error").info("Base de datos sin usuarios: sembrando empresas demo [DEMO-FDC125]...")
+                    seed_contrast_demo_tenants(db)
+            except Exception as exc:
+                logging.getLogger("uvicorn.error").warning(f"Auto-seeder demo tenants en arranque: {exc}")
+
         (ROOT / "static" / "uploads").mkdir(parents=True, exist_ok=True)
         yield
         engine.dispose()
