@@ -125,6 +125,11 @@ def update_product(
         prod.sale_price = parse_colombian_decimal(payload.sale_price, TWO_PLACES)
     if payload.min_stock is not None:
         prod.min_stock = parse_colombian_decimal(payload.min_stock, THREE_PLACES)
+    if payload.vat_rate is not None:
+        rate = parse_colombian_decimal(payload.vat_rate, TWO_PLACES)
+        if not rate.is_finite() or not 0 <= rate <= 100:
+            raise HTTPException(status_code=422, detail="Tarifa de IVA inválida.")
+        prod.vat_rate = rate
     if payload.image_url is not None:
         prod.image_url = payload.image_url.strip() if payload.image_url.strip() else None
     if payload.is_active is not None:

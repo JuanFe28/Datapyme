@@ -51,6 +51,7 @@ class ProductCreateRequest(BaseModel):
 
 
 class ProductUpdateRequest(BaseModel):
+    vat_rate: str | float | int | None = None
     sku: str | None = None
     name: str | None = None
     category: str | None = None

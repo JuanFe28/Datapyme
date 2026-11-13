@@ -793,6 +793,7 @@ function addCartLine(defaultProdId = null) {
 function calculateCartTotals() {
   const prods = getProductsCatalog();
   let grossSum = 0;
+  let vatTotal = 0;
   let hasStockExceeded = false;
   let stockErrorMsg = '';
 
@@ -811,12 +812,13 @@ function calculateCartTotals() {
     }
 
     grossSum += qty * price;
+    const rate = prod ? Number(prod.vat_rate) : 0;
+    const base = Math.round(qty * price * 100) / 100;
+    vatTotal += Math.round((base * rate / 100 + Number.EPSILON) * 100) / 100;
   });
 
-  // Cálculo de Subtotal e IVA (19%)
-  const vatRate = 0.19;
+  // Base e IVA por artículo; el servidor confirma los importes definitivos.
   const subtotal = grossSum;
-  const vatTotal = Math.round(subtotal * vatRate);
   const total = subtotal + vatTotal;
 
   const subtotalEl = document.getElementById('sale-subtotal-display');
@@ -1044,7 +1046,7 @@ async function handleImportFileInspection(e, targetSheet = null) {
     const columns = data.columns || [];
     const suggested = data.suggested_mapping || {};
 
-    const mappingFields = ['sku', 'name', 'category', 'cost_price', 'sale_price', 'initial_stock', 'unit', 'min_stock'];
+    const mappingFields = ['sku', 'name', 'category', 'cost_price', 'sale_price', 'initial_stock', 'unit', 'min_stock', 'vat_rate'];
     mappingFields.forEach((f) => {
       const sel = document.getElementById(`map-col-${f}`);
       if (!sel) return;
@@ -1116,6 +1118,7 @@ async function handleProductSubmit(e) {
     unit: document.getElementById('prod-unit').value,
     cost_price: document.getElementById('prod-cost').value,
     sale_price: document.getElementById('prod-price').value,
+    vat_rate: document.getElementById('prod-vat-rate').value,
     initial_stock: document.getElementById('prod-initial-stock').value,
     min_stock: document.getElementById('prod-min-stock').value,
     image_url: document.getElementById('prod-image-url')?.value || null,
@@ -1174,6 +1177,7 @@ async function handleImportSubmit(e) {
       initial_stock: document.getElementById('map-col-initial_stock')?.value || '',
       unit: document.getElementById('map-col-unit')?.value || '',
       min_stock: document.getElementById('map-col-min_stock')?.value || '',
+      vat_rate: document.getElementById('map-col-vat_rate')?.value || '',
     };
     formData.append('mapping', JSON.stringify(mapping));
     const sheetSel = document.getElementById('import-sheet-select');
@@ -1295,6 +1299,7 @@ function openEditProductDrawer(productId) {
   document.getElementById('edit-prod-unit').value = prod.unit || 'und';
   document.getElementById('edit-prod-cost').value = parseFloat(prod.cost_price) || 0;
   document.getElementById('edit-prod-price').value = parseFloat(prod.sale_price) || 0;
+  document.getElementById('edit-prod-vat-rate').value = prod.vat_rate;
   document.getElementById('edit-prod-stock-display').value = `${prod.stock_qty || 0} ${prod.unit || 'und'}`;
   document.getElementById('edit-prod-min-stock').value = parseFloat(prod.min_stock) || 0;
   document.getElementById('edit-prod-image-url').value = prod.image_url || '';
@@ -1382,6 +1387,7 @@ async function handleEditProductSubmit(e) {
     unit: document.getElementById('edit-prod-unit').value,
     cost_price: document.getElementById('edit-prod-cost').value,
     sale_price: document.getElementById('edit-prod-price').value,
+    vat_rate: document.getElementById('edit-prod-vat-rate').value,
     min_stock: document.getElementById('edit-prod-min-stock').value,
     image_url: document.getElementById('edit-prod-image-url')?.value || null,
   };
@@ -1568,8 +1574,9 @@ async function openSaleDetailDrawer(saleId) {
   const totalEl = document.getElementById('sale-detail-total');
   if (totalEl) totalEl.textContent = `${formatCOP(totalNum)} COP`;
 
-  const profitNum = subtotalNum - cogsNum;
-  const marginPct = subtotalNum > 0 ? (profitNum / subtotalNum) * 100 : 0;
+  const netRevenue = subtotalNum - discountNum;
+  const profitNum = netRevenue - cogsNum;
+  const marginPct = netRevenue > 0 ? (profitNum / netRevenue) * 100 : 0;
 
   const profitEl = document.getElementById('sale-detail-profit');
   if (profitEl) profitEl.textContent = `${formatCOP(profitNum)} COP`;

@@ -21,6 +21,7 @@ MAX_ROWS_LIMIT = 20000
 
 # Diccionario de sinónimos comerciales colombianos normalizados (sin acentos, minúsculas)
 SYNONYMS_MAP: dict[str, list[str]] = {
+    "vat_rate": ["vat_rate", "iva", "tarifa_iva"],
     "sku": [
         "sku",
         "codigo",
@@ -274,6 +275,7 @@ def inspect_workbook(
 
     # Auto-Mapeo usando sinónimos comerciales
     suggested_mapping: dict[str, str | None] = {
+        "vat_rate": None,
         "sku": None,
         "name": None,
         "category": None,
@@ -417,6 +419,9 @@ def parse_mapped_workbook_products(
         sale_dec = read_number(get_val(row_data, "sale_price"), "sale_price", "0.01", row_num)
         stock_dec = read_number(get_val(row_data, "initial_stock"), "initial_stock", "0.001", row_num)
         min_stock_dec = read_number(get_val(row_data, "min_stock"), "min_stock", "0.001", row_num)
+        vat_dec = read_number(get_val(row_data, "vat_rate") or "19", "vat_rate", "0.01", row_num)
+        if vat_dec > 100:
+            raise HTTPException(status_code=422, detail=f"Fila {row_num}: tarifa IVA fuera de rango.")
 
         parsed_products.append(
             {
@@ -426,7 +431,7 @@ def parse_mapped_workbook_products(
                 "unit": unit[:20],
                 "cost_price": cost_dec,
                 "sale_price": sale_dec,
-                "vat_rate": Decimal("19.00"),
+                "vat_rate": vat_dec,
                 "initial_stock": stock_dec,
                 "min_stock": min_stock_dec,
                 "row_number": row_num,

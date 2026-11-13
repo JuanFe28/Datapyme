@@ -1,5 +1,10 @@
 # ESTADO DE ORQUESTACIÓN Y ARQUITECTURA LIMPIA: DATAPYME (F-DC-124 / F-DC-125)
 
+> **Revisión de IVA 13/11/2026:** corregidos IVA visual uniforme, pérdida de tarifas
+> en importación/edición y utilidad sin descuentos. [Informe y fuentes oficiales](empresarial/docs/REVISION_IVA_COLOMBIA_2026_11_13.md).
+> Condiciones tributarias de los comercios parcialmente desconocidas: falta
+> configuración por empresa; no anunciar cumplimiento fiscal integral ni facturación DIAN.
+
 > **Revisión funcional del 13/11/2026:** el recorrido por las cuatro cuentas demo
 > confirmó dos roles efectivos, encontró errores de importación y mensajes de
 > consentimiento, y mantiene pendientes de CSV, supresión y series temporales.

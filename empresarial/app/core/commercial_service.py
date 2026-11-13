@@ -112,6 +112,16 @@ def create_product_with_initial_stock(
     clean_name = sanitize_cell_text(name, 180)
     clean_cat = sanitize_cell_text(category, 90) or "General"
     clean_unit = sanitize_cell_text(unit, 20) or "und"
+    if (
+        any(
+            not value.is_finite() or value < 0
+            for value in (cost_price, sale_price, vat_rate, initial_stock, min_stock)
+        )
+        or vat_rate > 100
+    ):
+        raise ValueError(
+            "Precios, existencias y tarifa deben ser números no negativos; IVA máximo 100%."
+        )
 
     if not clean_sku or not clean_name:
         raise ValueError("SKU y Nombre de producto son obligatorios.")
@@ -244,6 +254,10 @@ def create_sale_atomic(
             else Decimal(str(prod.sale_price)).quantize(TWO_PLACES)
         )
         discount = parse_colombian_decimal(item.get("discount", "0"), TWO_PLACES)
+        if not unit_price.is_finite() or not discount.is_finite() or unit_price < 0 or discount < 0:
+            raise HTTPException(status_code=422, detail="Precio y descuento deben ser no negativos.")
+        if discount > (qty * unit_price).quantize(TWO_PLACES, rounding=ROUND_HALF_UP):
+            raise HTTPException(status_code=422, detail="El descuento supera el importe del artículo.")
         resolved_items.append((prod, qty, unit_price, discount))
 
     max_num = db.query(func.max(Sale.sale_number)).filter_by(tenant_id=tenant_id).scalar() or 0
