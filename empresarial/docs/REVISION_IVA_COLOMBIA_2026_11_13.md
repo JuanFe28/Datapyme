@@ -1,5 +1,9 @@
 # Revisión de precios, utilidad e IVA — Colombia
 
+> Actualización posterior: la [condición editable por empresa](IVA_POR_EMPRESA.md)
+> ya está implementada y probada. Este informe conserva la revisión inicial;
+> sus menciones de esa función como pendiente quedan reemplazadas por la guía nueva.
+
 Fecha de consulta y pruebas: 13/11/2026. Revisión técnica del módulo empresarial
 de JuanFe28/Datapyme; continuación de b167ac7 en `fix/revision-iva-20261113`.
 Estado: errores concretos corregidos; configuración tributaria integral pendiente.

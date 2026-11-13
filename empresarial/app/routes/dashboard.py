@@ -1,6 +1,7 @@
 """Rutas del Dashboard Adaptativo, Personalización de UI y Preferencias (Sprint 3, Act. 3.4)."""
 
 import json
+from decimal import ROUND_HALF_UP, Decimal
 from typing import Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
@@ -9,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.analytics.kpis import get_tenant_kpis_payload
 from app.core.commercial_service import serialize_product
+from app.core.company_tax import tax_profile
 from app.core.dependencies import SESSION_COOKIE, get_current_context, get_db
 from app.core.jinja_filters import serialize_sale
 from app.core.models import (
@@ -144,6 +146,16 @@ def render_adaptive_dashboard(
         .limit(15)
         .all()
     ]
+    current_tax = tax_profile(db, tenant.id)
+    for product in products:
+        rate = Decimal(product["vat_rate"]) if current_tax["status"] == "responsible" else Decimal(0)
+        product["final_price"] = str(
+            (Decimal(product["sale_price"]) * (1 + rate / 100)).quantize(
+                Decimal("0.01"), rounding=ROUND_HALF_UP
+            )
+        )
+        if current_tax["status"] == "pending":
+            product["final_price"] = None
     forecast_data = get_tenant_forecast_payload(
         db=db,
         tenant_id=tenant.id,
@@ -170,6 +182,7 @@ def render_adaptive_dashboard(
 
     dashboard_json = json.dumps(
         {
+            "company_tax": tax_profile(db, tenant.id),
             "token": active_token,
             "primary_focus": layout_cfg.get("primary_focus"),
             "density": layout_cfg.get("density"),
@@ -184,6 +197,9 @@ def render_adaptive_dashboard(
     )
 
     templates = request.app.state.templates
+    dashboard_json = (
+        dashboard_json.replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+    )
     return templates.TemplateResponse(
         request=request,
         name="dashboard.html",
@@ -192,6 +208,7 @@ def render_adaptive_dashboard(
             "tenant_name": f"{clean_legal_name} · {tenant.municipality}",
             "company_name": clean_trade_name,
             "current_user": user,
+            "company_tax": tax_profile(db, tenant.id),
             "layout_config": layout_cfg,
             "kpi_payload": kpi_payload,
             "products": products,

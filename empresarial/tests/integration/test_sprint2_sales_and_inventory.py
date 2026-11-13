@@ -12,6 +12,7 @@ def _register_company(client, email="gerencia@ferrecabecera.co", name="FerreterÃ
         "/api/auth/register",
         json={
             "legal_name": name,
+            "tax_status": "responsible",
             "subsector": "ferreteria_hogar",
             "size": "pequena",
             "email": email,

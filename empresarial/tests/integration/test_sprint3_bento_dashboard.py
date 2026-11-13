@@ -15,6 +15,7 @@ def test_contrasting_tenants_render_distinct_bento_dashboard_and_isolated_kpis(t
             "/api/auth/register",
             json={
                 "legal_name": "Ferretería Cabecera S.A.S.",
+                "tax_status": "responsible",
                 "subsector": "Ferretería",
                 "email": "ferreteria@cabecera.co",
                 "full_name": "Carlos Mantilla",
@@ -42,6 +43,7 @@ def test_contrasting_tenants_render_distinct_bento_dashboard_and_isolated_kpis(t
             "/api/auth/register",
             json={
                 "legal_name": "Boutique San Pío S.A.S.",
+                "tax_status": "responsible",
                 "subsector": "Moda",
                 "email": "boutique@sanpio.co",
                 "full_name": "Laura Serrano",

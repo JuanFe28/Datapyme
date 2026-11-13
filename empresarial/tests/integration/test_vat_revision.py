@@ -8,6 +8,7 @@ def setup_company(client):
         "/api/auth/register",
         json={
             "legal_name": "Empresa sintetica IVA",
+            "tax_status": "responsible",
             "subsector": "Comercio",
             "email": "qa-iva@example.test",
             "full_name": "Prueba",

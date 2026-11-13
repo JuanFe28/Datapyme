@@ -28,6 +28,7 @@ from app.core.security import sha256_hex
 from app.routes import (
     admin,
     auth,
+    company_tax,
     dashboard,
     forecast,
     imports,
@@ -182,6 +183,7 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
 
     # Registro de enrutadores desacoplados
     application.include_router(auth.router)
+    application.include_router(company_tax.router)
     application.include_router(products.router)
     application.include_router(inventory.router)
     application.include_router(sales.router)

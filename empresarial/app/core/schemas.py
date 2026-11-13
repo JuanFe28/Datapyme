@@ -16,6 +16,7 @@ class DiagnosisPayload(BaseModel):
 
 
 class RegisterRequest(BaseModel):
+    tax_status: Literal["responsible", "not_responsible", "pending"] = "pending"
     legal_name: str
     subsector: str
     size: str = "pequena"
@@ -79,6 +80,7 @@ class SaleItemRequest(BaseModel):
 
 
 class SaleCreateRequest(BaseModel):
+    tax_revision: int | None = Field(default=None, ge=0)
     customer_label: str | None = "Cliente Mostrador"
     payment_method: Literal["cash", "card", "transfer", "credit", "other"] = "cash"
     items: list[SaleItemRequest]

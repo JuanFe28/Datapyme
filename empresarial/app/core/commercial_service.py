@@ -16,6 +16,7 @@ from app.core.models import (
     Product,
     Sale,
     SaleItem,
+    SaleTaxSnapshot,
     UsageEvent,
     utcnow,
 )
@@ -230,7 +231,11 @@ def create_sale_atomic(
     items_input: list[dict[str, Any]],
     source: str = "manual",
     import_job_id: str | None = None,
+    tax_revision: int | None = None,
 ) -> Sale:
+    from app.core.company_tax import effective_vat_rate, sale_tax_policy
+
+    policy = sale_tax_policy(db, tenant_id, tax_revision)
     if not items_input:
         raise HTTPException(status_code=422, detail="La venta debe incluir al menos un ítem.")
 
@@ -287,9 +292,12 @@ def create_sale_atomic(
     )
     db.add(sale)
     db.flush()
+    sale.tax_snapshot = SaleTaxSnapshot(
+        tenant_id=tenant_id, sale_id=sale.id, revision=policy["revision"], status=policy["status"]
+    )
 
     for prod, qty, unit_price, discount in resolved_items:
-        vat_r = Decimal(str(prod.vat_rate)).quantize(TWO_PLACES)
+        vat_r = effective_vat_rate(policy, Decimal(str(prod.vat_rate)).quantize(TWO_PLACES))
         line_subtotal = (qty * unit_price).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
         line_discount = min(discount, line_subtotal)
         taxable_base = line_subtotal - line_discount

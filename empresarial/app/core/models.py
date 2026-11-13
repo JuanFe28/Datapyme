@@ -53,6 +53,32 @@ class Tenant(Base):
     )
 
 
+class CompanyTaxChange(Base):
+    __tablename__ = "company_tax_changes"
+    id = Column(String(36), primary_key=True, default=new_uuid)
+    tenant_id = Column(String(36), ForeignKey("tenants.id"), nullable=False, index=True)
+    revision = Column(Integer, nullable=False)
+    status = Column(String(24), nullable=False)
+    reason = Column(String(280), nullable=False)
+    changed_by = Column(String(36), ForeignKey("users.id"), nullable=False)
+    changed_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    __table_args__ = (
+        UniqueConstraint("tenant_id", "revision", name="uq_company_tax_revision"),
+        CheckConstraint(
+            "status IN ('responsible','not_responsible','pending')", name="ck_company_tax_status"
+        ),
+    )
+
+
+class SaleTaxSnapshot(Base):
+    __tablename__ = "sale_tax_snapshots"
+    sale_id = Column(String(36), primary_key=True)
+    tenant_id = Column(String(36), nullable=False)
+    revision = Column(Integer, nullable=False)
+    status = Column(String(24), nullable=False)
+    __table_args__ = (ForeignKeyConstraint(["tenant_id", "sale_id"], ["sales.tenant_id", "sales.id"]),)
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -219,6 +245,7 @@ class Sale(Base):
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
+    tax_snapshot = relationship("SaleTaxSnapshot", uselist=False)
 
     __table_args__ = (
         UniqueConstraint("tenant_id", "sale_number", name="uq_tenant_sale_number"),

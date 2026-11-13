@@ -647,6 +647,18 @@ def seed_contrast_demo_tenants(db: Session) -> dict[str, Any]:
         db.add(user)
         db.flush()
 
+        from app.core.models import CompanyTaxChange
+
+        db.add(
+            CompanyTaxChange(
+                tenant_id=tenant.id,
+                revision=1,
+                status="responsible",
+                reason="Supuesto sintético del generador demo",
+                changed_by=user.id,
+            )
+        )
+
         profile = compute_priority_weights(spec["diagnosis"])
         ui_pref = CompanyUIPreference(
             tenant_id=tenant.id,
@@ -806,6 +818,14 @@ def clear_contrast_demo_tenants(db: Session) -> dict[str, int]:
                 synchronize_session=False
             )
             db.execute(text(guard.format("ENABLE")))
+        from app.core.models import CompanyTaxChange, SaleTaxSnapshot
+
+        db.query(SaleTaxSnapshot).filter(SaleTaxSnapshot.tenant_id.in_(demo_tids)).delete(
+            synchronize_session=False
+        )
+        db.query(CompanyTaxChange).filter(CompanyTaxChange.tenant_id.in_(demo_tids)).delete(
+            synchronize_session=False
+        )
         db.query(SaleItem).filter(SaleItem.tenant_id.in_(demo_tids)).delete(synchronize_session=False)
         db.query(Sale).filter(Sale.tenant_id.in_(demo_tids)).delete(synchronize_session=False)
         db.query(Product).filter(Product.tenant_id.in_(demo_tids)).delete(synchronize_session=False)

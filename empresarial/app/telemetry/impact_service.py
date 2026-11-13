@@ -19,6 +19,7 @@ from typing import Any
 from sqlalchemy.orm import Session
 
 from app.core.commercial_service import classify_inventory_alerts, serialize_product
+from app.core.company_tax import tax_profile
 from app.core.models import (
     CompanyUIPreference,
     ImportJob,
@@ -280,6 +281,7 @@ def export_habeas_data_bundle(
 
     return {
         "schema_version": "fdc124-habeas-data-v1.0",
+        "company_tax": tax_profile(db, tenant_id),
         "exported_at": utcnow().isoformat(),
         "requested_by_user_id": user_id,
         "tenant": {
@@ -335,6 +337,8 @@ def export_habeas_data_bundle(
                 "total": str(s.total),
                 "cogs_total": str(s.cogs_total),
                 "status": s.status,
+                "tax_status": s.tax_snapshot.status if s.tax_snapshot else "legacy",
+                "tax_revision": s.tax_snapshot.revision if s.tax_snapshot else None,
                 "occurred_at": s.occurred_at.isoformat() if s.occurred_at else None,
             }
             for s in sales

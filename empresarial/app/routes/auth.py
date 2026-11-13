@@ -15,6 +15,7 @@ from app.core.dependencies import (
     get_db,
 )
 from app.core.models import (
+    CompanyTaxChange,
     CompanyUIPreference,
     LegalConsent,
     SessionToken,
@@ -152,6 +153,17 @@ def register_tenant(payload: RegisterRequest, request: Request, db: Session = De
     )
     db.add(user)
     db.flush()
+
+    if payload.tax_status != "pending":
+        db.add(
+            CompanyTaxChange(
+                tenant_id=tenant.id,
+                revision=1,
+                status=payload.tax_status,
+                reason="Condición declarada al registrar empresa",
+                changed_by=user.id,
+            )
+        )
 
     ip_raw = request.client.host if request.client else "127.0.0.1"
     ua_raw = request.headers.get("user-agent", "testclient")

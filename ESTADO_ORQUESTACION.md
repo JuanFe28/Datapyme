@@ -1,5 +1,10 @@
 # ESTADO DE ORQUESTACIÓN Y ARQUITECTURA LIMPIA: DATAPYME (F-DC-124 / F-DC-125)
 
+> **IVA por empresa implementado 13/11/2026:** condición editable, historial y
+> aplicación a operaciones nuevas. Pendiente bloquea ventas; no responsable no
+> adiciona IVA; responsable usa la tarifa del artículo. Ventas anteriores conservadas.
+> [Uso, actualización y pruebas](empresarial/docs/IVA_POR_EMPRESA.md).
+
 > **Revisión de IVA 13/11/2026:** corregidos IVA visual uniforme, pérdida de tarifas
 > en importación/edición y utilidad sin descuentos. [Informe y fuentes oficiales](empresarial/docs/REVISION_IVA_COLOMBIA_2026_11_13.md).
 > Condiciones tributarias de los comercios parcialmente desconocidas: falta

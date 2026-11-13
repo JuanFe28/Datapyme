@@ -1,0 +1,27 @@
+<section style="padding:24px;margin-bottom:24px;background:var(--surface-card);border-radius:16px;" aria-labelledby="tax-settings-title">
+  <h2 id="tax-settings-title">Condición de IVA de la empresa</h2>
+  <p>Configura la condición vigente y confirmada del comercio. Se aplicará a las operaciones nuevas desde que guardes.</p>
+  <p>Responsable: se usa la tarifa de cada artículo. No responsable: no se adiciona IVA. Pendiente: se bloquea registrar ventas hasta confirmar.</p>
+  <p>Se conservan los precios base, costos contables y ventas anteriores. Los cambios de costo por IVA de compras requieren revisión de sus soportes. Una tarifa cero no distingue por sí sola exento y excluido.</p>
+  {% if current_user.role == 'owner' %}
+  <form id="company-tax-form">
+    <label for="company-tax-status">Condición tributaria</label>
+    <select id="company-tax-status" class="form-input" required>
+      {% for value, label in [('pending','Pendiente de confirmar'),('not_responsible','No responsable de IVA'),('responsible','Responsable de IVA')] %}
+      <option value="{{ value }}" {% if company_tax.status == value %}selected{% endif %}>{{ label }}</option>
+      {% endfor %}
+    </select>
+    <label for="company-tax-reason">Motivo del cambio o corrección</label>
+    <textarea id="company-tax-reason" class="form-input" minlength="5" maxlength="280" required placeholder="Ej.: condición verificada para las operaciones nuevas"></textarea>
+    <p>Revisa la condición antes de guardar. Una corrección del registro no modifica automáticamente comprobantes anteriores.</p>
+    <button type="submit" id="company-tax-save" class="btn btn-primary">Guardar condición de IVA</button>
+    <p id="company-tax-result" role="status" aria-live="polite"></p>
+  </form>
+  {% endif %}
+  <h3>Historial de cambios</h3>
+  <ul>
+    {% for change in company_tax.history %}
+    <li>Revisión {{ change.revision }} · {{ change.changed_at | date_es }} UTC · {{ {'responsible':'Responsable','not_responsible':'No responsable','pending':'Pendiente'}[change.status] }} · {{ change.reason }}</li>
+    {% else %}<li>Sin condición confirmada ni cambios registrados.</li>{% endfor %}
+  </ul>
+</section>

@@ -1,5 +1,10 @@
 {% extends "base.html" %}
 {% block content %}
+<div style="padding:12px;margin-bottom:16px;background:var(--surface-card);border-radius:12px;">
+  <strong>IVA de empresa:</strong>
+  {{ {'responsible':'Responsable de IVA', 'not_responsible':'No responsable de IVA', 'pending':'Pendiente de confirmar'}[company_tax.status] }}
+  <a href="#section-my_data" class="sidebar-nav-link" data-section="section-my_data">Editar condición de IVA</a>
+</div>
 <!-- Metadatos de Personalización según Encuesta (Compatibilidad de pruebas) -->
 <div style="display: none;" 
      data-testid="primary-focus-badge" 
@@ -298,7 +303,7 @@
             </td>
             <td><span class="badge-neutral">{{ prod.category or 'General' }}</span></td>
             <td class="price-cell" style="text-align: right;">{{ prod.cost_price | cop }}</td>
-            <td class="price-cell" style="text-align: right; font-weight: 600;">{{ prod.sale_price | cop }}</td>
+            <td class="price-cell" style="text-align: right; font-weight: 600;">{{ prod.sale_price | cop }}<br><small>Final: {{ prod.final_price | cop if prod.final_price is not none else 'Por confirmar' }}</small></td>
             <td>
               <div style="display: flex; align-items: center; gap: 8px;">
                 <div class="stock-progress-track">
@@ -478,7 +483,7 @@
           <td style="font-weight: 600;">{{ prod.name }}</td>
           <td><span class="badge-neutral">{{ prod.category or 'General' }}</span></td>
           <td class="price-cell" style="text-align: right;">{{ prod.cost_price | cop }}</td>
-          <td class="price-cell" style="text-align: right; font-weight: 600;">{{ prod.sale_price | cop }}</td>
+          <td class="price-cell" style="text-align: right; font-weight: 600;">{{ prod.sale_price | cop }}<br><small>Final: {{ prod.final_price | cop if prod.final_price is not none else 'Por confirmar' }}</small></td>
           <td style="font-weight: 600;">{{ prod.stock_qty | qty(prod.unit) }}</td>
           <td style="color: var(--ink-muted);">{{ prod.min_stock | qty(prod.unit) }}</td>
           <td>
@@ -753,6 +758,7 @@
 <!-- SECCIÓN 5: PRIVACIDAD Y HABEAS DATA (LEY 1581) -->
 <!-- ============================================== -->
 <div id="section-my_data" class="dashboard-module-section" style="display: none;">
+  {% include "company_tax_settings.html" %}
   <div style="margin-bottom: 24px;">
     <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Mis Datos y Habeas Data (Ley 1581 de 2012)</h2>
     <p style="font-size: 13px; color: var(--ink-muted); margin: 4px 0 0;">Garantía de privacidad comercial, descarga de información y aislamiento seguro Multi-Tenant.</p>
@@ -1317,6 +1323,7 @@
       <div>
         <h3 id="drawer-sale-detail-title" class="drawer-title">Comprobante de Venta</h3>
         <p class="drawer-subtitle" id="sale-detail-subtitle">Desglose de productos, cálculo de IVA y margen comercial.</p>
+        <p id="sale-detail-tax-status"></p>
       </div>
       <button type="button" class="drawer-close-btn" data-close-drawer="drawer-sale-detail" aria-label="Cerrar panel">
         <i data-lucide="x" style="width: 16px; height: 16px;"></i>

@@ -210,6 +210,8 @@ document.addEventListener('DOMContentLoaded', () => {
   if (formProduct) formProduct.addEventListener('submit', handleProductSubmit);
 
   const formImport = document.getElementById('form-import');
+  const taxForm = document.getElementById('company-tax-form');
+  if (taxForm) taxForm.addEventListener('submit', handleCompanyTaxChange);
   if (formImport) formImport.addEventListener('submit', handleImportSubmit);
 
   // Subida con preview instantáneo de foto de producto
@@ -794,8 +796,9 @@ function calculateCartTotals() {
   const prods = getProductsCatalog();
   let grossSum = 0;
   let vatTotal = 0;
-  let hasStockExceeded = false;
-  let stockErrorMsg = '';
+  const taxStatus = dashboardData.company_tax?.status || 'pending';
+  let hasStockExceeded = taxStatus === 'pending';
+  let stockErrorMsg = hasStockExceeded ? 'Confirma la condición de IVA de la empresa antes de vender.' : '';
 
   cartLines.forEach((line) => {
     const prod = prods.find((p) => p.id === line.product_id);
@@ -812,7 +815,7 @@ function calculateCartTotals() {
     }
 
     grossSum += qty * price;
-    const rate = prod ? Number(prod.vat_rate) : 0;
+    const rate = taxStatus === 'not_responsible' ? 0 : (prod ? Number(prod.vat_rate) : 0);
     const base = Math.round(qty * price * 100) / 100;
     vatTotal += Math.round((base * rate / 100 + Number.EPSILON) * 100) / 100;
   });
@@ -829,8 +832,8 @@ function calculateCartTotals() {
   const submitBtn = document.getElementById('btn-submit-sale');
 
   if (subtotalEl) subtotalEl.textContent = formatCOP(subtotal);
-  if (vatEl) vatEl.textContent = formatCOP(vatTotal);
-  if (totalEl) totalEl.textContent = formatCOP(total);
+  if (vatEl) vatEl.textContent = taxStatus === 'pending' ? 'Por confirmar' : formatCOP(vatTotal);
+  if (totalEl) totalEl.textContent = taxStatus === 'pending' ? 'Por confirmar' : formatCOP(total);
 
   if (warningEl) {
     if (hasStockExceeded) {
@@ -896,6 +899,7 @@ async function handleSaleSubmit(e) {
       method: 'POST',
       headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
       body: JSON.stringify({
+        tax_revision: dashboardData.company_tax?.revision,
         customer_label: customer,
         payment_method: payment,
         items: itemsPayload,
@@ -1549,6 +1553,10 @@ async function openSaleDetailDrawer(saleId) {
   }
 
   const subtotalNum = parseFloat(sale.subtotal) || 0;
+  const taxStatusEl = document.getElementById('sale-detail-tax-status');
+  if (taxStatusEl) taxStatusEl.textContent = 'Condición al registrar: ' +
+    ({responsible:'Responsable de IVA', not_responsible:'No responsable de IVA',
+      legacy:'Venta anterior a la configuración por empresa'}[sale.tax_status] || 'Sin registro histórico');
   const vatNum = parseFloat(sale.vat_total) || 0;
   const discountNum = parseFloat(sale.discount_total) || 0;
   const totalNum = parseFloat(sale.total) || 0;
@@ -1600,3 +1608,27 @@ async function openSaleDetailDrawer(saleId) {
   openDrawer('drawer-sale-detail');
 }
 window.openSaleDetailDrawer = openSaleDetailDrawer;
+
+async function handleCompanyTaxChange(event) {
+  event.preventDefault();
+  const button = document.getElementById('company-tax-save');
+  const result = document.getElementById('company-tax-result');
+  button.disabled = true;
+  try {
+    const response = await fetch(`${ROOT_PATH}/api/company/tax`, {
+      method: 'PUT', headers: getAuthHeaders({'Content-Type':'application/json'}),
+      body: JSON.stringify({status:document.getElementById('company-tax-status').value,
+        reason:document.getElementById('company-tax-reason').value,
+        expected_revision:dashboardData.company_tax.revision}),
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      result.textContent = typeof data.detail === 'string' ? data.detail : 'Revisa la condición y el motivo del cambio.';
+      return;
+    }
+    result.textContent = 'Condición guardada. Se actualizarán los totales de las operaciones nuevas.';
+    location.reload();
+  } catch (error) {
+    result.textContent = 'No se pudo confirmar el cambio. Recarga para verificar el estado antes de reintentar.';
+  } finally { button.disabled = false; }
+}

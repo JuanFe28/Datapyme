@@ -11,6 +11,7 @@ def _register_tenant(client, email: str, name: str):
         "/api/auth/register",
         json={
             "legal_name": name,
+            "tax_status": "responsible",
             "subsector": "ferreteria_hogar",
             "size": "pequena",
             "email": email,
