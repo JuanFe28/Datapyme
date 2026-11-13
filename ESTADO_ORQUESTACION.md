@@ -1,5 +1,12 @@
 # ESTADO DE ORQUESTACIÓN Y ARQUITECTURA LIMPIA: DATAPYME (F-DC-124 / F-DC-125)
 
+> **Revisión funcional del 13/11/2026:** el recorrido por las cuatro cuentas demo
+> confirmó dos roles efectivos, encontró errores de importación y mensajes de
+> consentimiento, y mantiene pendientes de CSV, supresión y series temporales.
+> Ver [pruebas, correcciones y límites](empresarial/docs/QA_ROLES_2026_11_13.md).
+> Las afirmaciones históricas de finalización siguientes no sustituyen esta
+> evidencia ni autorizan a afirmar que el proyecto completo está validado.
+
 **Fecha de Actualización:** 12 de Noviembre de 2026  
 **Entidad Académica:** Unidades Tecnológicas de Santander (UTS)  
 **Proyecto:** Datapyme - Plataforma de Analítica Comercial para PyMEs de Bucaramanga  

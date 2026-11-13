@@ -237,7 +237,7 @@ def inspect_workbook(
     best_score = -1
     best_headers: list[str] = []
 
-    all_synonyms = {syn for syn_list in SYNONYMS_MAP.values() for syn in syn_list}
+    all_synonyms = set(SYNONYMS_MAP) | {syn for syn_list in SYNONYMS_MAP.values() for syn in syn_list}
 
     for row_idx, row in enumerate(raw_matrix[:MAX_SCAN_ROWS]):
         score = 0
@@ -287,6 +287,7 @@ def inspect_workbook(
     assigned_cols: set[str] = set()
 
     for field, synonyms in SYNONYMS_MAP.items():
+        synonyms = [field, *synonyms]
         for col in columns:
             if col in assigned_cols:
                 continue
@@ -398,30 +399,24 @@ def parse_mapped_workbook_products(
         category = get_val(row_data, "category") or "General"
         unit = get_val(row_data, "unit") or "und"
 
-        cost_clean = clean_currency_or_number_string(get_val(row_data, "cost_price"))
-        sale_clean = clean_currency_or_number_string(get_val(row_data, "sale_price"))
-        stock_clean = clean_currency_or_number_string(get_val(row_data, "initial_stock"))
-        min_stock_clean = clean_currency_or_number_string(get_val(row_data, "min_stock"))
+        def read_number(raw: str, field: str, precision: str, row_number: int) -> Decimal:
+            try:
+                if raw and raw != "-" and not re.search(r"\d", raw):
+                    raise ValueError("Valor no numérico")
+                number = Decimal(clean_currency_or_number_string(raw)).quantize(Decimal(precision))
+                if not number.is_finite() or number < 0:
+                    raise ValueError("Valor negativo o no finito")
+                return number
+            except (InvalidOperation, ValueError, TypeError) as exc:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Fila {row_number}: {field} debe ser un número válido no negativo.",
+                ) from exc
 
-        try:
-            cost_dec = Decimal(cost_clean).quantize(Decimal("0.01"))
-        except (InvalidOperation, TypeError):
-            cost_dec = Decimal("0.00")
-
-        try:
-            sale_dec = Decimal(sale_clean).quantize(Decimal("0.01"))
-        except (InvalidOperation, TypeError):
-            sale_dec = Decimal("0.00")
-
-        try:
-            stock_dec = Decimal(stock_clean).quantize(Decimal("0.001"))
-        except (InvalidOperation, TypeError):
-            stock_dec = Decimal("0.000")
-
-        try:
-            min_stock_dec = Decimal(min_stock_clean).quantize(Decimal("0.001"))
-        except (InvalidOperation, TypeError):
-            min_stock_dec = Decimal("0.000")
+        cost_dec = read_number(get_val(row_data, "cost_price"), "cost_price", "0.01", row_num)
+        sale_dec = read_number(get_val(row_data, "sale_price"), "sale_price", "0.01", row_num)
+        stock_dec = read_number(get_val(row_data, "initial_stock"), "initial_stock", "0.001", row_num)
+        min_stock_dec = read_number(get_val(row_data, "min_stock"), "min_stock", "0.001", row_num)
 
         parsed_products.append(
             {

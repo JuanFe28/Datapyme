@@ -1044,7 +1044,7 @@ async function handleImportFileInspection(e, targetSheet = null) {
     const columns = data.columns || [];
     const suggested = data.suggested_mapping || {};
 
-    const mappingFields = ['sku', 'name', 'category', 'cost_price', 'sale_price', 'initial_stock', 'unit'];
+    const mappingFields = ['sku', 'name', 'category', 'cost_price', 'sale_price', 'initial_stock', 'unit', 'min_stock'];
     mappingFields.forEach((f) => {
       const sel = document.getElementById(`map-col-${f}`);
       if (!sel) return;
@@ -1173,6 +1173,7 @@ async function handleImportSubmit(e) {
       sale_price: document.getElementById('map-col-sale_price')?.value || '',
       initial_stock: document.getElementById('map-col-initial_stock')?.value || '',
       unit: document.getElementById('map-col-unit')?.value || '',
+      min_stock: document.getElementById('map-col-min_stock')?.value || '',
     };
     formData.append('mapping', JSON.stringify(mapping));
     const sheetSel = document.getElementById('import-sheet-select');
@@ -1195,17 +1196,30 @@ async function handleImportSubmit(e) {
     });
     const data = await resp.json();
     const resDiv = document.getElementById('import-results');
+    const detail = data.detail;
+    const errorMessage = typeof detail === 'string' ? detail
+      : Array.isArray(detail) ? detail.map((item) => item.msg || 'Dato inválido').join('; ')
+      : 'Error en validación del archivo';
     if (resDiv) {
       resDiv.style.display = 'block';
-      resDiv.innerHTML = `<strong>Resultado:</strong> ${data.rows_ok} filas procesadas correctamente, ${data.rows_rejected} rechazadas.`;
+      resDiv.textContent = resp.ok
+        ? `Resultado: ${data.rows_ok} filas válidas, ${data.rows_rejected} rechazadas. ${mode === 'preview' ? 'Revisión sin guardar productos ni ventas.' : 'Importación guardada.'}`
+        : errorMessage;
+      if (resp.ok && Array.isArray(data.errors)) {
+        data.errors.forEach((item) => {
+          const line = document.createElement('div');
+          line.textContent = `Fila ${item.row}: ${item.message}`;
+          resDiv.appendChild(line);
+        });
+      }
     }
     if (resp.ok) {
-      showToast('Importación completada con éxito', 'success');
+      showToast(mode === 'preview' ? 'Revisión completada sin guardar' : 'Importación completada', data.rows_rejected ? 'error' : 'success');
       if (mode === 'commit') {
         setTimeout(() => location.reload(), 900);
       }
     } else {
-      showToast(data.detail || 'Error en validación del archivo', 'error');
+      showToast(errorMessage, 'error');
     }
   } catch (err) {
     showToast('Error de conexión al importar', 'error');
