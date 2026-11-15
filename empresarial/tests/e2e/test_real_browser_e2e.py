@@ -270,6 +270,19 @@ def test_05_multi_product_cart_in_sale_drawer(page: Page):
     page.wait_for_url("**/dashboard")
     page.wait_for_load_state("networkidle")
 
+    # Si el comercio parte pendiente de IVA en una BD existente, confirmar condición primero
+    if page.locator("text=Pendiente de confirmar").count() > 0:
+        page.locator("a", has_text="Editar condición de IVA").click()
+        expect(page.locator("#company-tax-form")).to_be_visible()
+        page.locator("#company-tax-status").select_option("responsible")
+        page.locator("#company-tax-reason").fill(
+            "Configuración responsable confirmada para prueba E2E de venta"
+        )
+        with page.expect_navigation():
+            page.locator("#company-tax-save").click()
+        page.wait_for_load_state("networkidle")
+        expect(page.locator("text=Responsable de IVA").first).to_be_visible()
+
     # Abrir Drawer de Venta
     page.get_by_text("+ Registrar Venta").first.click()
     drawer_sale = page.locator("#drawer-sale")
@@ -332,8 +345,8 @@ def test_06_forecast_business_language_and_uts_accordion(page: Page):
     # 1. Verificar tarjetas de negocios comprensibles
     expect(page.locator("text=Venta Estimada Próximo Mes")).to_be_visible()
     expect(page.locator("text=Tendencia Mensual del Negocio")).to_be_visible()
-    expect(page.locator("text=Confiabilidad de la Proyección")).to_be_visible()
-    expect(page.locator("text=Muy Alta")).to_be_visible()
+    expect(page.locator("text=Ajuste al historial (R²)")).to_be_visible()
+    expect(page.locator("text=R²:").first).to_be_visible()
 
     # 2. Verificar que el gráfico propio de proyección existe y dibuja
     forecast_chart_canvas = page.locator("#forecastModuleChart")
