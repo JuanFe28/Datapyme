@@ -214,10 +214,40 @@
       </div>
     </div>
 
-    <!-- Vista Tab: Ventas -->
+    <!-- Vista Tab: Ventas y Estado de Pérdidas y Ganancias (P&L) -->
     <div id="tab-content-sales" class="tab-panel" style="{% if layout_config.primary_focus != 'sales' and layout_config.primary_focus != 'balanced' %}display: none;{% endif %}">
-      <p role="note" style="font-size: 13px; color: var(--ink-secondary);">Gráfica ilustrativa del prototipo: distribución simulada del total. Los filtros aún no representan ventas agrupadas por fecha.</p>
-      <div style="height: 300px; width: 100%;">
+      <div class="pnl-summary-strip" id="pnl-summary-strip">
+        <div class="pnl-metric">
+          <span class="pnl-metric-label">Ventas Netas (Sin IVA)</span>
+          <strong class="pnl-metric-value" id="pnl-net-revenue">{{ profitability.pnl.net_revenue | cop }}</strong>
+          <span class="pnl-metric-sub">Facturado real del periodo</span>
+        </div>
+        <div class="pnl-metric">
+          <span class="pnl-metric-label">Costo de lo Vendido (COGS)</span>
+          <strong class="pnl-metric-value" id="pnl-cogs">{{ profitability.pnl.cogs_total | cop }}</strong>
+          <span class="pnl-metric-sub">Reposición unitaria exacta</span>
+        </div>
+        <div class="pnl-metric pnl-metric-profit">
+          <span class="pnl-metric-label">Ganancia Neta Comercial</span>
+          <strong class="pnl-metric-value" id="pnl-net-profit">{{ profitability.pnl.net_profit_after_losses_cop | cop }}</strong>
+          <span class="pnl-metric-sub" id="pnl-net-margin">Margen neto: {{ profitability.pnl.net_margin_after_losses_pct }}%</span>
+        </div>
+        <div class="pnl-metric pnl-metric-loss">
+          <span class="pnl-metric-label">Pérdidas Detectadas</span>
+          <strong class="pnl-metric-value" id="pnl-total-losses">{{ profitability.pnl.total_losses_cop | cop }}</strong>
+          <span class="pnl-metric-sub" id="pnl-breakdown-note">Mermas: {{ profitability.pnl.shrinkage_loss_cop | cop }} · Bajo costo: {{ profitability.pnl.below_cost_loss_cop | cop }}</span>
+        </div>
+      </div>
+
+      <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px;">
+        <p role="note" style="font-size: 12px; color: var(--ink-secondary); margin: 0;">
+          Serie temporal auditable en pesos COP (sin IVA): compara ingresos netos, ganancia real después de mermas y costos/pérdidas según el horizonte (<span id="pnl-period-label">30D</span>).
+        </p>
+        <span style="font-size: 12px; color: var(--ink-muted);" id="pnl-immobilized-note">
+          Capital sin rotación (30D): <strong style="color: var(--ink-primary); font-variant-numeric: tabular-nums;">{{ profitability.pnl.immobilized_capital_30d_cop | cop }}</strong>
+        </span>
+      </div>
+      <div style="height: 290px; width: 100%;">
         <canvas id="salesTrendChart"></canvas>
       </div>
     </div>
@@ -256,7 +286,7 @@
           Últimas Ventas ({{ recent_sales | length }})
         </button>
         <button type="button" class="table-tab-btn" data-table-view="pareto">
-          Estrellas vs. Estancados
+          Más Vendidos vs. Menos Vendidos y Rentabilidad
         </button>
       </div>
 
@@ -400,45 +430,170 @@
       </div>
     </div>
 
-    <!-- Sub-vista 3: Clasificación Pareto (Estrellas vs Estancados) -->
+    <!-- Sub-vista 3: Ranking Explícito de Rentabilidad (Más Vendidos vs. Menos Vendidos y Pérdidas) -->
     <div id="table-view-pareto" class="table-view-panel" style="display: none;">
-      <div class="stars-sluggish-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 24px; padding: 16px 0;">
+      <div class="ranking-toolbar">
         <div>
-          <h4 style="margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--status-ok-text);">
-            Productos Estrella (80% Ingresos)
+          <h4 style="margin: 0; font-size: 14px; font-weight: 600; color: var(--ink-primary);">
+            Rentabilidad por Producto y Control de Pérdidas
           </h4>
-          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
-            {% for star in kpi_payload.star_products %}
-            <li style="display: flex; justify-content: space-between; padding: 10px 12px; background: var(--surface-subtle); border-radius: var(--radius-control);">
-              <div>
-                <strong>{{ star.name }}</strong>
-                <div style="font-size: 11px; color: var(--ink-muted);">SKU: {{ star.sku }} · {{ star.units_sold | qty }} vendidas</div>
-              </div>
-              <span class="price-cell" style="font-weight: 600; color: var(--ink-primary);">{{ star.net_revenue | cop }}</span>
-            </li>
-            {% else %}
-            <li style="color: var(--ink-muted); font-size: 12px;">Sin suficientes datos para clasificar estrellas.</li>
-            {% endfor %}
-          </ul>
+          <p style="margin: 2px 0 0; font-size: 12px; color: var(--ink-muted);">
+            Analiza qué productos generan utilidad real y cuáles inmovilizan capital o pierden margen (<span id="ranking-period-badge">30D</span>).
+          </p>
         </div>
 
-        <div>
-          <h4 style="margin: 0 0 12px; font-size: 13px; font-weight: 600; color: var(--status-warn-text);">
-            Productos Estancados (Baja Rotación)
-          </h4>
-          <ul style="list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px;">
-            {% for stag in kpi_payload.stagnant_products %}
-            <li style="display: flex; justify-content: space-between; padding: 10px 12px; background: var(--surface-subtle); border-radius: var(--radius-control);">
-              <div>
-                <strong>{{ stag.name }}</strong>
-                <div style="font-size: 11px; color: var(--ink-muted);">SKU: {{ stag.sku }} · Stock actual: {{ stag.stock_qty | qty }}</div>
-              </div>
-              <span class="badge-warning">0 ventas en el periodo</span>
-            </li>
-            {% else %}
-            <li style="color: var(--ink-muted); font-size: 12px;">No se registran productos estancados en este periodo.</li>
-            {% endfor %}
-          </ul>
+        <div class="segmented-control" id="ranking-segmented-control" role="tablist" aria-label="Vista de ranking de productos">
+          <button
+            type="button"
+            class="segmented-btn active"
+            data-ranking-view="top"
+            role="tab"
+            aria-selected="true"
+          >
+            Qué se vende más ({{ profitability.top_selling_products | length }})
+          </button>
+          <button
+            type="button"
+            class="segmented-btn"
+            data-ranking-view="least"
+            role="tab"
+            aria-selected="false"
+          >
+            Qué se vende menos y Pérdidas ({{ profitability.least_selling_and_loss_products | length }})
+          </button>
+        </div>
+      </div>
+
+      <!-- Vista A: Productos Más Vendidos y Más Rentables -->
+      <div id="ranking-panel-top" class="ranking-panel">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th style="text-align: right;">Unidades</th>
+                <th>Participación</th>
+                <th style="text-align: right;">Ingresos Netos</th>
+                <th style="text-align: right;">Costo (COGS)</th>
+                <th style="text-align: right;">Ganancia Real</th>
+                <th style="text-align: right;">Margen</th>
+              </tr>
+            </thead>
+            <tbody id="top-products-tbody">
+              {% for item in profitability.top_selling_products %}
+              <tr>
+                <td data-label="Producto">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" style="width: 34px; height: 34px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.08); flex-shrink: 0;">
+                    {% else %}
+                    <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--surface-subtle); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--ink-muted); flex-shrink: 0;">
+                      {{ item.name[:2] | upper }}
+                    </div>
+                    {% endif %}
+                    <div>
+                      <div style="font-weight: 600; color: var(--ink-primary);">{{ item.name }}</div>
+                      <div style="font-size: 11px; color: var(--ink-muted); font-family: var(--font-mono);">{{ item.sku }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Unidades" class="price-cell" style="text-align: right; font-weight: 600;">
+                  {{ '%g' | format(item.units_sold | float) }} <span style="font-size: 11px; color: var(--ink-muted); font-weight: 400;">{{ item.unit }}</span>
+                </td>
+                <td data-label="Participación">
+                  <div style="display: flex; align-items: center; gap: 8px; min-width: 110px;">
+                    <div class="share-bar-track">
+                      <div class="share-bar-fill" style="width: {{ item.revenue_share_pct }}%;"></div>
+                    </div>
+                    <span class="price-cell" style="font-size: 11px; color: var(--ink-secondary);">{{ item.revenue_share_pct }}%</span>
+                  </div>
+                </td>
+                <td data-label="Ingresos Netos" class="price-cell" style="text-align: right;">{{ item.net_revenue | cop }}</td>
+                <td data-label="Costo (COGS)" class="price-cell" style="text-align: right; color: var(--ink-muted);">{{ item.cogs_total | cop }}</td>
+                <td data-label="Ganancia Real" class="price-cell" style="text-align: right; font-weight: 600; color: {% if (item.profit_cop | float) < 0 %}#E11D48{% else %}#059669{% endif %};">
+                  {{ item.profit_cop | cop }}
+                </td>
+                <td data-label="Margen" class="price-cell" style="text-align: right;">
+                  <span class="{% if (item.margin_pct | float) >= 20 %}badge-success{% elif (item.margin_pct | float) > 0 %}badge-warning{% else %}badge-danger{% endif %}">
+                    {{ item.margin_pct }}%
+                  </span>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 28px;">
+                  Aún no se registran ventas confirmadas en este horizonte de tiempo.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Vista B: Productos Menos Vendidos, Estancados o con Pérdida -->
+      <div id="ranking-panel-least" class="ranking-panel" style="display: none;">
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Producto</th>
+                <th style="text-align: right;">Vendidas</th>
+                <th style="text-align: right;">Stock Actual</th>
+                <th style="text-align: right;">Dinero Estancado</th>
+                <th>Última Venta</th>
+                <th style="text-align: right;">Merma / Pérdida</th>
+                <th>Diagnóstico Automático</th>
+              </tr>
+            </thead>
+            <tbody id="least-products-tbody">
+              {% for item in profitability.least_selling_and_loss_products %}
+              <tr>
+                <td data-label="Producto">
+                  <div style="display: flex; align-items: center; gap: 10px;">
+                    {% if item.image_url %}
+                    <img src="{{ item.image_url }}" alt="{{ item.name }}" style="width: 34px; height: 34px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.08); flex-shrink: 0;">
+                    {% else %}
+                    <div style="width: 34px; height: 34px; border-radius: 6px; background: var(--surface-subtle); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--ink-muted); flex-shrink: 0;">
+                      {{ item.name[:2] | upper }}
+                    </div>
+                    {% endif %}
+                    <div>
+                      <div style="font-weight: 600; color: var(--ink-primary);">{{ item.name }}</div>
+                      <div style="font-size: 11px; color: var(--ink-muted); font-family: var(--font-mono);">{{ item.sku }}</div>
+                    </div>
+                  </div>
+                </td>
+                <td data-label="Vendidas" class="price-cell" style="text-align: right; font-weight: 600;">
+                  {{ '%g' | format(item.units_sold | float) }}
+                </td>
+                <td data-label="Stock Actual" class="price-cell" style="text-align: right;">
+                  {{ '%g' | format(item.stock_qty | float) }} {{ item.unit }}
+                </td>
+                <td data-label="Dinero Estancado" class="price-cell" style="text-align: right; font-weight: 600; color: var(--ink-primary);">
+                  {{ item.stock_value_cop | cop }}
+                </td>
+                <td data-label="Última Venta" style="font-size: 12px; color: var(--ink-secondary);">
+                  {{ item.last_sale_label }}
+                </td>
+                <td data-label="Merma / Pérdida" class="price-cell" style="text-align: right; font-weight: 600; color: {% if ((item.shrinkage_loss_cop | float) + (item.below_cost_loss_cop | float)) > 0 %}#E11D48{% else %}var(--ink-muted){% endif %};">
+                  {{ ((item.shrinkage_loss_cop | float) + (item.below_cost_loss_cop | float)) | cop }}
+                </td>
+                <td data-label="Diagnóstico Automático">
+                  <span class="{% if item.diagnosis_severity == 'danger' %}badge-danger{% elif item.diagnosis_severity == 'warning' %}badge-warning{% else %}badge-info{% endif %}">
+                    {{ item.diagnosis }}
+                  </span>
+                </td>
+              </tr>
+              {% else %}
+              <tr>
+                <td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 28px;">
+                  Todos los productos del catálogo registran rotación saludable sin alertas de pérdida.
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -842,6 +997,34 @@
 
     <div style="font-size: 12px; color: var(--ink-muted); line-height: 1.6; border-top: 1px solid rgba(15, 23, 42, 0.06); padding-top: 14px;">
       <strong>Derechos garantizados al titular:</strong> Conocer, actualizar, rectificar y suprimir sus datos en cualquier momento. La información recopilada en Datapyme Empresarial se utiliza exclusivamente para el cálculo de analítica interna de su comercio y jamás es compartida o transferida comercialmente a terceros no autorizados.
+    </div>
+  </div>
+
+  <!-- 4. Acerca del Sistema y Propuesta de Valor -->
+  <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-sm); margin-top: 24px;">
+    <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 6px; color: var(--ink-primary);">
+      Acerca de Datapyme Empresarial (F-DC-124 / UTS)
+    </h3>
+    <p style="font-size: 13px; color: var(--ink-secondary); margin: 0 0 16px; line-height: 1.5;">
+      Arquitectura diseñada para PyMEs colombianas con control financiero exacto, adaptabilidad sectorial y cumplimiento normativo nativo.
+    </p>
+    <div class="value-prop-grid value-prop-grid-4">
+      <div class="value-prop-item">
+        <strong>Cero cajas negras</strong>
+        <span>Proyecciones estadísticas clásicas OLS y SMA/WMA verificables sin modelos opacos de IA.</span>
+      </div>
+      <div class="value-prop-item">
+        <strong>Control de pérdidas en pesos</strong>
+        <span>Separa ganancia real en caja de mermas en bodega, ventas bajo costo e inventario inmóvil.</span>
+      </div>
+      <div class="value-prop-item">
+        <strong>Adaptación por subsector</strong>
+        <span>Configura automáticamente prioridades visuales, alertas de stock y densidad operativa.</span>
+      </div>
+      <div class="value-prop-item">
+        <strong>Soberanía de datos (Ley 1581)</strong>
+        <span>Exportación íntegra en JSON/CSV, bitácora SHA-256 encadenada y aislamiento Multi-Tenant.</span>
+      </div>
     </div>
   </div>
 </div>

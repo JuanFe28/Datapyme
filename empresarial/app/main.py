@@ -55,13 +55,26 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
                     if cols and "image_url" not in cols:
                         conn.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(512)"))
                         conn.commit()
+                    ucols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
+                    if ucols and "must_change_password" not in ucols:
+                        conn.execute(
+                            text(
+                                "ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT 0"
+                            )
+                        )
+                        conn.commit()
                 elif engine.dialect.name == "postgresql":
                     conn.execute(
                         text("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(512)")
                     )
+                    conn.execute(
+                        text(
+                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE"
+                        )
+                    )
                     conn.commit()
             except Exception as exc:  # noqa: BLE001
-                logging.getLogger("uvicorn.error").warning(f"Auto-migración products.image_url: {exc}")
+                logging.getLogger("uvicorn.error").warning(f"Auto-migración de esquema: {exc}")
 
         with SessionLocal() as db:
             try:
@@ -134,6 +147,10 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
                             u = sdb.get(User, sess.user_id)
                             if u and u.role == "superadmin":
                                 return RedirectResponse(f"{root_path}/admin/impacto", status_code=303)
+                            if u and u.must_change_password:
+                                return RedirectResponse(
+                                    f"{root_path}/auth/activar-cuenta", status_code=303
+                                )
             return templates.TemplateResponse(
                 request=request,
                 name="error.html",

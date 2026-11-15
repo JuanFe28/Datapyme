@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Registro de Empresa · Datapyme Empresarial</title>
+  <link rel="stylesheet" href="{{ root_path | default('') }}/static/css/tokens.css">
+  <style>
+    .register-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(13, 122, 111, 0.08), transparent),
+        var(--surface-canvas);
+    }
+    .register-card {
+      width: 100%;
+      max-width: 560px;
+      background: var(--surface-card);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: var(--radius-modal);
+      box-shadow: var(--shadow-md);
+      padding: 36px 32px;
+    }
+    .step-indicator {
+      display: flex;
+      gap: 8px;
+      margin: 14px 0 22px;
+    }
+    .step-pill {
+      flex: 1;
+      padding: 8px 12px;
+      border-radius: var(--radius-control);
+      background: var(--surface-subtle);
+      color: var(--ink-muted);
+      font-size: 12px;
+      font-weight: 600;
+      text-align: center;
+      border: var(--border-subtle);
+    }
+    .step-pill.active {
+      background: var(--accent-subtle);
+      color: var(--accent-primary);
+      border-color: rgba(13, 122, 111, 0.25);
+    }
+    .reg-grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .consent-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 10px;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      line-height: 1.45;
+    }
+    .consent-check input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: var(--accent-primary);
+    }
+    @media (max-width: 560px) {
+      .register-card { padding: 24px 18px; }
+      .reg-grid-2 { grid-template-columns: 1fr; gap: 0; }
+    }
+  </style>
+</head>
+<body>
+  <main class="register-shell">
+    <div class="register-card">
+      <h1 class="login-title">Crea la cuenta de tu empresa</h1>
+      <p class="login-subtitle" style="margin-bottom: 10px;">
+        Configura tu comercio en 2 pasos rápidos y adapta el tablero automáticamente a tu necesidad prioritaria.
+      </p>
+
+      <div class="step-indicator">
+        <div id="reg-pill-1" class="step-pill active">Paso 1 · Datos del Comercio</div>
+        <div id="reg-pill-2" class="step-pill">Paso 2 · Diagnóstico Adaptativo</div>
+      </div>
+
+      <div id="reg-error" class="form-error" role="alert" style="display: none;"></div>
+
+      <form id="form-self-register">
+        <div id="reg-step-1">
+          <div class="form-group">
+            <label for="reg-legal-name">Nombre comercial o razón social *</label>
+            <input id="reg-legal-name" type="text" required minlength="2" placeholder="Ej.: Variedades La Prosperidad">
+          </div>
+
+          <div class="reg-grid-2">
+            <div class="form-group">
+              <label for="reg-subsector">Subsector comercial *</label>
+              <select id="reg-subsector" required>
+                <option value="ferreteria_hogar">Ferretería y Hogar</option>
+                <option value="ropa_calzado_accesorios">Ropa, Calzado y Accesorios</option>
+                <option value="minimercado_alimentos">Minimercado y Alimentos</option>
+                <option value="cafe_restaurante">Cafetería y Gastronomía</option>
+                <option value="servicios_tecnicos">Servicios Técnicos</option>
+                <option value="general">Comercio General</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="reg-size">Tamaño de la empresa *</label>
+              <select id="reg-size" required>
+                <option value="micro">Microempresa (1-10)</option>
+                <option value="pequena">Pequeña empresa (11-50)</option>
+                <option value="mediana">Mediana empresa (51+)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="reg-grid-2">
+            <div class="form-group">
+              <label for="reg-full-name">Tu nombre completo *</label>
+              <input id="reg-full-name" type="text" required minlength="2" placeholder="Ej.: Martha Lucía Gómez">
+            </div>
+            <div class="form-group">
+              <label for="reg-tax-status">Condición frente al IVA *</label>
+              <select id="reg-tax-status" required>
+                <option value="not_responsible">No responsable de IVA</option>
+                <option value="responsible">Responsable de IVA</option>
+                <option value="pending">Pendiente de confirmar</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-email">Correo electrónico del propietario *</label>
+            <input id="reg-email" type="email" required placeholder="gerencia@micomercio.co">
+          </div>
+
+          <div class="form-group">
+            <label for="reg-password">Contraseña privada (mínimo 10 caracteres) *</label>
+            <input id="reg-password" type="password" required minlength="10" placeholder="Mínimo 10 caracteres">
+          </div>
+
+          <label class="consent-check" for="reg-accept-policy">
+            <input id="reg-accept-policy" type="checkbox" required>
+            <span>Acepto la Política de Tratamiento de Datos Personales (Ley 1581 de 2012) y los Términos del prototipo Datapyme.</span>
+          </label>
+
+          <label class="consent-check" for="reg-accept-stats">
+            <input id="reg-accept-stats" type="checkbox" checked>
+            <span>Autorizo estadísticas agregadas anónimas (k &ge; 3) para investigación académica UTS (F-DC-125).</span>
+          </label>
+
+          <button type="button" id="btn-reg-next" class="btn btn-primary login-btn-submit" style="margin-top: 12px;">
+            Continuar al Paso 2
+          </button>
+        </div>
+
+        <div id="reg-step-2" style="display: none;">
+          <div class="form-group">
+            <label for="reg-m17">¿Cuál es la prioridad más urgente hoy en tu negocio? *</label>
+            <select id="reg-m17">
+              <option value="Consulta de ventas e indicadores">Analizar ventas, ganancias y qué se vende más</option>
+              <option value="Inventarios y existencias">Controlar inventarios, rotación y alertas de agotado</option>
+              <option value="Tendencias o estimaciones">Proyectar ventas futuras con estadística clara</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-m10">¿Qué dificultad enfrentas con mayor frecuencia?</label>
+            <select id="reg-m10">
+              <option value="Dificultad para analizar ventas">Dificultad para analizar ventas y ganancias reales</option>
+              <option value="Diferencias en inventario">Diferencias en inventario o productos estancados</option>
+              <option value="No identifica fácilmente la rotación">No identifico fácilmente la rotación</option>
+              <option value="Demora preparando informes">Demora preparando informes en Excel</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="reg-m07">¿Qué herramienta utilizas principalmente hoy?</label>
+            <select id="reg-m07">
+              <option value="Hojas de cálculo">Hojas de cálculo (Excel / Google Sheets)</option>
+              <option value="Papel / cuaderno">Cuaderno / registro manual</option>
+              <option value="Software administrativo integrado">Software punto de venta / administrativo</option>
+            </select>
+          </div>
+
+          <div style="display: flex; gap: 10px; margin-top: 16px;">
+            <button type="button" id="btn-reg-back" class="btn btn-secondary" style="flex: 1; height: 44px;">
+              Volver
+            </button>
+            <button type="submit" id="btn-reg-submit" class="btn btn-primary" style="flex: 2; height: 44px;">
+              Crear Empresa y Entrar
+            </button>
+          </div>
+        </div>
+      </form>
+
+      <div style="margin-top: 20px; text-align: center; font-size: 13px; color: var(--ink-muted);">
+        ¿Ya tienes una cuenta asignada?
+        <a href="{{ root_path | default('') }}/login" style="color: var(--accent-primary); font-weight: 600; text-decoration: none;">Iniciar sesión</a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (function () {
+      const rootPath = {{ root_path | default('') | tojson }};
+      const step1 = document.getElementById('reg-step-1');
+      const step2 = document.getElementById('reg-step-2');
+      const pill1 = document.getElementById('reg-pill-1');
+      const pill2 = document.getElementById('reg-pill-2');
+      const errBox = document.getElementById('reg-error');
+
+      function showErr(msg) {
+        errBox.textContent = msg;
+        errBox.style.display = 'flex';
+      }
+      function hideErr() {
+        errBox.style.display = 'none';
+      }
+
+      document.getElementById('btn-reg-next').addEventListener('click', function () {
+        hideErr();
+        const name = document.getElementById('reg-legal-name').value.trim();
+        const full = document.getElementById('reg-full-name').value.trim();
+        const email = document.getElementById('reg-email').value.trim();
+        const pass = document.getElementById('reg-password').value;
+        const accepted = document.getElementById('reg-accept-policy').checked;
+        if (!name || !full || !email || pass.length < 10 || !accepted) {
+          showErr('Completa los campos obligatorios, clave mínima de 10 caracteres y aceptación Ley 1581.');
+          return;
+        }
+        step1.style.display = 'none';
+        step2.style.display = 'block';
+        pill1.classList.remove('active');
+        pill2.classList.add('active');
+      });
+
+      document.getElementById('btn-reg-back').addEventListener('click', function () {
+        hideErr();
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+        pill2.classList.remove('active');
+        pill1.classList.add('active');
+      });
+
+      document.getElementById('form-self-register').addEventListener('submit', async function (e) {
+        e.preventDefault();
+        hideErr();
+        const btn = document.getElementById('btn-reg-submit');
+        btn.disabled = true;
+
+        const email = document.getElementById('reg-email').value.trim();
+        const password = document.getElementById('reg-password').value;
+        const payload = {
+          legal_name: document.getElementById('reg-legal-name').value.trim(),
+          subsector: document.getElementById('reg-subsector').value,
+          size: document.getElementById('reg-size').value,
+          tax_status: document.getElementById('reg-tax-status').value,
+          full_name: document.getElementById('reg-full-name').value.trim(),
+          email: email,
+          password: password,
+          accept_data_policy: document.getElementById('reg-accept-policy').checked,
+          accept_terms_mvp: document.getElementById('reg-accept-policy').checked,
+          accept_aggregate_stats: document.getElementById('reg-accept-stats').checked,
+          diagnosis: {
+            M10: [document.getElementById('reg-m10').value],
+            M12: ['Ventas por periodo', 'Existencias y alertas', 'Productos más y menos vendidos'],
+            M17: document.getElementById('reg-m17').value,
+            M07: [document.getElementById('reg-m07').value],
+            M08: [document.getElementById('reg-m07').value],
+            M13: 'No',
+            M15: []
+          }
+        };
+
+        try {
+          const resp = await fetch(`${rootPath}/api/auth/register`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            showErr(typeof data.detail === 'string' ? data.detail : 'No se pudo completar el registro.');
+            btn.disabled = false;
+            return;
+          }
+          const form = document.createElement('form');
+          form.method = 'POST';
+          form.action = `${rootPath}/login`;
+          const eIn = document.createElement('input');
+          eIn.type = 'hidden';
+          eIn.name = 'email';
+          eIn.value = email;
+          const pIn = document.createElement('input');
+          pIn.type = 'hidden';
+          pIn.name = 'password';
+          pIn.value = password;
+          form.appendChild(eIn);
+          form.appendChild(pIn);
+          document.body.appendChild(form);
+          form.submit();
+        } catch (err) {
+          showErr('Error de conexión al registrar la empresa.');
+          btn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

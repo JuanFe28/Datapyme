@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from app.analytics.kpis import get_tenant_kpis_payload
+from app.analytics.profitability import get_tenant_profitability_payload
 from app.core.commercial_service import serialize_product
 from app.core.company_tax import tax_profile
 from app.core.dependencies import SESSION_COOKIE, get_current_context, get_db
@@ -131,6 +132,7 @@ def render_adaptive_dashboard(
     profile = load_tenant_profile(db, tenant.id)
     layout_cfg = build_layout_config(profile, view_mode=resolved_mode)
     kpi_payload = get_tenant_kpis_payload(db=db, tenant_id=tenant.id, period_days=30)
+    profitability_data = get_tenant_profitability_payload(db=db, tenant_id=tenant.id, period_days=30)
     products = [
         serialize_product(p)
         for p in db.query(Product)
@@ -192,6 +194,7 @@ def render_adaptive_dashboard(
             "kpis": kpi_payload.get("kpis", {}),
             "alerts_summary": kpi_payload.get("alerts_summary", {}),
             "forecast": forecast_data,
+            "profitability": profitability_data,
         },
         default=str,
     )
@@ -211,6 +214,7 @@ def render_adaptive_dashboard(
             "company_tax": tax_profile(db, tenant.id),
             "layout_config": layout_cfg,
             "kpi_payload": kpi_payload,
+            "profitability": profitability_data,
             "products": products,
             "recent_sales": recent_sales,
             "forecast_data": forecast_data,

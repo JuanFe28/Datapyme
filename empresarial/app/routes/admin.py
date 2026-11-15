@@ -12,7 +12,8 @@ from app.core.dependencies import (
     get_superadmin_user,
 )
 from app.core.models import SessionToken, Tenant, User, utcnow
-from app.core.schemas import DeletionRequestPayload
+from app.core.provisioning_service import provision_real_client_tenant
+from app.core.schemas import DeletionRequestPayload, ProvisionTenantRequest
 from app.core.security import sha256_hex
 from app.telemetry.impact_service import (
     compute_platform_impact_telemetry,
@@ -55,8 +56,38 @@ def render_superadmin_impact(
             "title": "Auditoría de Impacto (F-DC-125) · Datapyme Empresarial",
             "current_user": user,
             "telemetry": telemetry,
+            "active_token": raw_token,
             "root_path": root_path,
         },
+    )
+
+
+@router.post("/api/admin/tenants/provision", status_code=201)
+def provision_tenant_endpoint(
+    payload: ProvisionTenantRequest,
+    request: Request,
+    _admin: User = Depends(get_superadmin_user),
+    db: Session = Depends(get_db),
+):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("host") or request.url.netloc
+    base_url = f"{scheme}://{host}{root_path}" if host else root_path
+    return provision_real_client_tenant(
+        db,
+        trade_name=payload.trade_name,
+        legal_name=payload.legal_name,
+        subsector=payload.subsector,
+        size=payload.size,
+        municipality=payload.municipality,
+        owner_full_name=payload.owner_full_name,
+        email=payload.email,
+        temporary_password=payload.temporary_password,
+        priority_focus=payload.priority_focus,
+        density=payload.density,
+        tax_status=payload.tax_status,
+        starter_catalog=payload.starter_catalog,
+        access_url=base_url,
     )
 
 

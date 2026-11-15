@@ -1485,3 +1485,221 @@ html, body {
   white-space: nowrap;
   color: var(--ink-primary);
 }
+
+/* --- IMPECCABLE P&L STRIP, SEGMENTED RANKING Y PROPUESTA DE VALOR --- */
+.badge-info {
+  background: #F1F5F9;
+  color: #334155;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  display: inline-block;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.pnl-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  padding: 14px 16px;
+  background: var(--surface-subtle);
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: var(--radius-control);
+  margin-bottom: 14px;
+}
+
+.pnl-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding-right: 12px;
+  border-right: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.pnl-metric:last-child {
+  border-right: none;
+  padding-right: 0;
+}
+
+.pnl-metric-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pnl-metric-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink-primary);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.25;
+}
+
+.pnl-metric-profit .pnl-metric-value {
+  color: #059669;
+}
+
+.pnl-metric-loss .pnl-metric-value {
+  color: #E11D48;
+}
+
+.pnl-metric-sub {
+  font-size: 11px;
+  color: var(--ink-secondary);
+  line-height: 1.35;
+}
+
+.ranking-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.segmented-control {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.05);
+  padding: 3px;
+  border-radius: 10px;
+  gap: 3px;
+  max-width: 100%;
+  flex-wrap: wrap;
+}
+
+.segmented-btn {
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-secondary);
+  padding: 8px 14px;
+  min-height: 36px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 150ms ease, color 150ms ease, box-shadow 150ms ease;
+}
+
+.segmented-btn.active {
+  background: #FFFFFF;
+  color: var(--ink-primary);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
+}
+
+.share-bar-track {
+  flex: 1;
+  height: 6px;
+  background: rgba(15, 23, 42, 0.07);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.share-bar-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: 999px;
+}
+
+.value-prop-section {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.value-prop-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.value-prop-grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.value-prop-item {
+  padding: 10px 12px;
+  background: var(--surface-subtle);
+  border: 1px solid rgba(15, 23, 42, 0.06);
+  border-radius: var(--radius-control);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.value-prop-item strong {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.value-prop-item span {
+  font-size: 11px;
+  color: var(--ink-secondary);
+  line-height: 1.4;
+}
+
+@media (max-width: 1024px) {
+  .pnl-summary-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .pnl-metric:nth-child(2n) {
+    border-right: none;
+    padding-right: 0;
+  }
+  .value-prop-grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .pnl-summary-strip,
+  .value-prop-grid,
+  .value-prop-grid-4 {
+    grid-template-columns: 1fr;
+  }
+  .pnl-metric {
+    border-right: none;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+    padding-right: 0;
+    padding-bottom: 10px;
+  }
+  .pnl-metric:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+  .ranking-toolbar {
+    padding: 14px 16px;
+  }
+  .table-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .table-tabs {
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .table-tab-btn {
+    padding: 8px 12px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+  .segmented-control {
+    width: 100%;
+  }
+  .segmented-btn {
+    flex: 1 1 auto;
+    min-height: 44px;
+    text-align: center;
+  }
+}

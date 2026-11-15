@@ -88,3 +88,18 @@ class SaleCreateRequest(BaseModel):
 
 class DeletionRequestPayload(BaseModel):
     reason: str = Field(min_length=5, max_length=280)
+
+
+class ProvisionTenantRequest(BaseModel):
+    trade_name: str = Field(min_length=2, max_length=180)
+    legal_name: str | None = Field(default=None, max_length=180)
+    subsector: str = Field(default="general", min_length=2, max_length=40)
+    size: Literal["micro", "pequena", "mediana"] = "micro"
+    municipality: str = Field(default="Bucaramanga", min_length=2, max_length=60)
+    owner_full_name: str = Field(min_length=2, max_length=120)
+    email: str = Field(min_length=5, max_length=254)
+    temporary_password: str = Field(min_length=10, max_length=128)
+    priority_focus: Literal["sales", "inventory", "predictive", "balanced"] = "balanced"
+    density: Literal["simple", "standard", "detailed"] = "standard"
+    tax_status: Literal["responsible", "not_responsible", "pending"] = "pending"
+    starter_catalog: bool = False

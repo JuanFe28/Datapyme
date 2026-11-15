@@ -191,14 +191,14 @@ def test_03_chart_consistency_30d_7d_30d(page: Page):
 
     # Cambiar a 7D
     page.locator(".horizon-btn", has_text="7D").click()
-    page.wait_for_timeout(200)
+    expect(page.locator("#pnl-period-label")).to_have_text("7D")
     data_7d = page.evaluate("() => salesChart.data.datasets[0].data.slice()")
     assert len(data_7d) == 7, f"7D debe tener 7 días de datos: {data_7d}"
     assert data_7d != initial_30d_data
 
     # Volver a 30D
     page.locator(".horizon-btn", has_text="30D").click()
-    page.wait_for_timeout(200)
+    expect(page.locator("#pnl-period-label")).to_have_text("30D")
     returned_30d_data = page.evaluate("() => salesChart.data.datasets[0].data.slice()")
 
     # Los datos deben ser exactamente idénticos al estado inicial
@@ -362,3 +362,111 @@ def test_06_forecast_business_language_and_uts_accordion(page: Page):
     summary.click()
     expect(accordion.locator("table.data-table")).to_be_visible()
     expect(accordion.locator("text=Valores Observados vs. Ajustados MCO")).to_be_visible()
+
+
+def test_07_profitability_pnl_and_segmented_rankings(page: Page):
+    """Verifica P&L comercial real, 3 series Chart.js y ranking segmentado Top vs Menos Vendidos."""
+    page.goto(f"{BASE_URL}/login")
+    page.locator(".login-demo-pill").first.click()
+    page.locator(".login-btn-submit").click()
+    page.wait_for_url("**/dashboard")
+    page.wait_for_load_state("networkidle")
+
+    # 1. Ir a tab de Ventas y verificar P&L + 3 series reales en Chart.js
+    page.locator("[data-tab='sales']").click()
+    expect(page.locator("#pnl-summary-strip")).to_be_visible()
+    expect(page.locator("#pnl-net-profit")).to_contain_text("$")
+    expect(page.locator("#pnl-total-losses")).to_contain_text("$")
+
+    series_count = page.evaluate("() => salesChart.data.datasets.length")
+    assert series_count == 3, (
+        f"El gráfico debe tener 3 series (Ingresos, Ganancia, Costos/Pérdidas): {series_count}"
+    )
+
+    # 2. Cambiar a vista de Ranking Más Vendidos vs Menos Vendidos
+    page.locator("[data-table-view='pareto']").click()
+    expect(page.locator("#table-view-pareto")).to_be_visible()
+    expect(page.locator("#ranking-panel-top")).to_be_visible()
+
+    # Cambiar en el control segmentado a Qué se vende menos y Pérdidas
+    page.locator("#ranking-segmented-control [data-ranking-view='least']").click()
+    expect(page.locator("#ranking-panel-least")).to_be_visible()
+    expect(page.locator("#ranking-panel-top")).not_to_be_visible()
+
+    screenshot_path = ARTIFACTS_DIR / "profitability_rankings_verified.png"
+    page.screenshot(path=str(screenshot_path))
+    assert screenshot_path.exists()
+
+
+def test_08_superadmin_provision_and_client_activation(page: Page):
+    """Verifica provisión real desde Auditor UTS -> primer ingreso cliente -> activación -> dashboard."""
+    unique_email = f"cliente.e2e.{int(time.time())}@datapyme.co"
+
+    # 1. Ingresar como Auditor UTS (superadmin)
+    page.goto(f"{BASE_URL}/login")
+    page.locator(".login-demo-pill[data-demo-email='superadmin.demo@datapyme.co']").click()
+    page.locator(".login-btn-submit").click()
+    page.wait_for_url("**/admin/impacto")
+    page.wait_for_load_state("networkidle")
+
+    # 2. Llenar formulario de creación de empresa real
+    expect(page.locator("#provision-tenant-form")).to_be_visible()
+    page.fill("#prov-trade-name", "Ferretería Prueba E2E Real")
+    page.select_option("#prov-subsector", "ferreteria")
+    page.fill("#prov-owner-name", "Andrea Torres")
+    page.fill("#prov-email", unique_email)
+    page.fill("#prov-temp-pass", "TempPass2026!")
+    page.select_option("#prov-focus", "inventory")
+    page.check("#prov-starter-catalog")
+    page.click("#provision-submit-btn")
+
+    expect(page.locator("#provision-result-card")).to_be_visible(timeout=5000)
+    expect(page.locator("#provision-handoff-text")).to_contain_text(unique_email)
+
+    # 3. Cerrar sesión SuperAdmin e iniciar primer ingreso como cliente real
+    page.click("text=Cerrar Sesión")
+    page.wait_for_url("**/login")
+
+    page.fill("#email", unique_email)
+    page.fill("#password", "TempPass2026!")
+    page.locator(".login-btn-submit").click()
+    page.wait_for_url("**/auth/activar-cuenta")
+    page.wait_for_load_state("networkidle")
+
+    # 4. Definir contraseña definitiva + aceptar Ley 1581
+    page.fill("#password", "ClaveDefinitiva2026!")
+    page.fill("#confirm_password", "ClaveDefinitiva2026!")
+    page.check("#accept_data_policy")
+    page.check("#accept_aggregate_stats")
+    page.locator("#btn-activate-submit").click()
+
+    page.wait_for_url("**/dashboard")
+    page.wait_for_load_state("networkidle")
+    expect(page.locator("h1.company-title")).to_contain_text("Ferretería Prueba E2E Real")
+
+
+def test_09_mobile_viewport_profitability_and_registro(page: Page):
+    """Verifica responsividad móvil (390x844) sin overflow horizontal en Dashboard y /registro."""
+    page.set_viewport_size({"width": 390, "height": 844})
+
+    # 1. Revisar /registro en móvil
+    page.goto(f"{BASE_URL}/registro")
+    page.wait_for_load_state("networkidle")
+    expect(page.locator("text=Crea la cuenta de tu empresa")).to_be_visible()
+
+    # 2. Revisar dashboard y ranking en móvil
+    page.goto(f"{BASE_URL}/login")
+    page.locator(".login-demo-pill").first.click()
+    page.locator(".login-btn-submit").click()
+    page.wait_for_url("**/dashboard")
+    page.wait_for_load_state("networkidle")
+
+    page.locator("[data-tab='sales']").click()
+    expect(page.locator("#pnl-summary-strip")).to_be_visible()
+
+    page.locator("[data-table-view='pareto']").click()
+    expect(page.locator("#ranking-segmented-control")).to_be_visible()
+
+    screenshot_path = ARTIFACTS_DIR / "mobile_profitability_verified.png"
+    page.screenshot(path=str(screenshot_path))
+    assert screenshot_path.exists()

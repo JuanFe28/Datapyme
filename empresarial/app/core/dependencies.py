@@ -43,6 +43,28 @@ def get_db(request: Request):
         yield db
 
 
+def get_session_user_from_request(
+    request: Request,
+    db: Session,
+    authorization: str | None = None,
+) -> User | None:
+    """Resuelve el usuario autenticado vía cookie o Bearer sin lanzar excepción."""
+    raw_token: str | None = None
+    if authorization and authorization.startswith("Bearer "):
+        raw_token = authorization.removeprefix("Bearer ").strip()
+    else:
+        raw_token = request.cookies.get(SESSION_COOKIE)
+    if not raw_token:
+        return None
+    sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
+    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+        return None
+    user = db.get(User, sess.user_id)
+    if not user or not user.is_active:
+        return None
+    return user
+
+
 def get_current_context(
     request: Request,
     authorization: str | None = Header(default=None),
@@ -57,6 +79,11 @@ def get_current_context(
     user = db.get(User, sess.user_id)
     if not user or not user.is_active or not user.tenant_id or user.role == "superadmin":
         raise HTTPException(status_code=403, detail="Acceso operativo denegado.")
+    if user.must_change_password:
+        raise HTTPException(
+            status_code=403,
+            detail="Activación pendiente: defina su contraseña definitiva en /auth/activar-cuenta.",
+        )
     tenant = db.get(Tenant, user.tenant_id)
     if not tenant or tenant.status != "active":
         raise HTTPException(status_code=403, detail="Empresa inactiva.")

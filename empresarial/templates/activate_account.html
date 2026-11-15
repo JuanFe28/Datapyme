@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Activar Cuenta · Datapyme Empresarial</title>
+  <link rel="stylesheet" href="{{ root_path | default('') }}/static/css/tokens.css">
+  <style>
+    .activate-shell {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px 16px;
+      background:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(13, 122, 111, 0.08), transparent),
+        var(--surface-canvas);
+    }
+    .activate-card {
+      width: 100%;
+      max-width: 520px;
+      background: var(--surface-card);
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: var(--radius-modal);
+      box-shadow: var(--shadow-md);
+      padding: 36px 32px;
+    }
+    .profile-summary-strip {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      background: var(--surface-subtle);
+      border: var(--border-subtle);
+      border-radius: var(--radius-control);
+      padding: 14px 16px;
+      margin: 16px 0 22px;
+    }
+    .profile-summary-item span {
+      display: block;
+      font-size: 11px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      color: var(--ink-muted);
+    }
+    .profile-summary-item strong {
+      display: block;
+      font-size: 13px;
+      color: var(--ink-primary);
+      margin-top: 3px;
+    }
+    .consent-check {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+      font-size: 13px;
+      color: var(--ink-secondary);
+      line-height: 1.45;
+    }
+    .consent-check input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-top: 2px;
+      flex-shrink: 0;
+      accent-color: var(--accent-primary);
+    }
+    @media (max-width: 540px) {
+      .activate-card { padding: 24px 18px; }
+      .profile-summary-strip { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="activate-shell">
+    <div class="activate-card">
+      <div class="login-brand-icon" aria-hidden="true">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+          <polyline points="9 12 11 14 15 10"></polyline>
+        </svg>
+      </div>
+
+      <h1 class="login-title">Activa tu cuenta privada</h1>
+      <p class="login-subtitle" style="margin-bottom: 12px;">
+        Bienvenido a <strong>{{ company_name }}</strong> ({{ user.email }}). Por seguridad, define una contraseña personal para reemplazar la clave temporal inicial.
+      </p>
+
+      <div class="profile-summary-strip" aria-label="Resumen de interfaz personalizada">
+        <div class="profile-summary-item">
+          <span>Enfoque según encuesta</span>
+          <strong>{{ focus_label }}</strong>
+        </div>
+        <div class="profile-summary-item">
+          <span>Densidad visual asignada</span>
+          <strong>{{ density_label }}</strong>
+        </div>
+      </div>
+
+      {% if error %}
+      <div class="form-error" role="alert" data-testid="activate-error">
+        <span>{{ error }}</span>
+      </div>
+      {% endif %}
+
+      <form method="post" action="{{ root_path | default('') }}/auth/activar-cuenta">
+        <div class="form-group">
+          <label for="password">Nueva contraseña privada (mínimo 10 caracteres)</label>
+          <input id="password" name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="Elige una clave segura que solo tú conozcas">
+        </div>
+
+        <div class="form-group">
+          <label for="confirm_password">Confirmar nueva contraseña</label>
+          <input id="confirm_password" name="confirm_password" type="password" required minlength="10" autocomplete="new-password" placeholder="Repite tu nueva contraseña">
+        </div>
+
+        <label class="consent-check" for="accept_data_policy">
+          <input id="accept_data_policy" name="accept_data_policy" type="checkbox" value="true" required>
+          <span>Acepto la Política de Tratamiento de Datos Personales (Ley 1581 de 2012) y los Términos de Validación del prototipo Datapyme.</span>
+        </label>
+
+        <label class="consent-check" for="accept_aggregate_stats">
+          <input id="accept_aggregate_stats" name="accept_aggregate_stats" type="checkbox" value="true">
+          <span>Autorizo el aporte de indicadores estadísticos anónimos (k &ge; 3, sin datos identificables) para la validación académica UTS (F-DC-125).</span>
+        </label>
+
+        <button type="submit" id="btn-activate-submit" class="btn btn-primary login-btn-submit" style="margin-top: 16px;">
+          Guardar Clave y Entrar al Panel
+        </button>
+      </form>
+
+      <form method="post" action="{{ root_path | default('') }}/logout" style="margin-top: 12px; text-align: center;">
+        <button type="submit" class="btn btn-ghost" style="font-size: 12px;">Cerrar sesión y volver al login</button>
+      </form>
+    </div>
+  </main>
+</body>
+</html>

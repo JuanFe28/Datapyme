@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from app.analytics.kpis import get_tenant_kpis_payload
+from app.analytics.profitability import get_tenant_profitability_payload
 from app.core.dependencies import get_current_context, get_db
 from app.core.models import Tenant, User
 from app.forecast.stats import get_tenant_forecast_payload
@@ -21,6 +22,16 @@ def get_kpis_endpoint(
 ):
     _, tenant = ctx
     return get_tenant_kpis_payload(db=db, tenant_id=tenant.id, period_days=period_days)
+
+
+@router.get("/api/analytics/profitability")
+def get_profitability_endpoint(
+    period_days: int = Query(default=30, ge=1, le=365),
+    ctx: tuple[User, Tenant] = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    _, tenant = ctx
+    return get_tenant_profitability_payload(db=db, tenant_id=tenant.id, period_days=period_days)
 
 
 @router.get("/api/forecast")

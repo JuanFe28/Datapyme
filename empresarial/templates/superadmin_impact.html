@@ -377,6 +377,190 @@
         </div>
       </div>
     </section>
+
+    <!-- 5. Provisión de Empresas Reales (Entrega Directa a Clientes PyME) -->
+    <section class="section-card" id="provision-client-section" style="margin-top: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <h2 class="section-title">+ Crear Perfil de Empresa Real (Entrega a Cliente)</h2>
+          <p class="section-subtitle" style="margin-bottom: 0;">
+            Crea un espacio Multi-Tenant aislado con contraseña temporal obligatoria: en el primer ingreso el cliente activará su contraseña privada y firmará su consentimiento Ley 1581.
+          </p>
+        </div>
+        <span class="badge-info">Aislamiento Estricto · Primer Ingreso Guiado</span>
+      </div>
+
+      <form id="provision-tenant-form" style="display: flex; flex-direction: column; gap: 14px;">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px;">
+          <div>
+            <label for="prov-trade-name" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Nombre Comercial *</label>
+            <input id="prov-trade-name" name="trade_name" type="text" required placeholder="Ej. Ferretería La Cumbre" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px;">
+          </div>
+          <div>
+            <label for="prov-legal-name" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Razón Social (opcional)</label>
+            <input id="prov-legal-name" name="legal_name" type="text" placeholder="Ej. Inversiones La Cumbre SAS" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px;">
+          </div>
+          <div>
+            <label for="prov-subsector" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Subsector Comercial</label>
+            <select id="prov-subsector" name="subsector" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px; background: #fff;">
+              <option value="ferreteria">Ferretería y Construcción</option>
+              <option value="minimercado">Minimercado / Abarrotes</option>
+              <option value="boutique">Moda / Boutique / Calzado</option>
+              <option value="farmacia">Farmacia / Droguería</option>
+              <option value="general" selected>Comercio General</option>
+            </select>
+          </div>
+          <div>
+            <label for="prov-size" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Tamaño PyME</label>
+            <select id="prov-size" name="size" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px; background: #fff;">
+              <option value="micro" selected>Microempresa</option>
+              <option value="pequena">Pequeña</option>
+              <option value="mediana">Mediana</option>
+            </select>
+          </div>
+          <div>
+            <label for="prov-municipality" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Municipio</label>
+            <input id="prov-municipality" name="municipality" type="text" value="Bucaramanga" required style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px;">
+          </div>
+          <div>
+            <label for="prov-owner-name" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Nombre del Propietario / Gerente *</label>
+            <input id="prov-owner-name" name="owner_full_name" type="text" required placeholder="Ej. Carlos Mendoza" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px;">
+          </div>
+          <div>
+            <label for="prov-email" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Correo de Acceso *</label>
+            <input id="prov-email" name="email" type="email" required placeholder="cliente@empresa.com" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px;">
+          </div>
+          <div>
+            <label for="prov-temp-pass" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Contraseña Temporal (min. 10) *</label>
+            <input id="prov-temp-pass" name="temporary_password" type="text" required minlength="10" value="DatapymeTemp2026!" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: var(--font-mono); font-size: 13px;">
+          </div>
+          <div>
+            <label for="prov-focus" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Foco Prioritario (Encuesta)</label>
+            <select id="prov-focus" name="priority_focus" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px; background: #fff;">
+              <option value="balanced" selected>Equilibrado (Integral)</option>
+              <option value="sales">Ventas y Rentabilidad</option>
+              <option value="inventory">Inventarios y Stock</option>
+              <option value="predictive">Proyección Estadística</option>
+            </select>
+          </div>
+          <div>
+            <label for="prov-density" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Densidad Visual</label>
+            <select id="prov-density" name="density" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px; background: #fff;">
+              <option value="simple">Simple (Ejecutiva)</option>
+              <option value="standard" selected>Estándar (Equilibrada)</option>
+              <option value="detailed">Detallada (Operativa)</option>
+            </select>
+          </div>
+          <div>
+            <label for="prov-tax" style="display: block; font-size: 12px; font-weight: 600; color: var(--ink-secondary); margin-bottom: 4px;">Régimen IVA</label>
+            <select id="prov-tax" name="tax_status" style="width: 100%; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.16); border-radius: 8px; font-family: inherit; font-size: 13px; background: #fff;">
+              <option value="pending" selected>Pendiente de confirmar</option>
+              <option value="not_responsible">No responsable de IVA</option>
+              <option value="responsible">Responsable de IVA</option>
+            </select>
+          </div>
+        </div>
+
+        <label style="display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-secondary); cursor: pointer;">
+          <input id="prov-starter-catalog" name="starter_catalog" type="checkbox" style="width: 16px; height: 16px; accent-color: var(--accent-primary);">
+          Precargar plantilla de catálogo base según subsector (para demostración o arranque rápido)
+        </label>
+
+        <div id="provision-error-box" style="display: none; background: #FEF2F2; color: #991B1B; border: 1px solid #FECACA; padding: 10px 14px; border-radius: 8px; font-size: 13px;"></div>
+
+        <div style="display: flex; gap: 12px; align-items: center;">
+          <button type="submit" id="provision-submit-btn" class="btn btn-primary" style="min-height: 40px;">
+            Crear Perfil de Empresa y Generar Entrega
+          </button>
+        </div>
+      </form>
+
+      <div id="provision-result-card" style="display: none; margin-top: 18px; padding: 18px; background: var(--surface-subtle); border: 1px solid rgba(13, 122, 111, 0.25); border-radius: var(--radius-control);">
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 10px;">
+          <strong style="font-size: 14px; color: #065F46;">Empresa provisionada con éxito</strong>
+          <button type="button" id="copy-handoff-btn" class="btn btn-secondary" style="min-height: 36px;">
+            Copiar Ficha de Entrega (WhatsApp)
+          </button>
+        </div>
+        <div id="provision-handoff-text" style="margin: 0; white-space: pre-wrap; font-family: var(--font-mono); font-size: 12px; color: var(--ink-primary); background: #FFFFFF; padding: 12px; border-radius: 8px; border: 1px solid rgba(15,23,42,0.08);"></div>
+      </div>
+    </section>
   </main>
+
+  <script>
+    (function () {
+      const form = document.getElementById('provision-tenant-form');
+      const errBox = document.getElementById('provision-error-box');
+      const resCard = document.getElementById('provision-result-card');
+      const handoffPre = document.getElementById('provision-handoff-text');
+      const copyBtn = document.getElementById('copy-handoff-btn');
+      const submitBtn = document.getElementById('provision-submit-btn');
+      const rootPath = {{ (root_path | default('')) | tojson }};
+      const activeToken = {{ (active_token | default('')) | tojson }};
+
+      if (!form) return;
+
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        errBox.style.display = 'none';
+        resCard.style.display = 'none';
+        submitBtn.disabled = true;
+
+        const payload = {
+          trade_name: document.getElementById('prov-trade-name').value.trim(),
+          legal_name: document.getElementById('prov-legal-name').value.trim() || null,
+          subsector: document.getElementById('prov-subsector').value,
+          size: document.getElementById('prov-size').value,
+          municipality: document.getElementById('prov-municipality').value.trim(),
+          owner_full_name: document.getElementById('prov-owner-name').value.trim(),
+          email: document.getElementById('prov-email').value.trim(),
+          temporary_password: document.getElementById('prov-temp-pass').value,
+          priority_focus: document.getElementById('prov-focus').value,
+          density: document.getElementById('prov-density').value,
+          tax_status: document.getElementById('prov-tax').value,
+          starter_catalog: document.getElementById('prov-starter-catalog').checked,
+        };
+
+        try {
+          const headers = { 'Content-Type': 'application/json' };
+          if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+          const resp = await fetch(`${rootPath}/api/admin/tenants/provision`, {
+            method: 'POST',
+            headers,
+            credentials: 'same-origin',
+            body: JSON.stringify(payload),
+          });
+          const data = await resp.json();
+          if (!resp.ok) {
+            errBox.textContent = data.detail || 'No se pudo provisionar la empresa.';
+            errBox.style.display = 'block';
+          } else {
+            handoffPre.textContent = data.whatsapp_handoff_text || JSON.stringify(data, null, 2);
+            resCard.style.display = 'block';
+            form.reset();
+            document.getElementById('prov-municipality').value = 'Bucaramanga';
+            document.getElementById('prov-temp-pass').value = 'DatapymeTemp2026!';
+          }
+        } catch (err) {
+          errBox.textContent = 'Error de conexión al provisionar la empresa.';
+          errBox.style.display = 'block';
+        } finally {
+          submitBtn.disabled = false;
+        }
+      });
+
+      if (copyBtn) {
+        copyBtn.addEventListener('click', async () => {
+          try {
+            await navigator.clipboard.writeText(handoffPre.textContent);
+            copyBtn.textContent = 'Ficha copiada';
+            setTimeout(() => { copyBtn.textContent = 'Copiar Ficha de Entrega (WhatsApp)'; }, 1800);
+          } catch (_) {
+            copyBtn.textContent = 'Copia manual requerida';
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

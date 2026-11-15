@@ -75,6 +75,22 @@ let forecastChart = null;
 let forecastModuleChart = null;
 let activeHeroTab = 'inventory';
 let dashboardData = {};
+const profitabilityCache = {};
+
+function escapeHtmlText(str) {
+  return String(str ?? '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function formatQtyValue(val) {
+  const num = Number(val || 0);
+  if (Number.isNaN(num)) return '0';
+  return Number.isInteger(num) ? String(num) : num.toFixed(2);
+}
 
 // 4. Estado del Carrito Multi-Producto
 let cartLines = [];
@@ -90,6 +106,9 @@ document.addEventListener('DOMContentLoaded', () => {
   if (dataEl) {
     try {
       dashboardData = JSON.parse(dataEl.textContent);
+      if (dashboardData.profitability) {
+        profitabilityCache[30] = dashboardData.profitability;
+      }
     } catch (e) {
       console.error('Error parseando dashboard-data:', e);
     }
@@ -132,6 +151,14 @@ document.addEventListener('DOMContentLoaded', () => {
     btn.addEventListener('click', () => {
       const viewName = btn.getAttribute('data-table-view');
       if (viewName) switchTableTab(viewName, btn);
+    });
+  });
+
+  // Conectar Control Segmentado de Rentabilidad (Qué se vende más vs Qué se vende menos)
+  document.querySelectorAll('#ranking-segmented-control .segmented-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const view = btn.getAttribute('data-ranking-view');
+      if (view) switchRankingView(view, btn);
     });
   });
 
@@ -329,56 +356,164 @@ function switchHeroTab(tabName) {
   }, 50);
 }
 
-// --- FUENTE DE DATOS DETERMINÍSTICA PARA EL GRÁFICO DE VENTAS (100% INMUTABLE) ---
-function getDeterministicSalesData(rangeLabel) {
-  const kpis = dashboardData.kpis || {};
-  const netRev = parseFloat(kpis.net_revenue) || 704000;
+function getRangeDays(rangeLabel) {
+  if (rangeLabel === '7D') return 7;
+  if (rangeLabel === '90D') return 90;
+  if (rangeLabel === '12M') return 365;
+  return 30;
+}
 
-  if (rangeLabel === '7D') {
-    const labels = ['Día -6', 'Día -5', 'Día -4', 'Día -3', 'Día -2', 'Ayer', 'Hoy'];
-    const fractions = [0.11, 0.14, 0.12, 0.18, 0.15, 0.17, 0.13];
-    const data = fractions.map((f) => Math.round(netRev * 0.28 * f));
-    return { labels, data };
-  } else if (rangeLabel === '30D') {
-    const labels = ['Semana 1', 'Semana 2', 'Semana 3', 'Semana 4'];
-    const fractions = [0.21, 0.25, 0.24, 0.30];
-    const data = fractions.map((f) => Math.round(netRev * f));
-    return { labels, data };
-  } else if (rangeLabel === '90D') {
-    const labels = ['Hace 2 meses', 'Mes anterior', 'Mes actual'];
-    const data = [Math.round(netRev * 0.82), Math.round(netRev * 0.91), Math.round(netRev)];
-    return { labels, data };
-  } else {
-    // 12M
-    const labels = ['Ene', 'Mar', 'May', 'Jul', 'Sep', 'Nov'];
-    const data = [
-      Math.round(netRev * 0.38),
-      Math.round(netRev * 0.50),
-      Math.round(netRev * 0.64),
-      Math.round(netRev * 0.77),
-      Math.round(netRev * 0.88),
-      Math.round(netRev * 1.00),
-    ];
-    return { labels, data };
+function getSeriesFromPayload(payload) {
+  const s = (payload && payload.series) || {};
+  return {
+    labels: Array.isArray(s.labels) ? s.labels.slice() : [],
+    revenue: Array.isArray(s.revenue) ? s.revenue.map((v) => Number(v) || 0) : [],
+    netProfit: Array.isArray(s.net_profit) ? s.net_profit.map((v) => Number(v) || 0) : [],
+    lossesAndCosts: Array.isArray(s.losses_and_costs) ? s.losses_and_costs.map((v) => Number(v) || 0) : [],
+  };
+}
+
+function switchRankingView(viewName, btn) {
+  document.querySelectorAll('#ranking-segmented-control .segmented-btn').forEach((b) => {
+    const active = b.getAttribute('data-ranking-view') === viewName;
+    b.classList.toggle('active', active);
+    b.setAttribute('aria-selected', active ? 'true' : 'false');
+  });
+  if (btn) btn.classList.add('active');
+
+  const topPanel = document.getElementById('ranking-panel-top');
+  const leastPanel = document.getElementById('ranking-panel-least');
+  if (topPanel) topPanel.style.display = viewName === 'top' ? 'block' : 'none';
+  if (leastPanel) leastPanel.style.display = viewName === 'least' ? 'block' : 'none';
+}
+
+function buildThumbnailHtml(item) {
+  if (item.image_url) {
+    return `<img src="${escapeHtmlText(item.image_url)}" alt="${escapeHtmlText(item.name)}" style="width: 34px; height: 34px; object-fit: cover; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.08); flex-shrink: 0;">`;
+  }
+  const initials = escapeHtmlText(String(item.name || '').slice(0, 2).toUpperCase());
+  return `<div style="width: 34px; height: 34px; border-radius: 6px; background: var(--surface-subtle); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 600; color: var(--ink-muted); flex-shrink: 0;">${initials}</div>`;
+}
+
+function applyProfitabilityPayload(payload, rangeLabel) {
+  if (!payload) return;
+  const pnl = payload.pnl || {};
+  const series = getSeriesFromPayload(payload);
+
+  if (salesChart) {
+    salesChart.data.labels = series.labels;
+    salesChart.data.datasets[0].data = series.revenue;
+    if (salesChart.data.datasets[1]) salesChart.data.datasets[1].data = series.netProfit;
+    if (salesChart.data.datasets[2]) salesChart.data.datasets[2].data = series.lossesAndCosts;
+    salesChart.update();
+  }
+
+  const netRevEl = document.getElementById('pnl-net-revenue');
+  const cogsEl = document.getElementById('pnl-cogs');
+  const netProfitEl = document.getElementById('pnl-net-profit');
+  const netMarginEl = document.getElementById('pnl-net-margin');
+  const lossesEl = document.getElementById('pnl-total-losses');
+  const breakdownEl = document.getElementById('pnl-breakdown-note');
+  const periodLabelEl = document.getElementById('pnl-period-label');
+  const rankingBadgeEl = document.getElementById('ranking-period-badge');
+  const immEl = document.getElementById('pnl-immobilized-note');
+
+  if (netRevEl) netRevEl.textContent = formatCOP(Number(pnl.net_revenue || 0));
+  if (cogsEl) cogsEl.textContent = formatCOP(Number(pnl.cogs_total || 0));
+  if (netProfitEl) netProfitEl.textContent = formatCOP(Number(pnl.net_profit_after_losses_cop || 0));
+  if (netMarginEl) netMarginEl.textContent = `Margen neto: ${pnl.net_margin_after_losses_pct || '0.00'}%`;
+  if (lossesEl) lossesEl.textContent = formatCOP(Number(pnl.total_losses_cop || 0));
+  if (breakdownEl) {
+    breakdownEl.textContent = `Mermas: ${formatCOP(Number(pnl.shrinkage_loss_cop || 0))} · Bajo costo: ${formatCOP(Number(pnl.below_cost_loss_cop || 0))}`;
+  }
+  if (periodLabelEl) periodLabelEl.textContent = rangeLabel;
+  if (rankingBadgeEl) rankingBadgeEl.textContent = rangeLabel;
+  if (immEl) {
+    immEl.innerHTML = `Capital sin rotación (30D): <strong style="color: var(--ink-primary); font-variant-numeric: tabular-nums;">${formatCOP(Number(pnl.immobilized_capital_30d_cop || 0))}</strong>`;
+  }
+
+  const topItems = payload.top_selling_products || [];
+  const leastItems = payload.least_selling_and_loss_products || [];
+
+  const topBtn = document.querySelector('#ranking-segmented-control [data-ranking-view="top"]');
+  const leastBtn = document.querySelector('#ranking-segmented-control [data-ranking-view="least"]');
+  if (topBtn) topBtn.textContent = `Qué se vende más (${topItems.length})`;
+  if (leastBtn) leastBtn.textContent = `Qué se vende menos y Pérdidas (${leastItems.length})`;
+
+  const topBody = document.getElementById('top-products-tbody');
+  if (topBody) {
+    topBody.innerHTML = topItems.length
+      ? topItems
+          .map((item) => {
+            const profitNum = Number(item.profit_cop || 0);
+            const marginNum = Number(item.margin_pct || 0);
+            const profitColor = profitNum < 0 ? '#E11D48' : '#059669';
+            const badgeCls = marginNum >= 20 ? 'badge-success' : marginNum > 0 ? 'badge-warning' : 'badge-danger';
+            return `<tr>
+              <td data-label="Producto"><div style="display: flex; align-items: center; gap: 10px;">${buildThumbnailHtml(item)}<div><div style="font-weight: 600; color: var(--ink-primary);">${escapeHtmlText(item.name)}</div><div style="font-size: 11px; color: var(--ink-muted); font-family: var(--font-mono);">${escapeHtmlText(item.sku)}</div></div></div></td>
+              <td data-label="Unidades" class="price-cell" style="text-align: right; font-weight: 600;">${formatQtyValue(item.units_sold)} <span style="font-size: 11px; color: var(--ink-muted); font-weight: 400;">${escapeHtmlText(item.unit)}</span></td>
+              <td data-label="Participación"><div style="display: flex; align-items: center; gap: 8px; min-width: 110px;"><div class="share-bar-track"><div class="share-bar-fill" style="width: ${Number(item.revenue_share_pct || 0)}%;"></div></div><span class="price-cell" style="font-size: 11px; color: var(--ink-secondary);">${escapeHtmlText(item.revenue_share_pct)}%</span></div></td>
+              <td data-label="Ingresos Netos" class="price-cell" style="text-align: right;">${formatCOP(Number(item.net_revenue || 0))}</td>
+              <td data-label="Costo (COGS)" class="price-cell" style="text-align: right; color: var(--ink-muted);">${formatCOP(Number(item.cogs_total || 0))}</td>
+              <td data-label="Ganancia Real" class="price-cell" style="text-align: right; font-weight: 600; color: ${profitColor};">${formatCOP(profitNum)}</td>
+              <td data-label="Margen" class="price-cell" style="text-align: right;"><span class="${badgeCls}">${escapeHtmlText(item.margin_pct)}%</span></td>
+            </tr>`;
+          })
+          .join('')
+      : `<tr><td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 28px;">Aún no se registran ventas confirmadas en este horizonte de tiempo.</td></tr>`;
+  }
+
+  const leastBody = document.getElementById('least-products-tbody');
+  if (leastBody) {
+    leastBody.innerHTML = leastItems.length
+      ? leastItems
+          .map((item) => {
+            const totalLoss = Number(item.shrinkage_loss_cop || 0) + Number(item.below_cost_loss_cop || 0);
+            const lossColor = totalLoss > 0 ? '#E11D48' : 'var(--ink-muted)';
+            const diagCls =
+              item.diagnosis_severity === 'danger'
+                ? 'badge-danger'
+                : item.diagnosis_severity === 'warning'
+                ? 'badge-warning'
+                : 'badge-info';
+            return `<tr>
+              <td data-label="Producto"><div style="display: flex; align-items: center; gap: 10px;">${buildThumbnailHtml(item)}<div><div style="font-weight: 600; color: var(--ink-primary);">${escapeHtmlText(item.name)}</div><div style="font-size: 11px; color: var(--ink-muted); font-family: var(--font-mono);">${escapeHtmlText(item.sku)}</div></div></div></td>
+              <td data-label="Vendidas" class="price-cell" style="text-align: right; font-weight: 600;">${formatQtyValue(item.units_sold)}</td>
+              <td data-label="Stock Actual" class="price-cell" style="text-align: right;">${formatQtyValue(item.stock_qty)} ${escapeHtmlText(item.unit)}</td>
+              <td data-label="Dinero Estancado" class="price-cell" style="text-align: right; font-weight: 600; color: var(--ink-primary);">${formatCOP(Number(item.stock_value_cop || 0))}</td>
+              <td data-label="Última Venta" style="font-size: 12px; color: var(--ink-secondary);">${escapeHtmlText(item.last_sale_label)}</td>
+              <td data-label="Merma / Pérdida" class="price-cell" style="text-align: right; font-weight: 600; color: ${lossColor};">${formatCOP(totalLoss)}</td>
+              <td data-label="Diagnóstico Automático"><span class="${diagCls}">${escapeHtmlText(item.diagnosis)}</span></td>
+            </tr>`;
+          })
+          .join('')
+      : `<tr><td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 28px;">Todos los productos del catálogo registran rotación saludable sin alertas de pérdida.</td></tr>`;
   }
 }
 
-// --- FILTRADO TEMPORAL DINÁMICO (7D, 30D, 90D, 12M) ---
-function updateChartRange(rangeLabel, btn) {
+// --- FILTRADO TEMPORAL DINÁMICO REAL (7D, 30D, 90D, 12M) ---
+async function updateChartRange(rangeLabel, btn) {
   document.querySelectorAll('.horizon-btn').forEach((b) => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
-  // Actualizar datos de ventas determinísticamente (sin toasts molestos)
-  updateSalesChartForRange(rangeLabel);
-}
+  const days = getRangeDays(rangeLabel);
+  if (profitabilityCache[days]) {
+    applyProfitabilityPayload(profitabilityCache[days], rangeLabel);
+    return;
+  }
 
-function updateSalesChartForRange(rangeLabel) {
-  if (!salesChart) return;
-
-  const chartData = getDeterministicSalesData(rangeLabel);
-  salesChart.data.labels = structuredClone(chartData.labels);
-  salesChart.data.datasets[0].data = structuredClone(chartData.data);
-  salesChart.update();
+  try {
+    const res = await fetch(`${ROOT_PATH}/api/analytics/profitability?period_days=${days}`, {
+      headers: getAuthHeaders(),
+      credentials: 'same-origin',
+    });
+    if (!res.ok) return;
+    const payload = await res.json();
+    profitabilityCache[days] = payload;
+    applyProfitabilityPayload(payload, rangeLabel);
+  } catch (err) {
+    console.error('Error actualizando horizonte de rentabilidad:', err);
+  }
 }
 
 // --- PESTAÑAS DE TABLAS OPERATIVAS (SHOPIFY POLARIS) ---
@@ -400,20 +535,22 @@ function initSalesChart(initialRange = '30D') {
   const ctx = document.getElementById('salesTrendChart');
   if (!ctx || !window.Chart) return;
 
-  const chartData = getDeterministicSalesData(initialRange);
+  const days = getRangeDays(initialRange);
+  const initialPayload = profitabilityCache[days] || dashboardData.profitability || {};
+  const chartData = getSeriesFromPayload(initialPayload);
 
   salesChart = new Chart(ctx, {
     type: 'line',
     data: {
-      labels: structuredClone(chartData.labels),
+      labels: chartData.labels,
       datasets: [
         {
-          label: 'Ingresos Netos (COP)',
-          data: structuredClone(chartData.data),
+          label: 'Ingresos Netos ($)',
+          data: chartData.revenue,
           borderColor: '#0D7A6F',
           backgroundColor: 'rgba(13, 122, 111, 0.08)',
           fill: true,
-          tension: 0.35,
+          tension: 0.3,
           borderWidth: 2.2,
           pointRadius: 4,
           pointHoverRadius: 6,
@@ -421,19 +558,58 @@ function initSalesChart(initialRange = '30D') {
           pointBorderColor: '#0D7A6F',
           pointBorderWidth: 2,
         },
+        {
+          label: 'Ganancia Neta Real ($)',
+          data: chartData.netProfit,
+          borderColor: '#059669',
+          backgroundColor: 'rgba(5, 150, 105, 0.04)',
+          fill: false,
+          tension: 0.3,
+          borderWidth: 2,
+          pointRadius: 3.5,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#FFFFFF',
+          pointBorderColor: '#059669',
+          pointBorderWidth: 2,
+        },
+        {
+          label: 'Costos y Pérdidas ($)',
+          data: chartData.lossesAndCosts,
+          borderColor: '#E11D48',
+          backgroundColor: 'rgba(225, 29, 72, 0.04)',
+          borderDash: [5, 4],
+          fill: false,
+          tension: 0.3,
+          borderWidth: 1.8,
+          pointRadius: 3,
+          pointHoverRadius: 5,
+          pointBackgroundColor: '#FFFFFF',
+          pointBorderColor: '#E11D48',
+          pointBorderWidth: 1.8,
+        },
       ],
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: {
-        legend: { display: false },
+        legend: {
+          display: true,
+          position: 'top',
+          align: 'end',
+          labels: {
+            usePointStyle: true,
+            boxWidth: 8,
+            font: { family: 'Inter', size: 11, weight: '600' },
+            color: '#475569',
+          },
+        },
         tooltip: {
           backgroundColor: '#0F172A',
           padding: 10,
           cornerRadius: 8,
           callbacks: {
-            label: (item) => ' ' + formatCOP(item.raw),
+            label: (item) => ` ${item.dataset.label}: ${formatCOP(item.raw)}`,
           },
         },
       },

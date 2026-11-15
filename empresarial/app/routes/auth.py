@@ -13,23 +13,28 @@ from app.core.dependencies import (
     _as_aware,
     authenticate_user,
     get_db,
+    get_session_user_from_request,
 )
 from app.core.models import (
     CompanyTaxChange,
     CompanyUIPreference,
-    LegalConsent,
     SessionToken,
     Tenant,
     User,
     UserViewSetting,
     utcnow,
 )
+from app.core.provisioning_service import (
+    DENSITY_LABELS,
+    FOCUS_LABELS,
+    record_legal_consents_chain,
+)
 from app.core.schemas import LoginRequest, RegisterRequest
 from app.core.security import (
-    compute_consent_row_hash,
     generate_session_token,
     hash_password,
     sha256_hex,
+    verify_password,
 )
 from app.ui.ui_personalization_service import (
     DiagnosisInput,
@@ -43,7 +48,12 @@ router = APIRouter(tags=["auth"])
 @router.post("/api/auth/login")
 def api_login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
     user, raw_token = authenticate_user(db, request, payload.email, payload.password)
-    return {"access_token": raw_token, "role": user.role, "tenant_id": user.tenant_id}
+    return {
+        "access_token": raw_token,
+        "role": user.role,
+        "tenant_id": user.tenant_id,
+        "must_change_password": bool(user.must_change_password),
+    }
 
 
 @router.get("/", include_in_schema=False)
@@ -55,8 +65,11 @@ def root_redirect(request: Request, db: Session = Depends(get_db)):
         sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
         if sess and sess.revoked_at is None and _as_aware(sess.expires_at) > utcnow():
             user = db.get(User, sess.user_id)
-            if user and user.is_active and user.role == "superadmin":
-                return RedirectResponse(f"{root_path}/admin/impacto", status_code=303)
+            if user and user.is_active:
+                if user.role == "superadmin":
+                    return RedirectResponse(f"{root_path}/admin/impacto", status_code=303)
+                if user.must_change_password:
+                    return RedirectResponse(f"{root_path}/auth/activar-cuenta", status_code=303)
     return RedirectResponse(f"{root_path}/dashboard", status_code=303)
 
 
@@ -90,7 +103,12 @@ def login_form(
             status_code=exc.status_code,
         )
     root_path = request.scope.get("root_path", "").rstrip("/")
-    target = f"{root_path}/admin/impacto" if user.role == "superadmin" else f"{root_path}/dashboard"
+    if user.role == "superadmin":
+        target = f"{root_path}/admin/impacto"
+    elif user.must_change_password:
+        target = f"{root_path}/auth/activar-cuenta"
+    else:
+        target = f"{root_path}/dashboard"
     redirect = RedirectResponse(target, status_code=303)
     settings = request.app.state.settings
     is_https = (
@@ -168,46 +186,14 @@ def register_tenant(payload: RegisterRequest, request: Request, db: Session = De
     ip_raw = request.client.host if request.client else "127.0.0.1"
     ua_raw = request.headers.get("user-agent", "testclient")
     ip_h = sha256_hex(ip_raw)
-    ua_h = sha256_hex(ua_raw)
-
-    docs = [
-        ("data_policy", "v1.0", "accept"),
-        ("terms_mvp", "v1.0", "accept"),
-        (
-            "aggregate_stats_research",
-            "v1.0",
-            "accept" if payload.accept_aggregate_stats else "revoke",
-        ),
-    ]
-    prev_h = "0" * 64
-    for idx, (doc_type, doc_ver, action) in enumerate(docs):
-        ts = utcnow() + timedelta(milliseconds=idx)
-        doc_sha = sha256_hex(f"{doc_type}:{doc_ver}")
-        row_h = compute_consent_row_hash(
-            tenant_id=tenant.id,
-            user_id=user.id,
-            document_type=doc_type,
-            document_version=doc_ver,
-            document_sha256=doc_sha,
-            action=action,
-            accepted_iso=ts.isoformat(),
-            prev_hash=prev_h,
-        )
-        consent = LegalConsent(
-            tenant_id=tenant.id,
-            user_id=user.id,
-            document_type=doc_type,
-            document_version=doc_ver,
-            document_sha256=doc_sha,
-            action=action,
-            accepted_at=ts,
-            ip_hash=ip_h,
-            user_agent_hash=ua_h,
-            prev_hash=prev_h,
-            row_hash=row_h,
-        )
-        db.add(consent)
-        prev_h = row_h
+    record_legal_consents_chain(
+        db=db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        accept_aggregate_stats=payload.accept_aggregate_stats,
+        ip_raw=ip_raw,
+        ua_raw=ua_raw,
+    )
 
     diag_in = DiagnosisInput(
         M10=payload.diagnosis.M10,
@@ -262,3 +248,124 @@ def register_tenant(payload: RegisterRequest, request: Request, db: Session = De
         "access_token": raw_token,
         "layout_config": build_layout_config(profile, view_mode="personalized"),
     }
+
+
+def _activation_context(db: Session, request: Request, user: User, error: str | None = None) -> dict:
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    tenant = db.get(Tenant, user.tenant_id)
+    pref = db.query(CompanyUIPreference).filter_by(tenant_id=user.tenant_id).first()
+    focus = pref.primary_focus if pref else "balanced"
+    density = pref.preferred_chart_density if pref else "standard"
+    company_name = ((tenant.trade_name or tenant.legal_name) if tenant else "Tu Empresa").strip()
+    return {
+        "error": error,
+        "root_path": root_path,
+        "user": user,
+        "company_name": company_name,
+        "focus_label": FOCUS_LABELS.get(focus, focus),
+        "density_label": DENSITY_LABELS.get(density, density),
+    }
+
+
+@router.get("/auth/activar-cuenta", response_class=HTMLResponse, include_in_schema=False)
+def activate_account_page(request: Request, db: Session = Depends(get_db)):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    user = get_session_user_from_request(request, db, request.headers.get("authorization"))
+    if not user or user.role == "superadmin" or not user.tenant_id:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+    if not user.must_change_password:
+        return RedirectResponse(f"{root_path}/dashboard", status_code=303)
+    return request.app.state.templates.TemplateResponse(
+        request=request,
+        name="activate_account.html",
+        context=_activation_context(db, request, user),
+    )
+
+
+@router.post("/auth/activar-cuenta", response_class=HTMLResponse, include_in_schema=False)
+def activate_account_submit(
+    request: Request,
+    password: str = Form(...),
+    confirm_password: str = Form(...),
+    accept_data_policy: bool = Form(False),
+    accept_aggregate_stats: bool = Form(False),
+    db: Session = Depends(get_db),
+):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    user = get_session_user_from_request(request, db, request.headers.get("authorization"))
+    if not user or user.role == "superadmin" or not user.tenant_id:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+
+    templates = request.app.state.templates
+    if len(password) < 10:
+        return templates.TemplateResponse(
+            request=request,
+            name="activate_account.html",
+            context=_activation_context(
+                db, request, user, "La nueva contraseña debe tener al menos 10 caracteres."
+            ),
+            status_code=422,
+        )
+    if password != confirm_password:
+        return templates.TemplateResponse(
+            request=request,
+            name="activate_account.html",
+            context=_activation_context(db, request, user, "Las contraseñas ingresadas no coinciden."),
+            status_code=422,
+        )
+    if verify_password(password, user.password_hash):
+        return templates.TemplateResponse(
+            request=request,
+            name="activate_account.html",
+            context=_activation_context(
+                db,
+                request,
+                user,
+                "Debes elegir una contraseña privada distinta a la clave temporal entregada.",
+            ),
+            status_code=422,
+        )
+    if not accept_data_policy:
+        return templates.TemplateResponse(
+            request=request,
+            name="activate_account.html",
+            context=_activation_context(
+                db,
+                request,
+                user,
+                "Debes aceptar la Política de Tratamiento de Datos (Ley 1581 de 2012) para continuar.",
+            ),
+            status_code=422,
+        )
+
+    tenant = db.get(Tenant, user.tenant_id)
+    if not tenant:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+
+    user.password_hash = hash_password(password)
+    user.must_change_password = False
+    user.password_changed_at = utcnow()
+    tenant.research_stats_opt_in = bool(accept_aggregate_stats)
+
+    ip_raw = request.client.host if request.client else "127.0.0.1"
+    ua_raw = request.headers.get("user-agent", "browser")
+    record_legal_consents_chain(
+        db=db,
+        tenant_id=tenant.id,
+        user_id=user.id,
+        accept_aggregate_stats=bool(accept_aggregate_stats),
+        ip_raw=ip_raw,
+        ua_raw=ua_raw,
+    )
+    db.commit()
+    return RedirectResponse(f"{root_path}/dashboard", status_code=303)
+
+
+@router.get("/registro", response_class=HTMLResponse, include_in_schema=False)
+def register_page(request: Request):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    return request.app.state.templates.TemplateResponse(
+        request=request,
+        name="register.html",
+        context={"root_path": root_path},
+    )
