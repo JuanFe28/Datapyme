@@ -79,9 +79,12 @@ def setup_console_listener(page: Page):
 
 
 def test_01_login_styling_and_quick_fill(page: Page):
-    """Verifica estilos reales de login (Apple HIG) y autocompletado con pastillas demo."""
+    """Verifica login público sin botones demo y modo auditor (/login?modo=auditor) con pastillas."""
     page.goto(f"{BASE_URL}/login")
     page.wait_for_load_state("networkidle")
+
+    # El login público corporativo no debe mostrar cuentas demo
+    assert page.locator(".login-demo-pill").count() == 0
 
     # 1. Verificar tarjeta y estilos aplicados
     card = page.locator(".login-card")
@@ -114,7 +117,9 @@ def test_01_login_styling_and_quick_fill(page: Page):
     }""")
     assert "13, 122, 111" in btn_styles["bg"], f"Botón debe usar color primario #0D7A6F: {btn_styles}"
 
-    # 3. Probar autocompletado con pastilla demo
+    # 3. Probar modo auditor discreto con autocompletado de pastilla demo
+    page.goto(f"{BASE_URL}/login?modo=auditor")
+    page.wait_for_load_state("networkidle")
     pills = page.locator(".login-demo-pill")
     expect(pills.first).to_be_visible()
     pills.first.click()
@@ -132,7 +137,7 @@ def test_01_login_styling_and_quick_fill(page: Page):
 
 def test_02_dashboard_sidebar_spanish_and_navigation(page: Page):
     """Verifica menú lateral 100% en español y navegación funcional entre módulos."""
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -175,7 +180,7 @@ def test_02_dashboard_sidebar_spanish_and_navigation(page: Page):
 
 def test_03_chart_consistency_30d_7d_30d(page: Page):
     """Verifica que el gráfico 30D -> 7D -> 30D es exactamente idéntico y no se altera ni muta."""
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -214,7 +219,7 @@ def test_03_chart_consistency_30d_7d_30d(page: Page):
 
 def test_04_tables_layout_padding_dates_and_payment_methods(page: Page):
     """Verifica tablas limpias con padding >= 12px, fechas en español y medios de pago traducidos."""
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -264,7 +269,7 @@ def test_04_tables_layout_padding_dates_and_payment_methods(page: Page):
 
 def test_05_multi_product_cart_in_sale_drawer(page: Page):
     """Verifica que el panel de Registrar Venta permite agregar múltiples productos y descuenta stock atómicamente."""
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -331,7 +336,7 @@ def test_05_multi_product_cart_in_sale_drawer(page: Page):
 
 def test_06_forecast_business_language_and_uts_accordion(page: Page):
     """Verifica vista de Proyección Estadística: tarjetas de negocios, gráfico OLS y acordeón F-DC-124."""
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -356,7 +361,7 @@ def test_06_forecast_business_language_and_uts_accordion(page: Page):
     accordion = page.locator("details.audit-accordion")
     expect(accordion).to_be_visible()
     summary = accordion.locator("summary")
-    expect(summary).to_contain_text("Sustentación UTS F-DC-124")
+    expect(summary).to_contain_text("Ver desglose estadístico detallado de la proyección")
 
     # Al hacer click en el summary, se despliega el detalle matemático
     summary.click()
@@ -366,13 +371,16 @@ def test_06_forecast_business_language_and_uts_accordion(page: Page):
 
 def test_07_profitability_pnl_and_segmented_rankings(page: Page):
     """Verifica P&L comercial real, 3 series Chart.js y ranking segmentado Top vs Menos Vendidos."""
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
     page.wait_for_load_state("networkidle")
 
-    # 1. Ir a tab de Ventas y verificar P&L + 3 series reales en Chart.js
+    # 1. Ir a tab de Ventas y verificar P&L + 3 series reales en Chart.js + Plan Comercial
+    expect(page.locator("#weekly-action-plan")).to_be_visible()
+    expect(page.locator("#commercial-insights-row")).to_be_visible()
+    expect(page.locator("#btn-start-spotlight-tour")).to_be_visible()
     page.locator("[data-tab='sales']").click()
     expect(page.locator("#pnl-summary-strip")).to_be_visible()
     expect(page.locator("#pnl-net-profit")).to_contain_text("$")
@@ -403,7 +411,7 @@ def test_08_superadmin_provision_and_client_activation(page: Page):
     unique_email = f"cliente.e2e.{int(time.time())}@datapyme.co"
 
     # 1. Ingresar como Auditor UTS (superadmin)
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill[data-demo-email='superadmin.demo@datapyme.co']").click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/admin/impacto")
@@ -455,7 +463,7 @@ def test_09_mobile_viewport_profitability_and_registro(page: Page):
     expect(page.locator("text=Crea la cuenta de tu empresa")).to_be_visible()
 
     # 2. Revisar dashboard y ranking en móvil
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill").first.click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -470,3 +478,34 @@ def test_09_mobile_viewport_profitability_and_registro(page: Page):
     screenshot_path = ARTIFACTS_DIR / "mobile_profitability_verified.png"
     page.screenshot(path=str(screenshot_path))
     assert screenshot_path.exists()
+
+
+def test_10_spotlight_tour_and_cash_simulator(page: Page):
+    """Verifica el Tour Spotlight interactivo y el simulador 10%/15%/20% del Plan de Acción Comercial."""
+    page.goto(f"{BASE_URL}/login?modo=auditor")
+    page.locator(".login-demo-pill").first.click()
+    page.locator(".login-btn-submit").click()
+    page.wait_for_url("**/dashboard")
+    page.wait_for_load_state("networkidle")
+
+    # Probar simulador de liberación de efectivo (10% -> 20%)
+    page.locator("#cash-discount-pills [data-discount='10']").click()
+    amt_10 = page.locator("#cash-released-amount").inner_text()
+    page.locator("#cash-discount-pills [data-discount='20']").click()
+    amt_20 = page.locator("#cash-released-amount").inner_text()
+    assert "$" in amt_10 and "$" in amt_20
+
+    # Abrir Tour Spotlight desde la barra superior
+    page.locator("#btn-start-spotlight-tour").click()
+    popover = page.locator(".dp-spotlight-popover")
+    expect(popover).to_be_visible()
+    expect(popover).to_contain_text("Paso 1 de 5")
+
+    # Avanzar al Paso 2
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 2 de 5")
+
+    # Omitir tutorial limpiamente
+    page.locator("#btn-tour-skip").click()
+    page.wait_for_load_state("networkidle")
+    expect(page.locator(".dp-spotlight-popover")).to_have_count(0)

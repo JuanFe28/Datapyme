@@ -276,14 +276,14 @@
 
       <form method="post" action="{{ root_path | default('') }}/login" autocomplete="on">
         <div class="form-group">
-          <label for="email">Correo electrónico</label>
+          <label for="email">Usuario, correo o celular</label>
           <input
             id="email"
             name="email"
-            type="email"
+            type="text"
             required
             autocomplete="username"
-            placeholder="gerencia@comercio.co"
+            placeholder="Ej. vafelsweet, 3052621817 o correo@empresa.com"
             autofocus
           >
         </div>
@@ -313,8 +313,9 @@
         </a>
       </div>
 
+      {% if audit_mode %}
       <div class="login-demo-section">
-        <span class="login-demo-label">Cuentas demo de prueba (F-DC-125)</span>
+        <span class="login-demo-label">Modo Auditoría · Cuentas de demostración</span>
         <div class="login-demo-grid">
           <button
             type="button"
@@ -323,7 +324,7 @@
             data-demo-pass="DemoFerreteria2026!"
           >
             <strong>Ferretería Cabecera</strong>
-            <span>Foco Inventario · M07/M08</span>
+            <span>Enfoque Inventarios</span>
           </button>
 
           <button
@@ -333,7 +334,7 @@
             data-demo-pass="DemoBoutique2026!"
           >
             <strong>Boutique San Pío</strong>
-            <span>Foco Ventas · M10/M12</span>
+            <span>Enfoque Ventas</span>
           </button>
 
           <button
@@ -343,7 +344,7 @@
             data-demo-pass="DemoMinimercado2026!"
           >
             <strong>Minimercado Real</strong>
-            <span>Foco Predictivo · M17</span>
+            <span>Enfoque Proyección</span>
           </button>
 
           <button
@@ -357,6 +358,7 @@
           </button>
         </div>
       </div>
+      {% endif %}
 
       <div class="value-prop-section">
         <span class="login-demo-label">Por qué las PyMEs eligen Datapyme Empresarial</span>
@@ -382,7 +384,7 @@
     </div>
 
     <div class="login-footer-meta">
-      Unidades Tecnológicas de Santander · Validación de Software F-DC-124 / F-DC-125
+      Datapyme Empresarial · Gestión Comercial e Inventarios · Bucaramanga, Colombia
     </div>
   </main>
 

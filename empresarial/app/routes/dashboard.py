@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
+from app.analytics.action_advisor import compute_weekly_action_plan
 from app.analytics.kpis import get_tenant_kpis_payload
 from app.analytics.profitability import get_tenant_profitability_payload
 from app.core.commercial_service import serialize_product
@@ -16,15 +17,18 @@ from app.core.dependencies import SESSION_COOKIE, get_current_context, get_db
 from app.core.jinja_filters import serialize_sale
 from app.core.models import (
     CompanyUIPreference,
+    InventoryMovement,
     LegalConsent,
     Product,
     Sale,
+    SaleItem,
+    SaleTaxSnapshot,
     Tenant,
     User,
     UserViewSetting,
     utcnow,
 )
-from app.core.schemas import ViewModeUpdate
+from app.core.schemas import TourCompleteRequest, ViewModeUpdate
 from app.forecast.stats import get_tenant_forecast_payload
 from app.ui.ui_personalization_service import (
     DiagnosisInput,
@@ -166,6 +170,31 @@ def render_adaptive_dashboard(
         record_event=False,
     )
 
+    all_sales = db.query(Sale).filter_by(tenant_id=tenant.id).all()
+    all_items = db.query(SaleItem).filter(SaleItem.tenant_id == tenant.id).all()
+    action_plan = compute_weekly_action_plan(
+        products=products,
+        sales=[
+            {
+                "id": s.id,
+                "status": s.status,
+                "occurred_at": s.occurred_at,
+                "subtotal": s.subtotal,
+                "discount_total": s.discount_total,
+            }
+            for s in all_sales
+        ],
+        sale_items=[
+            {
+                "sale_id": it.sale_id,
+                "product_id": it.product_id,
+                "quantity": it.quantity,
+            }
+            for it in all_items
+        ],
+        forecast_payload=forecast_data,
+    )
+
     last_consent = (
         db.query(LegalConsent)
         .filter_by(tenant_id=tenant.id)
@@ -189,12 +218,15 @@ def render_adaptive_dashboard(
             "primary_focus": layout_cfg.get("primary_focus"),
             "density": layout_cfg.get("density"),
             "view_mode": resolved_mode,
+            "onboarding_tour_completed": bool(tenant.onboarding_tour_completed),
+            "mfa_enabled": bool(user.mfa_enabled),
             "products": products,
             "recent_sales": recent_sales,
             "kpis": kpi_payload.get("kpis", {}),
             "alerts_summary": kpi_payload.get("alerts_summary", {}),
             "forecast": forecast_data,
             "profitability": profitability_data,
+            "action_plan": action_plan,
         },
         default=str,
     )
@@ -215,6 +247,8 @@ def render_adaptive_dashboard(
             "layout_config": layout_cfg,
             "kpi_payload": kpi_payload,
             "profitability": profitability_data,
+            "action_plan": action_plan,
+            "onboarding_tour_completed": bool(tenant.onboarding_tour_completed),
             "products": products,
             "recent_sales": recent_sales,
             "forecast_data": forecast_data,
@@ -223,3 +257,48 @@ def render_adaptive_dashboard(
             "root_path": request.scope.get("root_path", "").rstrip("/"),
         },
     )
+
+
+@router.post("/api/onboarding/complete-tour")
+def complete_onboarding_tour(
+    payload: TourCompleteRequest,
+    ctx: tuple[User, Tenant] = Depends(get_current_context),
+    db: Session = Depends(get_db),
+):
+    _, tenant = ctx
+    if payload.action == "purge_training":
+        training_sales = db.query(Sale).filter_by(tenant_id=tenant.id, is_training_data=True).all()
+        t_sale_ids = [s.id for s in training_sales]
+        if t_sale_ids:
+            db.query(SaleTaxSnapshot).filter(
+                SaleTaxSnapshot.tenant_id == tenant.id, SaleTaxSnapshot.sale_id.in_(t_sale_ids)
+            ).delete(synchronize_session=False)
+            db.query(SaleItem).filter(
+                SaleItem.tenant_id == tenant.id, SaleItem.sale_id.in_(t_sale_ids)
+            ).delete(synchronize_session=False)
+        db.query(InventoryMovement).filter_by(tenant_id=tenant.id, is_training_data=True).delete(
+            synchronize_session=False
+        )
+        if t_sale_ids:
+            db.query(Sale).filter(Sale.tenant_id == tenant.id, Sale.id.in_(t_sale_ids)).delete(
+                synchronize_session=False
+            )
+        db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=True).delete(
+            synchronize_session=False
+        )
+        tenant.onboarding_tour_completed = True
+        db.commit()
+        return {"status": "purged", "onboarding_tour_completed": True}
+
+    db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=True).update(
+        {"is_training_data": False}, synchronize_session=False
+    )
+    db.query(InventoryMovement).filter_by(tenant_id=tenant.id, is_training_data=True).update(
+        {"is_training_data": False}, synchronize_session=False
+    )
+    db.query(Sale).filter_by(tenant_id=tenant.id, is_training_data=True).update(
+        {"is_training_data": False}, synchronize_session=False
+    )
+    tenant.onboarding_tour_completed = True
+    db.commit()
+    return {"status": "kept", "onboarding_tour_completed": True}

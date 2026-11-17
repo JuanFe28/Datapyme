@@ -485,6 +485,86 @@
         <div id="provision-handoff-text" style="margin: 0; white-space: pre-wrap; font-family: var(--font-mono); font-size: 12px; color: var(--ink-primary); background: #FFFFFF; padding: 12px; border-radius: 8px; border: 1px solid rgba(15,23,42,0.08);"></div>
       </div>
     </section>
+
+    <!-- 6. Sincronización Research Studio y Credenciales de Entrega (Empresas Reales) -->
+    <section class="section-card" id="research-sync-section" style="margin-top: 24px;">
+      <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 12px; margin-bottom: 16px;">
+        <div>
+          <h2 class="section-title">Sincronización Research Studio y Credenciales de Entrega</h2>
+          <p class="section-subtitle" style="margin-bottom: 0;">
+            Empresas reales aprovisionadas en cero productos con login triple (usuario corto, celular o correo), peso adaptativo calculado desde su encuesta M07–M17 y soporte 2FA.
+          </p>
+        </div>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" id="btn-sync-research" class="btn btn-primary" style="min-height: 38px;">
+            Sincronizar Empresas de Research Studio
+          </button>
+          <a href="{{ root_path | default('') }}/api/admin/tenants/credentials-report?format=csv" class="btn btn-secondary" download style="min-height: 38px;">
+            Descargar CSV de Credenciales
+          </a>
+        </div>
+      </div>
+
+      <div id="sync-status-msg" style="display: none; margin-bottom: 12px; padding: 10px 14px; border-radius: 8px; font-size: 13px;"></div>
+
+      <div class="table-responsive">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Empresa</th>
+              <th>Usuario Corto</th>
+              <th>Celular / Correo</th>
+              <th>Clave Temporal</th>
+              <th>Foco Adaptativo</th>
+              <th>2FA (MFA)</th>
+              <th style="text-align: right;">Acciones</th>
+            </tr>
+          </thead>
+          <tbody id="real-clients-tbody">
+            {% for client in real_clients | default([]) %}
+            <tr>
+              <td>
+                <strong>{{ client.trade_name }}</strong>
+                <div style="font-size: 11px; color: var(--ink-muted);">{{ client.owner_full_name }}</div>
+              </td>
+              <td style="font-family: var(--font-mono); font-size: 12px; font-weight: 600;">{{ client.username }}</td>
+              <td style="font-size: 12px;">
+                <div>{{ client.phone or 'Sin celular' }}</div>
+                <div style="font-size: 11px; color: var(--ink-muted);">{{ client.email }}</div>
+              </td>
+              <td style="font-family: var(--font-mono); font-size: 12px;">
+                {% if client.must_change_password %}
+                <span class="badge-warning">{{ client.temporary_password }}</span>
+                {% else %}
+                <span class="badge-success">Activada</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 12px;">{{ client.primary_focus_label }}</td>
+              <td>
+                {% if client.mfa_enabled %}
+                <span class="badge-success">Activo</span>
+                <button type="button" class="btn btn-ghost btn-reset-mfa" data-user-id="{{ client.user_id }}" style="font-size: 11px; padding: 2px 8px; margin-left: 4px; color: #991B1B;">Restablecer</button>
+                {% else %}
+                <span class="badge-info">Opcional / Inactivo</span>
+                {% endif %}
+              </td>
+              <td style="text-align: right;">
+                <button type="button" class="btn btn-secondary btn-copy-client-wa" data-whatsapp="{{ client.whatsapp_handoff_text | escape }}" style="font-size: 12px; padding: 5px 10px;">
+                  Copiar WhatsApp
+                </button>
+              </td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 20px;">
+                Aún no hay empresas reales sincronizadas. Haz clic en "Sincronizar Empresas de Research Studio".
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
   <script>
@@ -560,6 +640,66 @@
           }
         });
       }
+
+      const syncBtn = document.getElementById('btn-sync-research');
+      const syncMsg = document.getElementById('sync-status-msg');
+      if (syncBtn) {
+        syncBtn.addEventListener('click', async () => {
+          syncBtn.disabled = true;
+          try {
+            const headers = {};
+            if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+            const resp = await fetch(`${rootPath}/api/admin/tenants/sync-research`, {
+              method: 'POST',
+              headers,
+              credentials: 'same-origin',
+            });
+            const data = await resp.json();
+            if (resp.ok) {
+              syncMsg.style.display = 'block';
+              syncMsg.style.background = '#ECFDF5';
+              syncMsg.style.color = '#065F46';
+              syncMsg.textContent = `Sincronización completada: ${data.synced_count} empresas reales procesadas. Recargando tabla...`;
+              setTimeout(() => window.location.reload(), 600);
+            } else {
+              syncMsg.style.display = 'block';
+              syncMsg.style.background = '#FEF2F2';
+              syncMsg.style.color = '#991B1B';
+              syncMsg.textContent = data.detail || 'Error en sincronización.';
+            }
+          } finally {
+            syncBtn.disabled = false;
+          }
+        });
+      }
+
+      document.querySelectorAll('.btn-copy-client-wa').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const text = btn.getAttribute('data-whatsapp') || '';
+          try {
+            await navigator.clipboard.writeText(text);
+            btn.textContent = 'Copiado';
+            setTimeout(() => { btn.textContent = 'Copiar WhatsApp'; }, 1600);
+          } catch (_) {
+            btn.textContent = 'Error copia';
+          }
+        });
+      });
+
+      document.querySelectorAll('.btn-reset-mfa').forEach((btn) => {
+        btn.addEventListener('click', async () => {
+          const uid = btn.getAttribute('data-user-id');
+          if (!uid || !confirm('¿Restablecer verificación en dos pasos (2FA) de este cliente?')) return;
+          const headers = {};
+          if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+          const resp = await fetch(`${rootPath}/api/admin/users/${uid}/reset-mfa`, {
+            method: 'POST',
+            headers,
+            credentials: 'same-origin',
+          });
+          if (resp.ok) window.location.reload();
+        });
+      });
     })();
   </script>
 </body>

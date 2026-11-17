@@ -1,8 +1,10 @@
 """Dependencias de autenticación, sesión y contexto de base de datos para FastAPI."""
 
+import re
 from datetime import UTC, datetime, timedelta
 
 from fastapi import Depends, Header, HTTPException, Request
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.core.models import SessionToken, Tenant, User, utcnow
@@ -110,10 +112,31 @@ def get_superadmin_user(
     return user
 
 
-def authenticate_user(db: Session, request: Request, email: str, password: str) -> tuple[User, str]:
-    """Login con bloqueo temporal tras fallos consecutivos y mensaje genérico (anti-enumeración)."""
+def _find_user_by_identifier(db: Session, identifier: str) -> User | None:
+    """Resuelve usuario por correo, nombre de usuario corto o celular (10 dígitos)."""
+    ident = (identifier or "").strip().lower()
+    if not ident:
+        return None
+    digits = re.sub(r"\D", "", ident)
+    if digits.startswith("57") and len(digits) == 12:
+        digits = digits[2:]
+    if "@" in ident:
+        return db.query(User).filter(User.email == ident).first()
+    if len(digits) == 10 and re.fullmatch(r"[\d\s+\-().]+", ident):
+        return db.query(User).filter(or_(User.phone == digits, User.username == ident)).first()
+    return db.query(User).filter(or_(User.username == ident, User.email == ident)).first()
+
+
+def authenticate_user(
+    db: Session,
+    request: Request,
+    email: str,
+    password: str,
+    create_session: bool = True,
+) -> tuple[User, str]:
+    """Login triple (usuario, correo o celular) con bloqueo temporal tras fallos."""
     now = utcnow()
-    user = db.query(User).filter_by(email=email.strip().lower()).first()
+    user = _find_user_by_identifier(db, email)
     locked_until = _as_aware(user.locked_until) if user else None
     if user and locked_until and locked_until > now:
         raise HTTPException(
@@ -130,6 +153,9 @@ def authenticate_user(db: Session, request: Request, email: str, password: str) 
     user.failed_logins = 0
     user.locked_until = None
     user.last_login_at = now
+    if not create_session:
+        db.commit()
+        return user, ""
     raw_token, tok_hash = generate_session_token()
     ip_raw = request.client.host if request.client else "127.0.0.1"
     db.add(

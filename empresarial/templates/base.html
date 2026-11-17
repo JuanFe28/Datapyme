@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>{{ title | default('Datapyme Empresarial — Analítica Comercial PyME') }}</title>
   <link rel="stylesheet" href="{{ root_path | default('') }}/static/css/tokens.css">
+  <link rel="stylesheet" href="{{ root_path | default('') }}/static/css/spotlight_tour.css">
   <script src="{{ root_path | default('') }}/static/vendor/chart.umd.min.js"></script>
 </head>
 <body>
@@ -44,6 +45,11 @@
 
       <!-- Botones de Acción Inmediata (Abren Slide-Over Drawers) -->
       <div class="header-action-buttons">
+        <button type="button" id="btn-start-spotlight-tour" class="btn btn-ghost" title="Ver recorrido guiado paso a paso">
+          <i data-lucide="compass" style="width: 14px; height: 14px;"></i>
+          <span>Ver tutorial guiado</span>
+        </button>
+
         <button type="button" class="btn btn-secondary" data-open-drawer="drawer-import" onclick="openDrawer('drawer-import')" title="Carga masiva CSV/Excel">
           <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
           <span>Importar Excel</span>
@@ -99,9 +105,9 @@
       
       <div style="margin-top: 36px; padding: 12px; border-radius: var(--radius-control); background: var(--surface-subtle); border: 1px solid rgba(15, 23, 42, 0.05);">
         <div style="font-size: 11px; font-weight: 600; color: var(--ink-secondary); text-transform: uppercase; letter-spacing: 0.04em;">Entorno Seguro</div>
-        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Aislamiento Multi-Tenant · Ley 1581</div>
+        <div style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">Cuenta Privada Protegida · Ley 1581</div>
         <div style="font-size: 11px; color: var(--ink-muted); margin-top: 8px; border-top: 1px solid rgba(15, 23, 42, 0.06); padding-top: 6px; line-height: 1.4;">
-          Universitaria Tecnológica de Santander / Unidades Tecnológicas de Santander (UTS)
+          Protección de privacidad comercial bajo Ley 1581 de 2012
         </div>
       </div>
     </aside>
@@ -141,5 +147,6 @@
   <script src="{{ root_path | default('') }}/static/vendor/chart.umd.min.js"></script>
   <script src="{{ root_path | default('') }}/static/vendor/lucide.min.js"></script>
   <script src="{{ root_path | default('') }}/static/js/app.js" defer></script>
+  <script src="{{ root_path | default('') }}/static/js/spotlight_tour.js" defer></script>
 </body>
 </html>

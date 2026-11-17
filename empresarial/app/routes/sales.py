@@ -21,7 +21,8 @@ def create_sale(
     user, tenant = ctx
     from app.core.company_tax import sale_tax_policy
 
-    sale_tax_policy(db, tenant.id, payload.tax_revision)
+    if not payload.is_training_data:
+        sale_tax_policy(db, tenant.id, payload.tax_revision)
     items_data = [
         {
             "product_id": it.product_id,
@@ -41,6 +42,7 @@ def create_sale(
             items_input=items_data,
             source="manual",
             tax_revision=payload.tax_revision,
+            is_training_data=payload.is_training_data,
         )
         db.commit()
         return serialize_sale(sale)

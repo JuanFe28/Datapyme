@@ -314,8 +314,11 @@ def provision_real_client_tenant(
     tax_status: str = "pending",
     starter_catalog: bool = False,
     access_url: str = "",
+    phone: str | None = None,
 ) -> dict[str, Any]:
     """Crea una PyME cliente real con contraseña temporal (`must_change_password=True`)."""
+    from app.core.research_sync_service import extract_phone_and_email, make_unique_username
+
     norm_email = email.strip().lower()
     if db.query(User).filter_by(email=norm_email).first():
         raise HTTPException(status_code=409, detail="Ya existe una cuenta registrada con ese correo.")
@@ -326,21 +329,29 @@ def provision_real_client_tenant(
 
     clean_trade = trade_name.strip()
     clean_legal = (legal_name or clean_trade).strip()
+    norm_phone, _ = extract_phone_and_email(phone or "", "cliente")
+    if norm_phone and db.query(User).filter_by(phone=norm_phone).first():
+        raise HTTPException(status_code=409, detail="Ya existe una cuenta registrada con ese celular.")
+
     tenant = Tenant(
         legal_name=clean_legal,
         trade_name=clean_trade,
         subsector=subsector.strip() or "general",
         size=size,
         municipality=municipality.strip() or "Bucaramanga",
+        onboarding_tour_completed=False,
         research_stats_opt_in=False,
         status="active",
     )
     db.add(tenant)
     db.flush()
 
+    username = make_unique_username(db, clean_trade)
     user = User(
         tenant_id=tenant.id,
         email=norm_email,
+        username=username,
+        phone=norm_phone,
         full_name=owner_full_name.strip(),
         password_hash=hash_password(temporary_password),
         role="owner",
@@ -413,9 +424,10 @@ def provision_real_client_tenant(
         f"Hola {owner_full_name.strip()}, te entregamos el acceso personalizado a Datapyme Empresarial "
         f"para {clean_trade}.\n\n"
         f"Enlace de acceso: {login_link}\n"
-        f"Usuario: {norm_email}\n"
+        f"Usuario corto: {username}\n"
+        f"Correo: {norm_email}\n"
         f"Clave temporal: {temporary_password}\n"
-        f"Configuracion adaptativa segun tu encuesta: {focus_label} (Densidad {density_label}).\n\n"
+        f"Configuracion adaptativa: {focus_label} (Densidad {density_label}).\n\n"
         "En tu primer ingreso el sistema te pedira crear tu clave privada definitiva y aceptar "
         "la politica de tratamiento de datos (Ley 1581)."
     )
@@ -424,6 +436,8 @@ def provision_real_client_tenant(
         "tenant_id": tenant.id,
         "user_id": user.id,
         "trade_name": clean_trade,
+        "username": username,
+        "phone": norm_phone,
         "email": norm_email,
         "must_change_password": True,
         "primary_focus": profile.primary_focus,

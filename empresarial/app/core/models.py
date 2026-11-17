@@ -41,6 +41,8 @@ class Tenant(Base):
     subsector = Column(String(40), nullable=False)
     size = Column(String(20), nullable=False, default="pequena")
     municipality = Column(String(60), nullable=False, default="Bucaramanga")
+    research_company_id = Column(Integer, nullable=True, unique=True, index=True)
+    onboarding_tour_completed = Column(Boolean, nullable=False, default=False)
     research_stats_opt_in = Column(Boolean, nullable=False, default=False)
     status = Column(String(24), nullable=False, default="active")
     deletion_scheduled_at = Column(DateTime(timezone=True), nullable=True)
@@ -85,11 +87,16 @@ class User(Base):
     id = Column(String(36), primary_key=True, default=new_uuid)
     tenant_id = Column(String(36), ForeignKey("tenants.id"), nullable=True, index=True)
     email = Column(String(254), nullable=False, unique=True)
+    username = Column(String(64), nullable=True, unique=True, index=True)
+    phone = Column(String(24), nullable=True, unique=True, index=True)
     full_name = Column(String(120), nullable=False)
     password_hash = Column(String(255), nullable=False)
     role = Column(String(20), nullable=False, default="owner")
     is_active = Column(Boolean, nullable=False, default=True)
     must_change_password = Column(Boolean, nullable=False, default=False)
+    mfa_enabled = Column(Boolean, nullable=False, default=False)
+    mfa_secret = Column(String(128), nullable=True)
+    mfa_backup_codes = Column(JSON, nullable=True)
     failed_logins = Column(Integer, nullable=False, default=0)
     locked_until = Column(DateTime(timezone=True), nullable=True)
     password_changed_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -185,6 +192,7 @@ class Product(Base):
     stock_qty = Column(Numeric(14, 3), nullable=False, default=0)
     min_stock = Column(Numeric(14, 3), nullable=False, default=0)
     image_url = Column(String(512), nullable=True, default=None)
+    is_training_data = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     updated_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -209,6 +217,7 @@ class InventoryMovement(Base):
     reason = Column(String(200), nullable=False)
     sale_id = Column(String(36), nullable=True, index=True)
     import_job_id = Column(String(36), nullable=True, index=True)
+    is_training_data = Column(Boolean, nullable=False, default=False)
     occurred_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -241,6 +250,7 @@ class Sale(Base):
     cogs_total = Column(Numeric(14, 2), nullable=False)
     status = Column(String(20), nullable=False, default="completed")
     source = Column(String(20), nullable=False, default="manual")
+    is_training_data = Column(Boolean, nullable=False, default=False)
     import_job_id = Column(String(36), nullable=True)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
@@ -355,6 +365,9 @@ class PlatformImpactTelemetry(Base):
 _PG_IMMUTABLE_FN = """
 CREATE OR REPLACE FUNCTION datapyme_prevent_mutation() RETURNS trigger AS $$
 BEGIN
+    IF TG_TABLE_NAME = 'inventory_movements' AND TG_OP = 'DELETE' AND OLD.is_training_data IS TRUE THEN
+        RETURN OLD;
+    END IF;
     RAISE EXCEPTION 'Tabla inmutable por auditoria (Ley 1581 de 2012 / Kardex F-DC-124): UPDATE y DELETE prohibidos';
 END;
 $$ LANGUAGE plpgsql
@@ -413,10 +426,12 @@ def _create_kardex_immutability_triggers(target, connection, **kwargs):
             END;
             """
         )
+        connection.exec_driver_sql("DROP TRIGGER IF EXISTS trg_inventory_movements_no_delete")
         connection.exec_driver_sql(
             """
             CREATE TRIGGER IF NOT EXISTS trg_inventory_movements_no_delete
             BEFORE DELETE ON inventory_movements
+            WHEN OLD.is_training_data = 0
             BEGIN
                 SELECT RAISE(ABORT, 'inventory_movements es append-only: prohibido DELETE en Kardex');
             END;

@@ -1,0 +1,81 @@
+/* Estilos del Tour Interactivo "Spotlight" (Apple HIG) */
+.dp-spotlight-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 9000;
+  pointer-events: none;
+}
+
+.dp-spotlight-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.56);
+  pointer-events: auto;
+}
+
+.dp-spotlight-highlight {
+  position: fixed;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.62), 0 0 0 3px #14B8A6;
+  transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
+  pointer-events: none;
+  z-index: 9001;
+}
+
+.dp-spotlight-popover {
+  position: fixed;
+  z-index: 9002;
+  pointer-events: auto;
+  width: min(360px, calc(100vw - 24px));
+  background: #FFFFFF;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 14px;
+  box-shadow: 0 20px 44px -8px rgba(15, 23, 42, 0.25);
+  padding: 18px 20px;
+}
+
+.dp-spotlight-step-tag {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0D7A6F;
+  margin-bottom: 6px;
+}
+
+.dp-spotlight-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 700;
+  color: #0F172A;
+}
+
+.dp-spotlight-desc {
+  margin: 0 0 14px;
+  font-size: 13px;
+  line-height: 1.48;
+  color: #475569;
+}
+
+.dp-spotlight-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.dp-spotlight-modal-card {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 9003;
+  pointer-events: auto;
+  width: min(460px, calc(100vw - 24px));
+  background: #FFFFFF;
+  border-radius: 16px;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.35);
+  padding: 26px 24px;
+}

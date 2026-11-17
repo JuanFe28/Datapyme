@@ -133,9 +133,15 @@
             </div>
           </div>
 
-          <div class="form-group">
-            <label for="reg-email">Correo electrónico del propietario *</label>
-            <input id="reg-email" type="email" required placeholder="gerencia@micomercio.co">
+          <div class="reg-grid-2">
+            <div class="form-group">
+              <label for="reg-email">Correo electrónico *</label>
+              <input id="reg-email" type="email" required placeholder="gerencia@micomercio.co">
+            </div>
+            <div class="form-group">
+              <label for="reg-phone">Celular (para iniciar sesión rápido)</label>
+              <input id="reg-phone" type="tel" placeholder="Ej.: 3001234567">
+            </div>
           </div>
 
           <div class="form-group">
@@ -145,12 +151,12 @@
 
           <label class="consent-check" for="reg-accept-policy">
             <input id="reg-accept-policy" type="checkbox" required>
-            <span>Acepto la Política de Tratamiento de Datos Personales (Ley 1581 de 2012) y los Términos del prototipo Datapyme.</span>
+            <span>Acepto la Política de Tratamiento de Datos Personales (Ley 1581 de 2012) y los Términos de uso de Datapyme Empresarial.</span>
           </label>
 
           <label class="consent-check" for="reg-accept-stats">
             <input id="reg-accept-stats" type="checkbox" checked>
-            <span>Autorizo estadísticas agregadas anónimas (k &ge; 3) para investigación académica UTS (F-DC-125).</span>
+            <span>Autorizo compartir estadísticas agregadas y 100% anónimas (sin nombre de mi empresa ni datos personales) para estudios del comercio local.</span>
           </label>
 
           <button type="button" id="btn-reg-next" class="btn btn-primary login-btn-submit" style="margin-top: 12px;">
@@ -262,6 +268,7 @@
           tax_status: document.getElementById('reg-tax-status').value,
           full_name: document.getElementById('reg-full-name').value.trim(),
           email: email,
+          phone: (document.getElementById('reg-phone').value || '').trim() || null,
           password: password,
           accept_data_policy: document.getElementById('reg-accept-policy').checked,
           accept_terms_mvp: document.getElementById('reg-accept-policy').checked,

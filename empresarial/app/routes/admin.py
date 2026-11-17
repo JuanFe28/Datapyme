@@ -1,9 +1,10 @@
 """Rutas de auditoría de impacto para SuperAdmin y derechos de Habeas Data (Sprint 5, F-DC-125 y Ley 1581)."""
 
-from fastapi import APIRouter, Depends, Query, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
 from sqlalchemy.orm import Session
 
+from app.core.config import ROOT
 from app.core.dependencies import (
     SESSION_COOKIE,
     _as_aware,
@@ -13,6 +14,11 @@ from app.core.dependencies import (
 )
 from app.core.models import SessionToken, Tenant, User, utcnow
 from app.core.provisioning_service import provision_real_client_tenant
+from app.core.research_sync_service import (
+    build_credentials_report_csv,
+    list_real_client_credentials,
+    sync_research_companies,
+)
 from app.core.schemas import DeletionRequestPayload, ProvisionTenantRequest
 from app.core.security import sha256_hex
 from app.telemetry.impact_service import (
@@ -48,6 +54,10 @@ def render_superadmin_impact(
         return RedirectResponse(f"{root_path}/dashboard", status_code=303)
 
     telemetry = compute_platform_impact_telemetry(db=db, k_threshold=3)
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("host") or request.url.netloc
+    base_url = f"{scheme}://{host}{root_path}" if host else root_path
+    real_clients = list_real_client_credentials(db, access_url=base_url)
     templates = request.app.state.templates
     return templates.TemplateResponse(
         request=request,
@@ -56,6 +66,7 @@ def render_superadmin_impact(
             "title": "Auditoría de Impacto (F-DC-125) · Datapyme Empresarial",
             "current_user": user,
             "telemetry": telemetry,
+            "real_clients": real_clients,
             "active_token": raw_token,
             "root_path": root_path,
         },
@@ -82,6 +93,7 @@ def provision_tenant_endpoint(
         municipality=payload.municipality,
         owner_full_name=payload.owner_full_name,
         email=payload.email,
+        phone=payload.phone,
         temporary_password=payload.temporary_password,
         priority_focus=payload.priority_focus,
         density=payload.density,
@@ -89,6 +101,59 @@ def provision_tenant_endpoint(
         starter_catalog=payload.starter_catalog,
         access_url=base_url,
     )
+
+
+@router.post("/api/admin/tenants/sync-research")
+def sync_from_research_studio_endpoint(
+    request: Request,
+    _admin: User = Depends(get_superadmin_user),
+    db: Session = Depends(get_db),
+):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("host") or request.url.netloc
+    base_url = f"{scheme}://{host}{root_path}" if host else root_path
+    research_db = ROOT.parent / "datapyme_local.db"
+    results = sync_research_companies(db, sqlite_path=research_db, access_url=base_url)
+    return {"synced_count": len(results), "clients": results}
+
+
+@router.get("/api/admin/tenants/credentials-report")
+def export_credentials_report(
+    request: Request,
+    format: str = Query(default="json", pattern="^(json|csv)$"),
+    _admin: User = Depends(get_superadmin_user),
+    db: Session = Depends(get_db),
+):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
+    host = request.headers.get("host") or request.url.netloc
+    base_url = f"{scheme}://{host}{root_path}" if host else root_path
+    rows = list_real_client_credentials(db, access_url=base_url)
+    if format == "csv":
+        csv_body = build_credentials_report_csv(rows)
+        return PlainTextResponse(
+            content=csv_body,
+            media_type="text/csv; charset=utf-8",
+            headers={"Content-Disposition": 'attachment; filename="datapyme_credenciales_clientes.csv"'},
+        )
+    return {"clients": rows}
+
+
+@router.post("/api/admin/users/{user_id}/reset-mfa")
+def reset_client_mfa_endpoint(
+    user_id: str,
+    _admin: User = Depends(get_superadmin_user),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if not user or user.role == "superadmin":
+        raise HTTPException(status_code=404, detail="Usuario de empresa no encontrado.")
+    user.mfa_enabled = False
+    user.mfa_secret = None
+    user.mfa_backup_codes = None
+    db.commit()
+    return {"user_id": user.id, "mfa_enabled": False}
 
 
 @router.get("/api/admin/impact")

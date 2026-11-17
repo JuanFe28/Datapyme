@@ -122,8 +122,36 @@
 
         <label class="consent-check" for="accept_aggregate_stats">
           <input id="accept_aggregate_stats" name="accept_aggregate_stats" type="checkbox" value="true">
-          <span>Autorizo el aporte de indicadores estadísticos anónimos (k &ge; 3, sin datos identificables) para la validación académica UTS (F-DC-125).</span>
+          <span>Autorizo el aporte de indicadores estadísticos anónimos (sin nombre de mi empresa ni datos personales) para estudios del sector comercial.</span>
         </label>
+
+        <!-- Verificación en Dos Pasos (Opcional · Recomendado) -->
+        <div style="margin: 14px 0; padding: 14px; border-radius: var(--radius-control); background: var(--surface-subtle); border: 1px solid rgba(15, 23, 42, 0.08);">
+          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+            <div>
+              <strong style="font-size: 13px; color: var(--ink-primary);">Verificación en Dos Pasos · 2FA (Opcional · Recomendado)</strong>
+              <div style="font-size: 11px; color: var(--ink-secondary); margin-top: 2px;">Protege tu ingreso con Google Authenticator, Microsoft Authenticator o Authy (100% gratuito).</div>
+            </div>
+            <button type="button" id="btn-setup-mfa-activate" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; min-height: 36px;">
+              Configurar 2FA ahora
+            </button>
+          </div>
+
+          <div id="activate-mfa-box" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(15, 23, 42, 0.08);">
+            <div style="display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap;">
+              <div id="activate-mfa-qr" style="background: #fff; padding: 8px; border-radius: 8px; border: 1px solid rgba(15, 23, 42, 0.08);"></div>
+              <div style="flex: 1; min-width: 200px;">
+                <div style="font-size: 12px; color: var(--ink-secondary); margin-bottom: 6px;">Escanea el QR e ingresa el código temporal de 6 dígitos para activarlo (puedes guardar estos 5 códigos de respaldo):</div>
+                <div id="activate-mfa-backups" style="font-family: var(--font-mono); font-size: 11px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.08); margin-bottom: 8px;"></div>
+                <div style="display: flex; gap: 8px;">
+                  <input id="activate-mfa-code" type="text" maxlength="6" placeholder="Código 6 dígitos" style="flex: 1; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.18); border-radius: 8px; font-family: var(--font-mono);">
+                  <button type="button" id="btn-confirm-mfa-activate" class="btn btn-primary" style="min-height: 38px; padding: 0 14px; font-size: 12px;">Activar 2FA</button>
+                </div>
+                <div id="activate-mfa-status" style="font-size: 12px; margin-top: 6px;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <button type="submit" id="btn-activate-submit" class="btn btn-primary login-btn-submit" style="margin-top: 16px;">
           Guardar Clave y Entrar al Panel
@@ -135,5 +163,65 @@
       </form>
     </div>
   </main>
+
+  <script>
+    (function () {
+      const setupBtn = document.getElementById('btn-setup-mfa-activate');
+      const box = document.getElementById('activate-mfa-box');
+      const qrEl = document.getElementById('activate-mfa-qr');
+      const backupsEl = document.getElementById('activate-mfa-backups');
+      const confirmBtn = document.getElementById('btn-confirm-mfa-activate');
+      const codeIn = document.getElementById('activate-mfa-code');
+      const statusEl = document.getElementById('activate-mfa-status');
+      const rootPath = {{ (root_path | default('')) | tojson }};
+      const activeToken = {{ (active_token | default('')) | tojson }};
+
+      if (!setupBtn) return;
+
+      setupBtn.addEventListener('click', async () => {
+        setupBtn.disabled = true;
+        try {
+          const headers = {};
+          if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+          const res = await fetch(`${rootPath}/api/auth/mfa/setup`, {
+            method: 'POST',
+            headers,
+            credentials: 'same-origin',
+          });
+          const data = await res.json();
+          if (res.ok) {
+            qrEl.innerHTML = data.qr_svg;
+            backupsEl.textContent = 'Respaldos: ' + (data.backup_codes || []).join('  |  ');
+            box.style.display = 'block';
+          }
+        } finally {
+          setupBtn.disabled = false;
+        }
+      });
+
+      if (confirmBtn) {
+        confirmBtn.addEventListener('click', async () => {
+          const code = (codeIn.value || '').trim();
+          const headers = { 'Content-Type': 'application/json' };
+          if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+          const res = await fetch(`${rootPath}/api/auth/mfa/confirm`, {
+            method: 'POST',
+            headers,
+            credentials: 'same-origin',
+            body: JSON.stringify({ code }),
+          });
+          const data = await res.json();
+          if (res.ok) {
+            statusEl.style.color = '#059669';
+            statusEl.textContent = 'Verificación 2FA activada correctamente para tu próximo ingreso.';
+            confirmBtn.disabled = true;
+          } else {
+            statusEl.style.color = '#E11D48';
+            statusEl.textContent = data.detail || 'Código inválido.';
+          }
+        });
+      }
+    })();
+  </script>
 </body>
 </html>

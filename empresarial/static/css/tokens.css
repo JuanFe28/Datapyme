@@ -1703,3 +1703,122 @@ html, body {
     text-align: center;
   }
 }
+
+/* --- PLAN DE ACCIÓN COMERCIAL Y VISUALIZACIONES DE DISTRIBUCIÓN (PILAR 5) --- */
+.action-advisor-section {
+  background: var(--surface-card);
+  border: var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  padding: 20px 24px;
+  margin-bottom: 24px;
+}
+
+.action-advisor-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.action-card {
+  background: var(--surface-subtle);
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  border-radius: var(--radius-control);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.action-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-card-kicker {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ink-muted);
+}
+
+.action-restock-list {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.action-restock-list li {
+  padding-bottom: 8px;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.06);
+}
+
+.action-restock-list li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.insights-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.insight-card {
+  background: var(--surface-card);
+  border: var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-sm);
+  padding: 18px 20px;
+}
+
+.insight-card-title {
+  margin: 0 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-primary);
+}
+
+.category-bars-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.stock-health-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.06);
+  margin: 12px 0 14px;
+}
+
+.stock-health-legend {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink-secondary);
+}
+
+.stock-health-legend .dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  margin-right: 6px;
+}
+
+@media (max-width: 1024px) {
+  .action-advisor-grid,
+  .insights-visual-grid {
+    grid-template-columns: 1fr;
+  }
+}

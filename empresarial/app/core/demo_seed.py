@@ -637,9 +637,15 @@ def seed_contrast_demo_tenants(db: Session) -> dict[str, Any]:
         db.add(tenant)
         db.flush()
 
+        demo_username = {
+            "empresa_a_inventario": "ferreteriacabecera",
+            "empresa_b_ventas": "boutiquesanpio",
+            "empresa_c_predictivo": "minimercadoreal",
+        }.get(spec["key"])
         user = User(
             tenant_id=tenant.id,
             email=spec["email"],
+            username=demo_username,
             full_name=spec["full_name"],
             password_hash=hash_password(spec_password),
             role="owner",
@@ -752,6 +758,7 @@ def seed_contrast_demo_tenants(db: Session) -> dict[str, Any]:
         existing_admin = User(
             tenant_id=None,
             email=admin_email,
+            username="auditoruts",
             full_name=f"{DEMO_TAG} Auditor SuperAdmin F-DC-125",
             password_hash=hash_password(admin_password),
             role="superadmin",
@@ -759,6 +766,7 @@ def seed_contrast_demo_tenants(db: Session) -> dict[str, Any]:
         db.add(existing_admin)
         db.flush()
     else:
+        existing_admin.username = existing_admin.username or "auditoruts"
         existing_admin.password_hash = hash_password(admin_password)
         existing_admin.failed_logins = 0
         existing_admin.locked_until = None
@@ -805,6 +813,7 @@ def clear_contrast_demo_tenants(db: Session) -> dict[str, int]:
                     """
                     CREATE TRIGGER IF NOT EXISTS trg_inventory_movements_no_delete
                     BEFORE DELETE ON inventory_movements
+                    WHEN OLD.is_training_data = 0
                     BEGIN
                         SELECT RAISE(ABORT, 'inventory_movements es append-only: prohibido DELETE en Kardex');
                     END;

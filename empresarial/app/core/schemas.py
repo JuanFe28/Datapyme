@@ -21,6 +21,7 @@ class RegisterRequest(BaseModel):
     subsector: str
     size: str = "pequena"
     email: str
+    phone: str | None = None
     full_name: str
     password: str
     accept_data_policy: bool
@@ -32,6 +33,15 @@ class RegisterRequest(BaseModel):
 class LoginRequest(BaseModel):
     email: str
     password: str
+    totp_code: str | None = None
+
+
+class MfaConfirmRequest(BaseModel):
+    code: str = Field(min_length=6, max_length=16)
+
+
+class TourCompleteRequest(BaseModel):
+    action: Literal["purge_training", "keep_training"]
 
 
 class ViewModeUpdate(BaseModel):
@@ -49,6 +59,7 @@ class ProductCreateRequest(BaseModel):
     initial_stock: str | float | int = "0"
     min_stock: str | float | int = "0"
     image_url: str | None = None
+    is_training_data: bool = False
 
 
 class ProductUpdateRequest(BaseModel):
@@ -84,6 +95,7 @@ class SaleCreateRequest(BaseModel):
     customer_label: str | None = "Cliente Mostrador"
     payment_method: Literal["cash", "card", "transfer", "credit", "other"] = "cash"
     items: list[SaleItemRequest]
+    is_training_data: bool = False
 
 
 class DeletionRequestPayload(BaseModel):
@@ -98,6 +110,7 @@ class ProvisionTenantRequest(BaseModel):
     municipality: str = Field(default="Bucaramanga", min_length=2, max_length=60)
     owner_full_name: str = Field(min_length=2, max_length=120)
     email: str = Field(min_length=5, max_length=254)
+    phone: str | None = Field(default=None, max_length=24)
     temporary_password: str = Field(min_length=10, max_length=128)
     priority_focus: Literal["sales", "inventory", "predictive", "balanced"] = "balanced"
     density: Literal["simple", "standard", "detailed"] = "standard"

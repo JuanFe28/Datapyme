@@ -23,7 +23,13 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from app.core.config import ROOT, Settings
 from app.core.dependencies import SESSION_COOKIE, _as_aware
 from app.core.jinja_filters import register_jinja_filters
-from app.core.models import Base, SessionToken, User, utcnow
+from app.core.models import (
+    Base,
+    SessionToken,
+    User,
+    _install_pg_immutability,
+    utcnow,
+)
 from app.core.security import sha256_hex
 from app.routes import (
     admin,
@@ -51,27 +57,120 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
         with engine.connect() as conn:
             try:
                 if engine.dialect.name == "sqlite":
-                    cols = [r[1] for r in conn.execute(text("PRAGMA table_info(products)")).fetchall()]
-                    if cols and "image_url" not in cols:
-                        conn.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(512)"))
-                        conn.commit()
-                    ucols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
-                    if ucols and "must_change_password" not in ucols:
+                    tcols = {r[1] for r in conn.execute(text("PRAGMA table_info(tenants)")).fetchall()}
+                    if tcols:
+                        if "research_company_id" not in tcols:
+                            conn.execute(
+                                text("ALTER TABLE tenants ADD COLUMN research_company_id INTEGER")
+                            )
+                            conn.execute(
+                                text(
+                                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_tenants_research_company_id ON tenants (research_company_id)"
+                                )
+                            )
+                        if "onboarding_tour_completed" not in tcols:
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE tenants ADD COLUMN onboarding_tour_completed BOOLEAN NOT NULL DEFAULT 0"
+                                )
+                            )
+
+                    ucols = {r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()}
+                    if ucols:
+                        if "must_change_password" not in ucols:
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT 0"
+                                )
+                            )
+                        if "username" not in ucols:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN username VARCHAR(64)"))
+                            conn.execute(
+                                text(
+                                    "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)"
+                                )
+                            )
+                        if "phone" not in ucols:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN phone VARCHAR(24)"))
+                            conn.execute(
+                                text("CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone ON users (phone)")
+                            )
+                        if "mfa_enabled" not in ucols:
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE users ADD COLUMN mfa_enabled BOOLEAN NOT NULL DEFAULT 0"
+                                )
+                            )
+                        if "mfa_secret" not in ucols:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN mfa_secret VARCHAR(128)"))
+                        if "mfa_backup_codes" not in ucols:
+                            conn.execute(text("ALTER TABLE users ADD COLUMN mfa_backup_codes JSON"))
+
+                    pcols = {r[1] for r in conn.execute(text("PRAGMA table_info(products)")).fetchall()}
+                    if pcols:
+                        if "image_url" not in pcols:
+                            conn.execute(text("ALTER TABLE products ADD COLUMN image_url VARCHAR(512)"))
+                        if "is_training_data" not in pcols:
+                            conn.execute(
+                                text(
+                                    "ALTER TABLE products ADD COLUMN is_training_data BOOLEAN NOT NULL DEFAULT 0"
+                                )
+                            )
+
+                    mcols = {
+                        r[1]
+                        for r in conn.execute(text("PRAGMA table_info(inventory_movements)")).fetchall()
+                    }
+                    if mcols and "is_training_data" not in mcols:
                         conn.execute(
                             text(
-                                "ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT 0"
+                                "ALTER TABLE inventory_movements ADD COLUMN is_training_data BOOLEAN NOT NULL DEFAULT 0"
                             )
                         )
-                        conn.commit()
-                elif engine.dialect.name == "postgresql":
-                    conn.execute(
-                        text("ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(512)")
-                    )
+                    # Reinstalar trigger condicional de inventory_movements para permitir limpieza de datos de prueba
+                    conn.execute(text("DROP TRIGGER IF EXISTS trg_inventory_movements_no_delete"))
                     conn.execute(
                         text(
-                            "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE"
+                            """
+                            CREATE TRIGGER IF NOT EXISTS trg_inventory_movements_no_delete
+                            BEFORE DELETE ON inventory_movements
+                            WHEN OLD.is_training_data = 0
+                            BEGIN
+                                SELECT RAISE(ABORT, 'inventory_movements es append-only: prohibido DELETE en Kardex');
+                            END;
+                            """
                         )
                     )
+
+                    scols = {r[1] for r in conn.execute(text("PRAGMA table_info(sales)")).fetchall()}
+                    if scols and "is_training_data" not in scols:
+                        conn.execute(
+                            text(
+                                "ALTER TABLE sales ADD COLUMN is_training_data BOOLEAN NOT NULL DEFAULT 0"
+                            )
+                        )
+                    conn.commit()
+                elif engine.dialect.name == "postgresql":
+                    stmts = [
+                        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS research_company_id INTEGER",
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_tenants_research_company_id ON tenants (research_company_id)",
+                        "ALTER TABLE tenants ADD COLUMN IF NOT EXISTS onboarding_tour_completed BOOLEAN NOT NULL DEFAULT FALSE",
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS must_change_password BOOLEAN NOT NULL DEFAULT FALSE",
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS username VARCHAR(64)",
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_username ON users (username)",
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS phone VARCHAR(24)",
+                        "CREATE UNIQUE INDEX IF NOT EXISTS ix_users_phone ON users (phone)",
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_enabled BOOLEAN NOT NULL DEFAULT FALSE",
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_secret VARCHAR(128)",
+                        "ALTER TABLE users ADD COLUMN IF NOT EXISTS mfa_backup_codes JSONB",
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS image_url VARCHAR(512)",
+                        "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_training_data BOOLEAN NOT NULL DEFAULT FALSE",
+                        "ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS is_training_data BOOLEAN NOT NULL DEFAULT FALSE",
+                        "ALTER TABLE sales ADD COLUMN IF NOT EXISTS is_training_data BOOLEAN NOT NULL DEFAULT FALSE",
+                    ]
+                    for s in stmts:
+                        conn.execute(text(s))
+                    _install_pg_immutability(conn, "inventory_movements")
                     conn.commit()
             except Exception as exc:  # noqa: BLE001
                 logging.getLogger("uvicorn.error").warning(f"Auto-migración de esquema: {exc}")

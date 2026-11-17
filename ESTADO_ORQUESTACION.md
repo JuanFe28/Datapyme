@@ -127,3 +127,13 @@ empresarial/
 * **Linter:** `ruff check empresarial` -> **0 errores, 0 advertencias**.
 * **Formatter:** `ruff format --check empresarial` -> **100% formateado (62 archivos limpios)**.
 * **Archivos basura eliminados:** Eliminadas capturas temporales sueltas, bases de datos de prueba `.db`, archivos `.log` y documentos duplicados.
+
+---
+
+## 5. RELEASE PRODUCCIÓN REAL (F-DC-124 / F-DC-125 · LOS 7 PILARES)
+
+* **Login Corporativo Limpio + Modo Auditor (`/login` vs `/login?modo=auditor`):** Pastillas demo ocultadas en la vista pública del comerciante y jerga interna eliminada de plantillas operativas (`base.html`, `dashboard.html`, `activate_account.html`, `register.html`, `error.html`).
+* **Puente `Research Studio` -> `Datapyme Empresarial` (`app/core/research_sync_service.py`):** Sincronización idempotente de las 13 PyMEs reales con encuesta de mercado completa (incluyendo **VaFel Sweet** bajo usuario `vafelsweet` y celular `3052621817`), todas inicializadas con `0` productos y `0` ventas, `must_change_password=True`, pesos adaptativos `map-v1` y login triple (`username`, `phone`, `email`).
+* **MFA TOTP RFC 6238 Gratuito y Offline (`app/core/mfa_service.py`):** QR SVG generado en memoria (`segno` + `pyotp`), ventana de tolerancia `+-30s`, 5 códigos de respaldo SHA-256 de un solo uso, ruta `/login/mfa` y botón de soporte `POST /api/admin/users/{user_id}/reset-mfa` en `/admin/impacto`.
+* **Tour Interactivo "Spotlight" (`static/js/spotlight_tour.js`):** 5 pasos guiados desde cuenta en cero con recorte dinámico, práctica de creación de producto y venta marcados como `is_training_data=True`, y borrado atómico en `POST /api/onboarding/complete-tour` conservando intacta la inmutabilidad del Kardex real (`WHEN OLD.is_training_data = 0`).
+* **Plan de Acción Comercial de la Semana (`app/analytics/action_advisor.py`) + Nuevas Gráficas:** Reabastecimiento por punto de reorden, simulador de liberación de efectivo (`10%`, `15%`, `20%` protegido sobre costo), termómetro de meta mensual OLS, barras por categoría, distribución por método de pago y mapa visual de salud de stock.

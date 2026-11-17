@@ -42,6 +42,7 @@ def create_product(
             initial_stock=parse_colombian_decimal(payload.initial_stock, THREE_PLACES),
             min_stock=parse_colombian_decimal(payload.min_stock, THREE_PLACES),
             image_url=payload.image_url,
+            is_training_data=payload.is_training_data,
         )
         db.commit()
         return serialize_product(prod)

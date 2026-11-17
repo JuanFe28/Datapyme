@@ -296,6 +296,87 @@ def compute_pure_profitability(
         ref_now=ref_now,
     )
 
+    # Distribución por categoría de producto (sobre ventas netas del periodo)
+    cat_totals: dict[str, Decimal] = {}
+    for row in product_rows_all:
+        cat = str(row.get("category") or "General")
+        rev_val = Decimal(str(row.get("net_revenue") or "0"))
+        if rev_val > 0:
+            cat_totals[cat] = cat_totals.get(cat, Decimal("0.00")) + rev_val
+    category_distribution = [
+        {
+            "category": cat,
+            "net_revenue": str(_q2(amt)),
+            "share_pct": str(
+                _q2((amt / net_revenue) * Decimal(100)) if net_revenue > 0 else Decimal("0.00")
+            ),
+        }
+        for cat, amt in sorted(cat_totals.items(), key=lambda x: x[1], reverse=True)
+    ]
+
+    # Distribución por método de pago en el periodo
+    pm_labels = {
+        "cash": "Efectivo",
+        "transfer": "Transferencia",
+        "card": "Tarjeta",
+        "credit": "Crédito",
+        "other": "Otro",
+    }
+    pm_acc: dict[str, dict[str, Any]] = {}
+    for s in period_sales.values():
+        method = str(s.get("payment_method") or "cash")
+        rev_val = _q2(Decimal(str(s.get("subtotal", "0"))) - Decimal(str(s.get("discount_total", "0"))))
+        entry = pm_acc.setdefault(method, {"net_revenue": Decimal("0.00"), "count": 0})
+        entry["net_revenue"] += rev_val
+        entry["count"] += 1
+    payment_method_distribution = [
+        {
+            "method": method,
+            "label": pm_labels.get(method, method.capitalize()),
+            "count": info["count"],
+            "net_revenue": str(_q2(info["net_revenue"])),
+            "share_pct": str(
+                _q2((info["net_revenue"] / net_revenue) * Decimal(100))
+                if net_revenue > 0
+                else Decimal("0.00")
+            ),
+        }
+        for method, info in sorted(pm_acc.items(), key=lambda x: x[1]["net_revenue"], reverse=True)
+    ]
+
+    # Mapa Visual de Salud de Stock
+    optimal_n = 0
+    risk_n = 0
+    out_n = 0
+    stagnant_overstock_n = 0
+    for pid, p in products_by_id.items():
+        st_qty = _q3(Decimal(str(p.get("stock_qty", "0"))))
+        min_st = _q3(Decimal(str(p.get("min_stock", "0"))))
+        if st_qty <= Decimal("0.000"):
+            out_n += 1
+        elif st_qty <= min_st:
+            risk_n += 1
+        elif pid not in sold_30d_products or (
+            min_st > Decimal("0.000") and st_qty >= (min_st * Decimal(3))
+        ):
+            stagnant_overstock_n += 1
+        else:
+            optimal_n += 1
+    total_prods_n = len(products_by_id)
+    stock_health_map = {
+        "total_products": total_prods_n,
+        "optimal": optimal_n,
+        "stockout_risk": risk_n,
+        "out_of_stock": out_n,
+        "overstock_stagnant": stagnant_overstock_n,
+        "optimal_pct": round((optimal_n / total_prods_n) * 100, 1) if total_prods_n else 0.0,
+        "stockout_risk_pct": round((risk_n / total_prods_n) * 100, 1) if total_prods_n else 0.0,
+        "out_of_stock_pct": round((out_n / total_prods_n) * 100, 1) if total_prods_n else 0.0,
+        "overstock_stagnant_pct": round((stagnant_overstock_n / total_prods_n) * 100, 1)
+        if total_prods_n
+        else 0.0,
+    }
+
     return {
         "period_days": period_days,
         "pnl": {
@@ -317,6 +398,9 @@ def compute_pure_profitability(
         "top_selling_products": top_selling,
         "least_selling_and_loss_products": least_selling,
         "series": series,
+        "category_distribution": category_distribution,
+        "payment_method_distribution": payment_method_distribution,
+        "stock_health_map": stock_health_map,
     }
 
 
@@ -442,6 +526,7 @@ def get_tenant_profitability_payload(
             "unit": p.unit,
             "cost_price": p.cost_price,
             "stock_qty": p.stock_qty,
+            "min_stock": p.min_stock,
             "image_url": p.image_url,
         }
         for p in products
@@ -451,6 +536,7 @@ def get_tenant_profitability_payload(
             "id": s.id,
             "status": s.status,
             "occurred_at": s.occurred_at,
+            "payment_method": s.payment_method,
             "subtotal": s.subtotal,
             "discount_total": s.discount_total,
             "cogs_total": s.cogs_total,

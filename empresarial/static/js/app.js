@@ -73,6 +73,7 @@ let salesChart = null;
 let inventoryChart = null;
 let forecastChart = null;
 let forecastModuleChart = null;
+let paymentMethodChart = null;
 let activeHeroTab = 'inventory';
 let dashboardData = {};
 const profitabilityCache = {};
@@ -129,6 +130,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initInventoryChart();
   initForecastChart();
   initForecastModuleChart();
+  initPaymentMethodChart();
 
   // Conectar pestañas del Hero Chart
   document.querySelectorAll('.tab-btn').forEach((btn) => {
@@ -138,13 +140,87 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Conectar filtros temporales 7D, 30D, 90D, 12M
-  document.querySelectorAll('.horizon-btn').forEach((btn) => {
+  // Conectar filtros temporales 7D, 30D, 90D, 12M (solo del Hero Header)
+  document.querySelectorAll('.hero-header .horizon-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       const range = btn.textContent.trim();
       updateChartRange(range, btn);
     });
   });
+
+  // Conectar Simulador de Liberación de Efectivo (10%, 15%, 20%)
+  document.querySelectorAll('#cash-discount-pills .cash-disc-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('#cash-discount-pills .cash-disc-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const pct = btn.getAttribute('data-discount') || '15';
+      const scenarios = dashboardData.action_plan?.cash_release_simulator?.scenarios || {};
+      const sc = scenarios[pct];
+      if (sc) {
+        const amtEl = document.getElementById('cash-released-amount');
+        const noteEl = document.getElementById('cash-retained-note');
+        if (amtEl) amtEl.textContent = formatCOP(Number(sc.cash_released_cop || 0));
+        if (noteEl) {
+          noteEl.innerHTML = `Efectivo recuperable manteniendo ganancia de <strong class="price-cell">${formatCOP(Number(sc.retained_profit_cop || 0))}</strong> (protegido sobre costo).`;
+        }
+      }
+    });
+  });
+
+  // Conectar activación de Verificación en Dos Pasos (2FA) desde Mis Datos
+  const dashMfaBtn = document.getElementById('btn-dash-setup-mfa');
+  const dashMfaConfirm = document.getElementById('btn-dash-confirm-mfa');
+  if (dashMfaBtn) {
+    dashMfaBtn.addEventListener('click', async () => {
+      dashMfaBtn.disabled = true;
+      try {
+        const res = await fetch(`${ROOT_PATH}/api/auth/mfa/setup`, {
+          method: 'POST',
+          headers: getAuthHeaders(),
+          credentials: 'same-origin',
+        });
+        const data = await res.json();
+        if (res.ok) {
+          const panel = document.getElementById('dash-mfa-setup-panel');
+          const qr = document.getElementById('dash-mfa-qr');
+          const back = document.getElementById('dash-mfa-backups');
+          if (qr) qr.innerHTML = data.qr_svg || '';
+          if (back) back.textContent = 'Códigos de respaldo (guárdalos): ' + (data.backup_codes || []).join('  |  ');
+          if (panel) panel.style.display = 'block';
+        }
+      } finally {
+        dashMfaBtn.disabled = false;
+      }
+    });
+  }
+  if (dashMfaConfirm) {
+    dashMfaConfirm.addEventListener('click', async () => {
+      const code = (document.getElementById('dash-mfa-code')?.value || '').trim();
+      const statusEl = document.getElementById('dash-mfa-status');
+      const res = await fetch(`${ROOT_PATH}/api/auth/mfa/confirm`, {
+        method: 'POST',
+        headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
+        credentials: 'same-origin',
+        body: JSON.stringify({ code }),
+      });
+      const data = await res.json();
+      if (res.ok) {
+        const badge = document.getElementById('dash-mfa-badge');
+        if (badge) {
+          badge.className = 'badge-success';
+          badge.textContent = '2FA Activo';
+        }
+        if (statusEl) {
+          statusEl.style.color = '#059669';
+          statusEl.textContent = 'Verificación 2FA activada correctamente.';
+        }
+        showToast('Verificación en dos pasos activada', 'success');
+      } else if (statusEl) {
+        statusEl.style.color = '#E11D48';
+        statusEl.textContent = data.detail || 'Código inválido.';
+      }
+    });
+  }
 
   // Conectar pestañas de Tablas Inferiores
   document.querySelectorAll('.table-tab-btn').forEach((btn) => {
@@ -489,11 +565,86 @@ function applyProfitabilityPayload(payload, rangeLabel) {
           .join('')
       : `<tr><td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 28px;">Todos los productos del catálogo registran rotación saludable sin alertas de pérdida.</td></tr>`;
   }
+
+  // Actualizar barras por categoría y gráfico donut de métodos de pago
+  const catBox = document.getElementById('category-bars-container');
+  const cats = (payload.category_distribution || []).slice(0, 5);
+  if (catBox) {
+    catBox.innerHTML = cats.length
+      ? cats
+          .map(
+            (c) => `<div class="cat-bar-row">
+              <div style="display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 4px;">
+                <span style="font-weight: 600; color: var(--ink-primary);">${escapeHtmlText(c.category)}</span>
+                <span class="price-cell" style="color: var(--ink-secondary);">${formatCOP(Number(c.net_revenue || 0))} (${escapeHtmlText(c.share_pct)}%)</span>
+              </div>
+              <div class="share-bar-track"><div class="share-bar-fill" style="width: ${Number(c.share_pct || 0)}%;"></div></div>
+            </div>`
+          )
+          .join('')
+      : `<p style="font-size: 12px; color: var(--ink-muted); margin: 12px 0 0;">Sin ventas por categoría registradas aún en el periodo.</p>`;
+  }
+
+  if (paymentMethodChart) {
+    const pms = payload.payment_method_distribution || [];
+    const hasData = pms.some((p) => Number(p.net_revenue || 0) > 0);
+    paymentMethodChart.data.labels = hasData ? pms.map((p) => p.label) : ['Sin ventas'];
+    paymentMethodChart.data.datasets[0].data = hasData ? pms.map((p) => Number(p.net_revenue || 0)) : [1];
+    paymentMethodChart.data.datasets[0].backgroundColor = hasData
+      ? ['#0D7A6F', '#059669', '#0284C7', '#D97706', '#64748B']
+      : ['#E2E8F0'];
+    paymentMethodChart.options.plugins.tooltip.enabled = hasData;
+    paymentMethodChart.update();
+  }
+}
+
+function initPaymentMethodChart() {
+  const ctx = document.getElementById('paymentMethodChart');
+  if (!ctx || !window.Chart) return;
+  const pms = dashboardData.profitability?.payment_method_distribution || [];
+  const hasData = pms.some((p) => Number(p.net_revenue || 0) > 0);
+  const labels = hasData ? pms.map((p) => p.label) : ['Sin ventas'];
+  const values = hasData ? pms.map((p) => Number(p.net_revenue || 0)) : [1];
+  const palette = hasData
+    ? ['#0D7A6F', '#059669', '#0284C7', '#D97706', '#64748B']
+    : ['#E2E8F0'];
+
+  paymentMethodChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: {
+      labels,
+      datasets: [
+        {
+          data: values,
+          backgroundColor: palette,
+          borderWidth: 0,
+          hoverOffset: 4,
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      cutout: '66%',
+      plugins: {
+        legend: {
+          position: 'right',
+          labels: { boxWidth: 10, font: { family: 'Inter', size: 11 }, color: '#475569' },
+        },
+        tooltip: {
+          enabled: hasData,
+          callbacks: {
+            label: (item) => ` ${item.label}: ${formatCOP(item.raw)}`,
+          },
+        },
+      },
+    },
+  });
 }
 
 // --- FILTRADO TEMPORAL DINÁMICO REAL (7D, 30D, 90D, 12M) ---
 async function updateChartRange(rangeLabel, btn) {
-  document.querySelectorAll('.horizon-btn').forEach((b) => b.classList.remove('active'));
+  document.querySelectorAll('.hero-header .horizon-btn').forEach((b) => b.classList.remove('active'));
   if (btn) btn.classList.add('active');
 
   const days = getRangeDays(rangeLabel);
@@ -972,7 +1123,8 @@ function calculateCartTotals() {
   const prods = getProductsCatalog();
   let grossSum = 0;
   let vatTotal = 0;
-  const taxStatus = dashboardData.company_tax?.status || 'pending';
+  const rawTaxStatus = dashboardData.company_tax?.status || 'pending';
+  const taxStatus = rawTaxStatus === 'pending' && window.__SPOTLIGHT_TRAINING_ACTIVE__ ? 'not_responsible' : rawTaxStatus;
   let hasStockExceeded = taxStatus === 'pending';
   let stockErrorMsg = hasStockExceeded ? 'Confirma la condición de IVA de la empresa antes de vender.' : '';
 
@@ -1079,6 +1231,7 @@ async function handleSaleSubmit(e) {
         customer_label: customer,
         payment_method: payment,
         items: itemsPayload,
+        is_training_data: Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__),
       }),
     });
     if (resp.ok) {
@@ -1302,6 +1455,7 @@ async function handleProductSubmit(e) {
     initial_stock: document.getElementById('prod-initial-stock').value,
     min_stock: document.getElementById('prod-min-stock').value,
     image_url: document.getElementById('prod-image-url')?.value || null,
+    is_training_data: Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__),
   };
 
   try {

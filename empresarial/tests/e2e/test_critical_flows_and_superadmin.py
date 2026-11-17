@@ -53,7 +53,7 @@ def test_01_unauthenticated_dashboard_redirects_to_login(page: Page):
 def test_02_superadmin_login_shows_html_impact_view(page: Page):
     """Verifica que el rol Auditor UTS (superadmin) carga la vista visual HTML /admin/impacto."""
     page.context.clear_cookies()
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.wait_for_load_state("networkidle")
 
     # Hacer click en la pastilla de Auditor UTS
@@ -110,7 +110,7 @@ def test_02_superadmin_login_shows_html_impact_view(page: Page):
 def test_03_edit_product_drawer_and_inventory_calculation(page: Page):
     """Verifica el botón Editar en inventarios, cálculo en vivo de ganancia/margen y actualización de precios."""
     page.context.clear_cookies()
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill", has_text="Ferretería Cabecera").click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -175,7 +175,7 @@ def test_03_edit_product_drawer_and_inventory_calculation(page: Page):
 def test_04_sale_detail_drawer_receipt(page: Page):
     """Verifica que el botón 'Ver detalle' abre el comprobante con el desglose exacto de productos de la venta."""
     page.context.clear_cookies()
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator(".login-demo-pill", has_text="Ferretería Cabecera").click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")

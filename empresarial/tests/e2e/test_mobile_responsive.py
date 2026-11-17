@@ -61,7 +61,7 @@ def test_01_mobile_login_no_overflow_and_screenshot(page: Page):
 def test_02_mobile_dashboard_navigation_and_zero_overflow(page: Page):
     """Verifica navegación móvil por Bottom Tab Bar y ausencia de desbordamiento horizontal en todas las secciones."""
     page.set_viewport_size({"width": 390, "height": 844})
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator("button[data-demo-email='demo.ferreteria@datapyme.co']").click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")
@@ -108,7 +108,7 @@ def test_02_mobile_dashboard_navigation_and_zero_overflow(page: Page):
 def test_03_mobile_sale_drawer_full_width_and_interaction(page: Page):
     """Verifica que el Drawer de Registrar Venta se abra al 100% de ancho en móvil y sea completamente operativo."""
     page.set_viewport_size({"width": 390, "height": 844})
-    page.goto(f"{BASE_URL}/login")
+    page.goto(f"{BASE_URL}/login?modo=auditor")
     page.locator("button[data-demo-email='demo.ferreteria@datapyme.co']").click()
     page.locator(".login-btn-submit").click()
     page.wait_for_url("**/dashboard")

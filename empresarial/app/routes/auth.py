@@ -3,17 +3,27 @@
 from datetime import timedelta
 from decimal import Decimal
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, Header, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
+from itsdangerous import BadSignature, SignatureExpired, TimestampSigner
 from sqlalchemy.orm import Session
 
 from app.core.dependencies import (
     SESSION_COOKIE,
     SESSION_HOURS,
     _as_aware,
+    _extract_token,
     authenticate_user,
     get_db,
     get_session_user_from_request,
+)
+from app.core.mfa_service import (
+    build_totp_uri,
+    generate_backup_codes,
+    generate_totp_secret,
+    render_qr_svg_inline,
+    verify_or_consume_backup_code,
+    verify_totp_code,
 )
 from app.core.models import (
     CompanyTaxChange,
@@ -29,7 +39,8 @@ from app.core.provisioning_service import (
     FOCUS_LABELS,
     record_legal_consents_chain,
 )
-from app.core.schemas import LoginRequest, RegisterRequest
+from app.core.research_sync_service import extract_phone_and_email, make_unique_username
+from app.core.schemas import LoginRequest, MfaConfirmRequest, RegisterRequest
 from app.core.security import (
     generate_session_token,
     hash_password,
@@ -43,16 +54,75 @@ from app.ui.ui_personalization_service import (
 )
 
 router = APIRouter(tags=["auth"])
+MFA_PENDING_COOKIE = "dp_mfa_pending"
+
+
+def _is_https_request(request: Request) -> bool:
+    settings = request.app.state.settings
+    return (
+        request.url.scheme == "https"
+        or request.headers.get("x-forwarded-proto") == "https"
+        or settings.environment in ("production", "review")
+    )
+
+
+def _issue_user_session(db: Session, request: Request, user: User) -> str:
+    raw_token, tok_hash = generate_session_token()
+    ip_raw = request.client.host if request.client else "127.0.0.1"
+    db.add(
+        SessionToken(
+            user_id=user.id,
+            token_hash=tok_hash,
+            csrf_secret=sha256_hex(raw_token + "|csrf"),
+            expires_at=utcnow() + timedelta(hours=SESSION_HOURS),
+            ip_hash=sha256_hex(ip_raw),
+        )
+    )
+    db.commit()
+    return raw_token
+
+
+def _target_after_login(root_path: str, user: User) -> str:
+    if user.role == "superadmin":
+        return f"{root_path}/admin/impacto"
+    if user.must_change_password:
+        return f"{root_path}/auth/activar-cuenta"
+    return f"{root_path}/dashboard"
+
+
+def _set_session_cookie_and_redirect(request: Request, target: str, raw_token: str) -> RedirectResponse:
+    redirect = RedirectResponse(target, status_code=303)
+    redirect.set_cookie(
+        SESSION_COOKIE,
+        raw_token,
+        max_age=SESSION_HOURS * 3600,
+        httponly=True,
+        secure=_is_https_request(request),
+        samesite="lax",
+        path="/",
+    )
+    return redirect
 
 
 @router.post("/api/auth/login")
 def api_login(payload: LoginRequest, request: Request, db: Session = Depends(get_db)):
-    user, raw_token = authenticate_user(db, request, payload.email, payload.password)
+    user, _ = authenticate_user(db, request, payload.email, payload.password, create_session=False)
+    if user.mfa_enabled:
+        code = (payload.totp_code or "").strip()
+        if not code:
+            raise HTTPException(
+                status_code=403,
+                detail="Se requiere el código temporal de verificación en dos pasos (2FA).",
+            )
+        if not (verify_totp_code(user.mfa_secret, code) or verify_or_consume_backup_code(user, code)):
+            raise HTTPException(status_code=401, detail="Código de verificación en dos pasos inválido.")
+    raw_token = _issue_user_session(db, request, user)
     return {
         "access_token": raw_token,
         "role": user.role,
         "tenant_id": user.tenant_id,
         "must_change_password": bool(user.must_change_password),
+        "mfa_enabled": bool(user.mfa_enabled),
     }
 
 
@@ -74,13 +144,17 @@ def root_redirect(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
-def login_page(request: Request):
+def login_page(request: Request, modo: str | None = None):
     templates = request.app.state.templates
     root_path = request.scope.get("root_path", "").rstrip("/")
     return templates.TemplateResponse(
         request=request,
         name="login.html",
-        context={"error": None, "root_path": root_path},
+        context={
+            "error": None,
+            "root_path": root_path,
+            "audit_mode": (modo == "auditor"),
+        },
     )
 
 
@@ -92,40 +166,160 @@ def login_form(
     db: Session = Depends(get_db),
 ):
     templates = request.app.state.templates
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    audit_mode = request.query_params.get("modo") == "auditor" or "modo=auditor" in request.headers.get(
+        "referer", ""
+    )
     try:
-        user, raw_token = authenticate_user(db, request, email, password)
+        user, _ = authenticate_user(db, request, email, password, create_session=False)
     except HTTPException as exc:
-        root_path = request.scope.get("root_path", "").rstrip("/")
         return templates.TemplateResponse(
             request=request,
             name="login.html",
-            context={"error": exc.detail, "root_path": root_path},
+            context={"error": exc.detail, "root_path": root_path, "audit_mode": audit_mode},
             status_code=exc.status_code,
         )
+
+    if user.mfa_enabled:
+        signer = TimestampSigner(request.app.state.settings.secret_key)
+        signed_uid = signer.sign(user.id).decode("utf-8")
+        redirect = RedirectResponse(f"{root_path}/login/mfa", status_code=303)
+        redirect.set_cookie(
+            MFA_PENDING_COOKIE,
+            signed_uid,
+            max_age=300,
+            httponly=True,
+            secure=_is_https_request(request),
+            samesite="lax",
+            path="/",
+        )
+        return redirect
+
+    raw_token = _issue_user_session(db, request, user)
+    target = _target_after_login(root_path, user)
+    return _set_session_cookie_and_redirect(request, target, raw_token)
+
+
+@router.get("/login/mfa", response_class=HTMLResponse, include_in_schema=False)
+def login_mfa_page(request: Request, db: Session = Depends(get_db)):
     root_path = request.scope.get("root_path", "").rstrip("/")
-    if user.role == "superadmin":
-        target = f"{root_path}/admin/impacto"
-    elif user.must_change_password:
-        target = f"{root_path}/auth/activar-cuenta"
-    else:
-        target = f"{root_path}/dashboard"
-    redirect = RedirectResponse(target, status_code=303)
-    settings = request.app.state.settings
-    is_https = (
-        request.url.scheme == "https"
-        or request.headers.get("x-forwarded-proto") == "https"
-        or settings.environment in ("production", "review")
+    pending = request.cookies.get(MFA_PENDING_COOKIE)
+    if not pending:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+    signer = TimestampSigner(request.app.state.settings.secret_key)
+    try:
+        uid = signer.unsign(pending, max_age=300).decode("utf-8")
+    except (BadSignature, SignatureExpired):
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+    user = db.get(User, uid)
+    if not user or not user.is_active or not user.mfa_enabled:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+    return request.app.state.templates.TemplateResponse(
+        request=request,
+        name="login_mfa.html",
+        context={
+            "root_path": root_path,
+            "error": None,
+            "account_hint": user.username or user.email,
+        },
     )
-    redirect.set_cookie(
-        SESSION_COOKIE,
-        raw_token,
-        max_age=SESSION_HOURS * 3600,
-        httponly=True,
-        secure=is_https,
-        samesite="lax",
-        path="/",
-    )
-    return redirect
+
+
+@router.post("/login/mfa", response_class=HTMLResponse, include_in_schema=False)
+def login_mfa_submit(
+    request: Request,
+    code: str = Form(...),
+    db: Session = Depends(get_db),
+):
+    root_path = request.scope.get("root_path", "").rstrip("/")
+    pending = request.cookies.get(MFA_PENDING_COOKIE)
+    if not pending:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+    signer = TimestampSigner(request.app.state.settings.secret_key)
+    try:
+        uid = signer.unsign(pending, max_age=300).decode("utf-8")
+    except (BadSignature, SignatureExpired):
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+    user = db.get(User, uid)
+    if not user or not user.is_active or not user.mfa_enabled:
+        return RedirectResponse(f"{root_path}/login", status_code=303)
+
+    if not (verify_totp_code(user.mfa_secret, code) or verify_or_consume_backup_code(user, code)):
+        db.commit()
+        return request.app.state.templates.TemplateResponse(
+            request=request,
+            name="login_mfa.html",
+            context={
+                "root_path": root_path,
+                "error": "Código incorrecto o expirado. Verifica tu app autenticadora o usa un código de recuperación.",
+                "account_hint": user.username or user.email,
+            },
+            status_code=401,
+        )
+
+    raw_token = _issue_user_session(db, request, user)
+    target = _target_after_login(root_path, user)
+    resp = _set_session_cookie_and_redirect(request, target, raw_token)
+    resp.delete_cookie(MFA_PENDING_COOKIE, path="/")
+    return resp
+
+
+@router.post("/api/auth/mfa/setup")
+def mfa_setup(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    raw_token = _extract_token(request, authorization)
+    sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
+    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada.")
+    user = db.get(User, sess.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(status_code=401, detail="Sesión inválida.")
+
+    secret = generate_totp_secret()
+    account_label = user.username or user.email
+    uri = build_totp_uri(secret, account_label)
+    qr_svg = render_qr_svg_inline(uri)
+    plain_codes, hashed_codes = generate_backup_codes(count=5)
+
+    user.mfa_secret = secret
+    user.mfa_backup_codes = hashed_codes
+    user.mfa_enabled = False
+    db.commit()
+
+    return {
+        "secret": secret,
+        "otpauth_uri": uri,
+        "qr_svg": qr_svg,
+        "backup_codes": plain_codes,
+    }
+
+
+@router.post("/api/auth/mfa/confirm")
+def mfa_confirm(
+    payload: MfaConfirmRequest,
+    request: Request,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    raw_token = _extract_token(request, authorization)
+    sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
+    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+        raise HTTPException(status_code=401, detail="Sesión inválida o expirada.")
+    user = db.get(User, sess.user_id)
+    if not user or not user.is_active or not user.mfa_secret:
+        raise HTTPException(status_code=400, detail="Primero inicia la configuración del código QR 2FA.")
+
+    if not verify_totp_code(user.mfa_secret, payload.code):
+        raise HTTPException(
+            status_code=422,
+            detail="El código de 6 dígitos no coincide. Verifica la hora de tu celular e intenta de nuevo.",
+        )
+    user.mfa_enabled = True
+    db.commit()
+    return {"mfa_enabled": True}
 
 
 @router.post("/logout", include_in_schema=False)
@@ -162,9 +356,13 @@ def register_tenant(payload: RegisterRequest, request: Request, db: Session = De
     db.add(tenant)
     db.flush()
 
+    norm_phone, _ = extract_phone_and_email(payload.phone or "", "cliente")
+    username = make_unique_username(db, payload.legal_name.strip())
     user = User(
         tenant_id=tenant.id,
         email=norm_email,
+        username=username,
+        phone=norm_phone,
         full_name=payload.full_name.strip(),
         password_hash=hash_password(payload.password),
         role="owner",
@@ -260,6 +458,7 @@ def _activation_context(db: Session, request: Request, user: User, error: str | 
     return {
         "error": error,
         "root_path": root_path,
+        "active_token": request.cookies.get(SESSION_COOKIE, ""),
         "user": user,
         "company_name": company_name,
         "focus_label": FOCUS_LABELS.get(focus, focus),

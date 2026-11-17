@@ -108,6 +108,7 @@ def create_product_with_initial_stock(
     min_stock: Decimal,
     import_job_id: str | None = None,
     image_url: str | None = None,
+    is_training_data: bool = False,
 ) -> Product:
     clean_sku = sanitize_cell_text(sku, 64).upper()
     clean_name = sanitize_cell_text(name, 180)
@@ -143,6 +144,7 @@ def create_product_with_initial_stock(
         stock_qty=Decimal("0.000"),
         min_stock=min_stock,
         image_url=image_url.strip() if image_url and image_url.strip() else None,
+        is_training_data=bool(is_training_data),
         is_active=True,
     )
     db.add(prod)
@@ -158,6 +160,7 @@ def create_product_with_initial_stock(
             unit_cost=cost_price,
             reason="Carga inicial de inventario",
             import_job_id=import_job_id,
+            is_training_data=bool(is_training_data),
             created_by=user_id,
         )
         db.add(mov)
@@ -232,10 +235,14 @@ def create_sale_atomic(
     source: str = "manual",
     import_job_id: str | None = None,
     tax_revision: int | None = None,
+    is_training_data: bool = False,
 ) -> Sale:
-    from app.core.company_tax import effective_vat_rate, sale_tax_policy
+    from app.core.company_tax import effective_vat_rate, sale_tax_policy, tax_profile
 
-    policy = sale_tax_policy(db, tenant_id, tax_revision)
+    if is_training_data and tax_profile(db, tenant_id)["status"] == "pending":
+        policy = {"revision": 0, "status": "not_responsible"}
+    else:
+        policy = sale_tax_policy(db, tenant_id, tax_revision)
     if not items_input:
         raise HTTPException(status_code=422, detail="La venta debe incluir al menos un ítem.")
 
@@ -287,6 +294,7 @@ def create_sale_atomic(
         cogs_total=Decimal("0.00"),
         status="completed",
         source=source,
+        is_training_data=bool(is_training_data),
         import_job_id=import_job_id,
         created_by=user_id,
     )
@@ -342,6 +350,7 @@ def create_sale_atomic(
             reason=f"Venta N° {next_number}",
             sale_id=sale.id,
             import_job_id=import_job_id,
+            is_training_data=bool(is_training_data),
             created_by=user_id,
         )
         db.add(mov)
