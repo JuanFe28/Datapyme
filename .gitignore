@@ -14,6 +14,7 @@ dist/
 .coverage
 htmlcov/
 USO_PRIVADO_EQUIPO.txt
+CREDENCIALES_PRIVADAS_*
 .github/
 *.png
 *.log

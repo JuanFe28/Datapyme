@@ -17,10 +17,10 @@
 > Las afirmaciones históricas de finalización siguientes no sustituyen esta
 > evidencia ni autorizan a afirmar que el proyecto completo está validado.
 
-**Fecha de Actualización:** 12 de Noviembre de 2026  
+**Fecha de Actualización:** 16 de Noviembre de 2026  
 **Entidad Académica:** Unidades Tecnológicas de Santander (UTS)  
 **Proyecto:** Datapyme - Plataforma de Analítica Comercial para PyMEs de Bucaramanga  
-**Agente Orquestador Principal:** Antigravity (Google DeepMind) + OpenCode Engine (`deepseek-v4.1-flash-free --variant max`)  
+**Agente Orquestador Principal:** Antigravity (Google DeepMind) — Modo Producción Real (7 Pilares)  
 
 ---
 
@@ -34,28 +34,33 @@ empresarial/
 │   ├── main.py                     # Fábrica ASGI (create_app), lifespan, middlewares y error handlers (<200 líneas)
 │   ├── core/                       # Núcleo del dominio y persistencia
 │   │   ├── config.py               # Configuración tipada Pydantic / Twelve-Factor
-│   │   ├── dependencies.py         # Inyección de dependencias (get_db, get_current_context, auth)
+│   │   ├── dependencies.py         # Inyección de dependencias, sesiones y login triple (user/tel/correo)
 │   │   ├── jinja_filters.py        # Serializadores y filtros de formato colombiano (COP, %, fechas)
-│   │   ├── models.py               # Modelos SQLAlchemy relacionales multi-tenant
+│   │   ├── models.py               # Modelos relacionales multi-tenant y triggers Kardex/Ley 1581
 │   │   ├── schemas.py              # Esquemas de validación Pydantic v2
 │   │   ├── security.py             # Argon2id, SHA-256, tokens de sesión y hashing anti-CSRF
+│   │   ├── mfa_service.py          # MFA TOTP RFC 6238 offline, QR SVG en memoria y códigos de respaldo
+│   │   ├── provisioning_service.py # Entrega de perfiles reales, primer ingreso y consentimientos
+│   │   ├── research_sync_service.py# Puente idempotente desde Research Studio hacia Empresarial
 │   │   ├── commercial_service.py   # Lógica pura de inventario (Kardex) y ventas atómicas
 │   │   ├── image_service.py        # Validación estricta y aislamiento de imágenes de productos
 │   │   └── demo_seed.py            # Sembrado determinístico de tenants de contraste F-DC-125
 │   ├── routes/                     # Enrutadores modulares desacoplados (APIRouter)
-│   │   ├── auth.py                 # Login, logout, sesiones y registro con consentimiento Ley 1581
+│   │   ├── auth.py                 # Login triple, MFA /login/mfa, primer ingreso, registro y sesiones
 │   │   ├── products.py             # Catálogo de productos, edición, consulta y fotos
 │   │   ├── inventory.py            # Movimientos Kardex, ajustes y alertas de existencias
 │   │   ├── sales.py                # Facturación atómica multi-producto, comprobantes y anulación
 │   │   ├── imports.py              # Inspección e importación inteligente de Excel/CSV
-│   │   ├── dashboard.py            # Dashboard adaptativo según encuesta y preferencias
-│   │   ├── forecast.py             # Pronósticos estadísticos OLS y KPIs comerciales
-│   │   └── admin.py                # Panel HTML de impacto SuperAdmin (UTS) y Habeas Data
+│   │   ├── dashboard.py            # Dashboard adaptativo, Plan de Acción y Tour Onboarding
+│   │   ├── forecast.py             # Pronósticos OLS, KPIs y endpoint de rentabilidad P&L
+│   │   └── admin.py                # Panel HTML SuperAdmin, sincronización Research Studio y reset MFA
 │   ├── imports/                    # Procesamiento y mapeo masivo
 │   │   ├── smart_excel_mapper.py   # Mapeador heurístico inteligente multi-hoja (openpyxl puro)
 │   │   └── batch_importer.py       # Importación por lotes con sanitización anti-fórmulas
-│   ├── analytics/                  # Inteligencia de negocios
-│   │   └── kpis.py                 # Pareto 80/20, rotación, margen y productos estancados
+│   ├── analytics/                  # Inteligencia de negocios determinista
+│   │   ├── kpis.py                 # Pareto 80/20, rotación, margen y productos estancados
+│   │   ├── profitability.py        # P&L exacto (COGS, mermas, bajo costo) y rankings de productos
+│   │   └── action_advisor.py       # Plan de Acción Comercial (reorden, liberación de efectivo, meta OLS)
 │   ├── forecast/                   # Analítica predictiva
 │   │   └── stats.py                # Regresión Lineal OLS exacta (y = a + bx), R², SMA-3 y WMA-3
 │   ├── telemetry/                  # Gobernanza y auditoría
@@ -63,14 +68,21 @@ empresarial/
 │   └── ui/                         # Personalización adaptativa
 │       └── ui_personalization_service.py # Ponderador de interfaz basado en diagnóstico
 ├── static/                         # Activos web estáticos
-│   ├── css/tokens.css              # Sistema de diseño Apple HIG / Polaris (variables OKLCH/Hex)
-│   ├── js/                         # JavaScript modular desacoplado
+│   ├── css/
+│   │   ├── tokens.css              # Sistema de diseño Apple HIG / Impeccable / Polaris
+│   │   └── spotlight_tour.css      # Estilos del Tour Interactivo Spotlight
+│   ├── js/
+│   │   ├── app.js                  # Controlador principal y gráficas Chart.js
+│   │   └── spotlight_tour.js       # Motor de tutorial guiado con práctica autolimpiable
 │   └── vendor/                     # Librerías locales (Chart.js, Lucide, sin CDNs externos)
 ├── templates/                      # Plantillas Jinja2 semánticas y accesibles
-│   ├── dashboard.html              # Bento Grid adaptable (Ventas, Inventario, Predicción)
-│   ├── login.html                  # Autenticación con acceso a credenciales demo de prueba
-│   ├── superadmin_impact.html      # Panel visual para Auditor UTS (telemetría agregada F-DC-125)
-│   └── error.html                  # Vistas gráficas para 401, 403, 404 y 500 (cero JSON crudo)
+│   ├── dashboard.html              # Bento Grid adaptable, P&L, Plan de Acción y 2FA
+│   ├── login.html                  # Login corporativo limpio (modo auditor bajo ?modo=auditor)
+│   ├── login_mfa.html              # Verificación en Dos Pasos (TOTP / respaldo)
+│   ├── activate_account.html       # Primer ingreso obligatorio (clave privada + Ley 1581 + 2FA)
+│   ├── register.html               # Auto-registro guiado en 2 pasos
+│   ├── superadmin_impact.html      # Panel visual Auditor UTS (F-DC-125, sincronización y soporte)
+│   └── error.html                  # Vistas gráficas limpias para 401, 403, 404 y 500
 └── tests/                          # Suite automatizada (100% verde)
     ├── unit/                       # Pruebas matemáticas, heurísticas y de fundamentos
     ├── security/                   # Aislamiento multi-tenant, sesiones, CSRF y subida de archivos
@@ -100,33 +112,23 @@ empresarial/
 
 ---
 
-## 3. RESUMEN DE PRUEBAS AUTOMATIZADAS
+## 3. RESUMEN DE PRUEBAS AUTOMATIZADAS (ESTADO ACTUAL: 72/72 EN VERDE)
 
-| Categoría de Prueba | Archivo de Pruebas | Casos | Estado |
+| Categoría de Prueba | Archivos de Pruebas Principales | Casos | Estado |
 |:---|:---|:---:|:---:|
-| **Fundamentos & Tokens** | `tests/unit/test_sprint0_foundations.py` | 4 | **100% Verde** |
-| **Matemática de KPIs** | `tests/unit/test_sprint3_kpis_math.py` | 4 | **100% Verde** |
-| **Regresión Predictiva OLS** | `tests/unit/test_sprint4_forecast_ols.py` | 5 | **100% Verde** |
-| **Personalización UI** | `tests/unit/test_ui_personalization.py` | 4 | **100% Verde** |
-| **Mapeador Inteligente Excel** | `tests/unit/test_smart_excel_mapper.py` | 3 | **100% Verde** |
-| **Seguridad de Archivos e Imágenes** | `tests/security/test_product_image_upload.py` | 6 | **100% Verde** |
-| **Aislamiento Multi-Tenant & Fórmulas** | `tests/security/test_sprint2_upload_and_isolation.py` | 2 | **100% Verde** |
-| **Habeas Data & k-Anonimato** | `tests/security/test_sprint5_telemetry_and_habeas_data.py` | 1 | **100% Verde** |
-| **Sesiones, Cookies y Anti-Fuerza Bruta** | `tests/security/test_sprint7_login_and_sessions.py` | 2 | **100% Verde** |
-| **Integración Ventas & Kardex** | `tests/integration/test_sprint2_sales_and_inventory.py` | 2 | **100% Verde** |
-| **Integración Bento Dashboard** | `tests/integration/test_sprint3_bento_dashboard.py` | 1 | **100% Verde** |
-| **Sembrado de Contraste F-DC-125** | `tests/integration/test_sprint6_contrast_seed_and_e2e.py` | 1 | **100% Verde** |
-| **E2E Playwright Escritorio** | `tests/e2e/test_critical_flows_and_superadmin.py` | 4 | **100% Verde** |
-| **E2E Playwright Móvil** | `tests/e2e/test_mobile_responsive.py` | 3 | **100% Verde** |
-| **E2E Imágenes y Excel Mapper** | `tests/e2e/test_images_and_excel_mapper.py` | 2 | **100% Verde** |
-| **TOTAL GENERAL** | **42 pruebas automatizadas** | **42** | **100% PASADAS** |
+| **Unitarias (Core, KPIs, P&L, MFA, Advisor, OLS, Mapper, UI)** | `tests/unit/test_*.py` | 17 | **100% Verde** |
+| **Seguridad (Aislamiento, CSRF, Ley 1581, k-Anonimato, Sin IA, Sesiones, Uploads)** | `tests/security/test_*.py` | 15 | **100% Verde** |
+| **Integración (Sync Research Studio, Login Triple, MFA, IVA, Ventas/Kardex, Primer Ingreso)** | `tests/integration/test_*.py` | 19 | **100% Verde** |
+| **E2E Playwright (Escritorio, Móvil 390px, Spotlight Tour, P&L, Auditoría)** | `tests/e2e/test_*.py` | 19 | **100% Verde** |
+| **Frontend JS Unit (`node --test`)** | `tests/frontend/vat.test.cjs` | 2 | **100% Verde** |
+| **TOTAL VERIFICADO** | **70 `pytest` + 2 `node --test`** | **72** | **100% PASADAS** |
 
 ---
 
 ## 4. AUDITORÍA DE CALIDAD DE CÓDIGO (LINTERS & FORMATTERS)
 * **Linter:** `ruff check empresarial` -> **0 errores, 0 advertencias**.
-* **Formatter:** `ruff format --check empresarial` -> **100% formateado (62 archivos limpios)**.
-* **Archivos basura eliminados:** Eliminadas capturas temporales sueltas, bases de datos de prueba `.db`, archivos `.log` y documentos duplicados.
+* **Formatter:** `ruff format --check empresarial` -> **100% formateado (79 archivos limpios)**.
+* **Archivos privados:** `CREDENCIALES_PRIVADAS_PRODUCCION.md` y `USO_PRIVADO_EQUIPO.txt` excluidos estrictamente mediante `.gitignore` (nunca rastreados en Git).
 
 ---
 
