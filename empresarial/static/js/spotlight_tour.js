@@ -21,7 +21,7 @@
     {
       selector: '[data-open-drawer="drawer-sale"]',
       title: 'Práctica 2 · Registra tu primera venta',
-      desc: 'Ahora haz clic en "+ Registrar Venta" para vender 1 unidad de prueba y ver cómo cobran vida tus KPIs, gráficas y márgenes en vivo.',
+      desc: 'Registra 1 unidad del producto de práctica y revisa su comprobante e IVA. Esta simulación no se cuenta como operación real en los indicadores.',
       actionLabel: 'Abrir caja de venta',
       practiceType: 'sale',
     },
@@ -129,14 +129,21 @@
 
     const rootPath = window.__ROOT_PATH__ || (window.location.pathname.startsWith('/empresarial') ? '/empresarial' : '');
     try {
-      await fetch(`${rootPath}/api/onboarding/complete-tour`, {
+      const response = await fetch(`${rootPath}/api/onboarding/complete-tour`, {
         method: 'POST',
         headers,
         credentials: 'same-origin',
         body: JSON.stringify({ action }),
       });
+      if (!response.ok) {
+        const result = await response.json();
+        alert(typeof result.detail === 'string' ? result.detail : 'No se pudo completar el recorrido. Se conservó la información.');
+        return;
+      }
     } catch (err) {
       console.error('Error al cerrar recorrido:', err);
+      alert('No se pudo confirmar el cierre. No se borró la práctica; recarga antes de volver a intentarlo.');
+      return;
     }
     clearState();
     destroyLayer();
@@ -188,7 +195,7 @@
               Borrar producto y venta de prueba (Empezar mi cuenta 100% en limpio)
             </button>
             <button type="button" id="btn-tour-keep-training" class="btn btn-secondary" style="width: 100%; min-height: 44px;">
-              Conservar estos datos en mi cuenta
+              Conservar estos datos como práctica
             </button>
             <button type="button" id="btn-tour-prev" class="btn btn-ghost" style="font-size: 12px;">
               Anterior

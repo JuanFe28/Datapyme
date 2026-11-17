@@ -26,6 +26,7 @@ def serialize_sale(sale: Sale) -> dict[str, Any]:
         "cogs_total": str(Decimal(str(sale.cogs_total)).quantize(TWO_PLACES)),
         "status": sale.status,
         "source": sale.source,
+        "external_reference": sale.historical_reference.reference if sale.historical_reference else None,
         "tax_status": sale.tax_snapshot.status if sale.tax_snapshot else "legacy",
         "tax_revision": sale.tax_snapshot.revision if sale.tax_snapshot else None,
         "items": [
@@ -68,12 +69,11 @@ def format_qty_filter(val: Any, unit: str = "und") -> str:
     if val is None or val == "":
         return f"0 {unit}"
     try:
-        num = float(val)
-        if num.is_integer():
-            return f"{int(num)} {unit}"
-        formatted = f"{num:.1f}".rstrip("0").rstrip(".")
+        num = Decimal(str(val)).quantize(THREE_PLACES, rounding=ROUND_HALF_UP)
+        formatted = format(num, "f").rstrip("0").rstrip(".") if num % 1 else str(int(num))
+        formatted = formatted.replace(".", ",")
         return f"{formatted} {unit}"
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidOperation):
         return f"{val} {unit}"
 
 

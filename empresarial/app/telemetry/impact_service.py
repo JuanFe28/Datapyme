@@ -337,6 +337,10 @@ def export_habeas_data_bundle(
                 "total": str(s.total),
                 "cogs_total": str(s.cogs_total),
                 "status": s.status,
+                "source": s.source,
+                "external_reference": s.historical_reference.reference
+                if s.historical_reference
+                else None,
                 "customer_label": s.customer_label,
                 "payment_method": s.payment_method,
                 "is_training_data": bool(s.is_training_data),

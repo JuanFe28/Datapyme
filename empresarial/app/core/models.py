@@ -81,6 +81,19 @@ class SaleTaxSnapshot(Base):
     __table_args__ = (ForeignKeyConstraint(["tenant_id", "sale_id"], ["sales.tenant_id", "sales.id"]),)
 
 
+class HistoricalSaleReference(Base):
+    """Referencia de origen única por empresa para no duplicar un histórico."""
+
+    __tablename__ = "historical_sale_references"
+    sale_id = Column(String(36), primary_key=True)
+    tenant_id = Column(String(36), nullable=False)
+    reference = Column(String(128), nullable=False)
+    __table_args__ = (
+        ForeignKeyConstraint(["tenant_id", "sale_id"], ["sales.tenant_id", "sales.id"]),
+        UniqueConstraint("tenant_id", "reference", name="uq_historical_sale_reference"),
+    )
+
+
 class User(Base):
     __tablename__ = "users"
 
@@ -254,6 +267,7 @@ class Sale(Base):
     import_job_id = Column(String(36), nullable=True)
     created_by = Column(String(36), ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
+    historical_reference = relationship("HistoricalSaleReference", uselist=False)
 
     items = relationship("SaleItem", back_populates="sale", cascade="all, delete-orphan")
     tax_snapshot = relationship("SaleTaxSnapshot", uselist=False)

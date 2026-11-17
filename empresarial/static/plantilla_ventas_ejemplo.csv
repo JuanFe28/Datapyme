@@ -1,3 +1,3 @@
-sale_number,occurred_at,customer_label,payment_method,sku,quantity,unit_price,discount
-1001,2026-11-10T14:30:00Z,Cliente Mostrador,cash,CEM-ARG-50,2,32000.00,0.00
-1002,2026-11-11T10:15:00Z,Constructora Santander,card,TAL-BOS-650,1,230000.00,0.00
+sale_number,occurred_at,customer_label,payment_method,sku,quantity,unit_price,unit_cost,vat_rate,discount
+QA-HIST-001,2026-08-15T12:00:00-05:00,Cliente sintético,cash,CEM-ARG-50,2,32000.00,24500.00,19,0.00
+QA-HIST-002,2026-09-15T12:00:00-05:00,Cliente sintético,card,TAL-BOS-650,1,230000.00,165000.00,19,0.00

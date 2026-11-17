@@ -49,6 +49,7 @@ function openDrawer(drawerId) {
   const backdrop = document.getElementById(drawerId);
   if (backdrop) {
     backdrop.classList.add('open');
+    backdrop.setAttribute('aria-hidden', 'false');
     if (drawerId === 'drawer-sale' && cartLines.length === 0) {
       addCartLine();
     }
@@ -64,6 +65,7 @@ function closeDrawer(drawerId) {
   const backdrop = document.getElementById(drawerId);
   if (backdrop) {
     backdrop.classList.remove('open');
+    backdrop.setAttribute('aria-hidden', 'true');
   }
 }
 window.closeDrawer = closeDrawer;
@@ -847,6 +849,7 @@ function initForecastChart() {
   if (!ctx || !window.Chart) return;
 
   const forecast = dashboardData.forecast || {};
+  if (forecast.status !== 'ok') return;
   const audit = forecast.audit_table || [];
   let labels = [];
   let histData = [];
@@ -855,10 +858,9 @@ function initForecastChart() {
     labels = audit.map((r) => r.period_label || `P${r.period_index}`);
     histData = audit.map((r) => r.observed_y);
     labels.push('Proyección (t+1)');
-    histData.push(forecast.next_period_ols || histData[histData.length - 1] * 1.08);
+    histData.push(forecast.next_period_ols ?? null);
   } else {
-    labels = ['Mes 1', 'Mes 2', 'Mes 3', 'Mes 4', 'Proyección (t+1)'];
-    histData = [120000, 160000, 210000, 280000, 350000];
+    return;
   }
 
   forecastChart = new Chart(ctx, {
@@ -919,6 +921,7 @@ function initForecastModuleChart() {
   if (!ctx || !window.Chart) return;
 
   const forecast = dashboardData.forecast || {};
+  if (forecast.status !== 'ok') return;
   const audit = forecast.audit_table || [];
   let labels = [];
   let histData = [];
@@ -927,10 +930,9 @@ function initForecastModuleChart() {
     labels = audit.map((r) => r.period_label || `P${r.period_index}`);
     histData = audit.map((r) => r.observed_y);
     labels.push('Proyección (t+1)');
-    histData.push(forecast.next_period_ols || histData[histData.length - 1] * 1.08);
+    histData.push(forecast.next_period_ols ?? null);
   } else {
-    labels = ['Mes -3', 'Mes -2', 'Mes -1', 'Mes Actual', 'Proyección (t+1)'];
-    histData = [180000, 240000, 310000, 420000, 480000];
+    return;
   }
 
   forecastModuleChart = new Chart(ctx, {
@@ -1008,10 +1010,10 @@ function renderCart() {
     thumbWrap.style.flexShrink = '0';
     function updateThumb(p) {
       if (p && p.image_url) {
-        thumbWrap.innerHTML = `<img src="${ROOT_PATH}${p.image_url}" class="product-avatar-img" style="width: 36px; height: 36px; border-radius: 6px;">`;
+        thumbWrap.innerHTML = `<img src="${escapeHtmlText(ROOT_PATH+p.image_url)}" class="product-avatar-img" style="width: 36px; height: 36px; border-radius: 6px;">`;
       } else {
         const init = (p ? p.name : 'PR').slice(0, 2).toUpperCase();
-        thumbWrap.innerHTML = `<div class="product-avatar-fallback" style="width: 36px; height: 36px; font-size: 11px; border-radius: 6px;">${init}</div>`;
+        thumbWrap.innerHTML = `<div class="product-avatar-fallback" style="width: 36px; height: 36px; font-size: 11px; border-radius: 6px;">${escapeHtmlText(init)}</div>`;
       }
     }
     updateThumb(selectedProd);
@@ -1050,15 +1052,15 @@ function renderCart() {
     const qtyWrap = document.createElement('div');
     const qtyInput = document.createElement('input');
     qtyInput.type = 'number';
-    qtyInput.min = '1';
-    qtyInput.step = '1';
+    qtyInput.min = '0.001';
+    qtyInput.step = '0.001';
     qtyInput.className = 'form-input cart-quantity-input';
     qtyInput.value = line.quantity || 1;
     qtyInput.setAttribute('data-index', index);
 
     qtyInput.addEventListener('input', (e) => {
-      const val = parseInt(e.target.value, 10) || 1;
-      cartLines[index].quantity = val > 0 ? val : 1;
+      const val = Number(e.target.value);
+      cartLines[index].quantity = Number.isFinite(val) && val > 0 ? val : 0;
       calculateCartTotals();
     });
     qtyWrap.appendChild(qtyInput);
@@ -1119,6 +1121,19 @@ function addCartLine(defaultProdId = null) {
   calculateCartTotals();
 }
 
+function scaledUnsigned(value, places) {
+  const text = String(value ?? 0);
+  if (!/^\d+(?:\.\d+)?$/.test(text)) return 0n;
+  const [whole,fraction=''] = text.split('.');
+  return BigInt(whole) * 10n ** BigInt(places) + BigInt(fraction.slice(0,places).padEnd(places,'0') || '0');
+}
+
+function lineAmounts(quantity, price, rate) {
+  const baseCents=(scaledUnsigned(quantity,3)*scaledUnsigned(price,2)+500n)/1000n;
+  const vatCents=(baseCents*scaledUnsigned(rate,2)+5000n)/10000n;
+  return {base:Number(baseCents)/100,vat:Number(vatCents)/100};
+}
+
 function calculateCartTotals() {
   const prods = getProductsCatalog();
   let grossSum = 0;
@@ -1132,7 +1147,7 @@ function calculateCartTotals() {
     const prod = prods.find((p) => p.id === line.product_id);
     const price = prod ? parseFloat(prod.sale_price) || 0 : line.unit_price;
     const stock = prod ? parseFloat(prod.stock_qty) || 0 : line.max_stock;
-    const qty = line.quantity || 1;
+    const qty = line.quantity || 0;
 
     line.unit_price = price;
     line.max_stock = stock;
@@ -1141,11 +1156,15 @@ function calculateCartTotals() {
       hasStockExceeded = true;
       stockErrorMsg = `La cantidad para '${prod ? prod.name : 'un producto'}' (${qty} und) supera el stock disponible (${stock} und).`;
     }
+    if (qty <= 0) {
+      hasStockExceeded = true;
+      stockErrorMsg = 'Ingrese una cantidad mayor a cero (hasta tres decimales).';
+    }
 
-    grossSum += qty * price;
     const rate = taxStatus === 'not_responsible' ? 0 : (prod ? Number(prod.vat_rate) : 0);
-    const base = Math.round(qty * price * 100) / 100;
-    vatTotal += Math.round((base * rate / 100 + Number.EPSILON) * 100) / 100;
+    const amounts=lineAmounts(qty,price,rate);
+    grossSum += amounts.base;
+    vatTotal += amounts.vat;
   });
 
   // Base e IVA por artículo; el servidor confirma los importes definitivos.
@@ -1524,6 +1543,7 @@ async function handleImportSubmit(e) {
   const endpoint =
     type === 'products'
       ? `/api/imports/products?mode=${mode}`
+      : type === 'historical_sales' ? `/api/imports/historical-sales?mode=${mode}`
       : `/api/imports/sales?mode=${mode}`;
 
   try {
@@ -1570,14 +1590,14 @@ async function handleImportSubmit(e) {
 }
 
 async function voidSale(saleId) {
-  if (!confirm('¿Confirma la anulación de esta venta? Se restituirá el stock atómicamente en el Kardex.')) return;
+  if (!confirm('¿Confirma la anulación? Una venta operativa devuelve stock; una venta histórica no modifica existencias.')) return;
   try {
     const resp = await fetch(`${ROOT_PATH}/api/sales/${saleId}/void`, {
       method: 'POST',
       headers: getAuthHeaders(),
     });
     if (resp.ok) {
-      showToast('Venta anulada y stock restituido', 'success');
+      showToast('Venta anulada. Existencias conservadas según el tipo de venta.', 'success');
       setTimeout(() => location.reload(), 600);
     } else {
       const err = await resp.json();
@@ -1646,7 +1666,7 @@ function openEditProductDrawer(productId) {
   const previewBox = document.getElementById('edit-prod-img-preview-box');
   if (previewBox) {
     if (prod.image_url) {
-      previewBox.innerHTML = `<img src="${ROOT_PATH}${prod.image_url}" alt="${prod.name}" style="width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-control);">`;
+      previewBox.innerHTML = `<img src="${escapeHtmlText(ROOT_PATH+prod.image_url)}" alt="${escapeHtmlText(prod.name)}" style="width: 100%; height: 100%; object-fit: cover; border-radius: var(--radius-control);">`;
     } else {
       previewBox.innerHTML = `<i data-lucide="image" style="width: 22px; height: 22px; color: var(--ink-muted);"></i>`;
       if (window.lucide) lucide.createIcons();
@@ -1858,9 +1878,9 @@ async function openSaleDetailDrawer(saleId) {
     tbody.innerHTML = '';
     (sale.items || []).forEach((item) => {
       const prod = (dashboardData.products || []).find((p) => p.id === item.product_id);
-      const prodName = item.product_name || (prod ? prod.name : 'Producto');
-      const prodSku = item.product_sku || (prod ? prod.sku : '-');
-      const prodUnit = item.product_unit || (prod ? prod.unit : 'und');
+      const prodName = escapeHtmlText(item.product_name || (prod ? prod.name : 'Producto'));
+      const prodSku = escapeHtmlText(item.product_sku || (prod ? prod.sku : '-'));
+      const prodUnit = escapeHtmlText(item.product_unit || (prod ? prod.unit : 'und'));
       const imgUrl = item.product_image_url || (prod ? prod.image_url : null);
 
       const tr = document.createElement('tr');
@@ -1869,7 +1889,7 @@ async function openSaleDetailDrawer(saleId) {
           <div style="display: flex; align-items: center; gap: 10px;">
             ${
               imgUrl
-                ? `<img src="${ROOT_PATH}${imgUrl}" alt="${prodName}" class="product-avatar-img" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;">`
+                ? `<img src="${escapeHtmlText(ROOT_PATH+imgUrl)}" alt="${prodName}" class="product-avatar-img" style="width: 30px; height: 30px; border-radius: 6px; object-fit: cover;">`
                 : `<div class="product-avatar-fallback" style="width: 30px; height: 30px; font-size: 11px; border-radius: 6px;" aria-hidden="true">${prodName.substring(0, 2).toUpperCase()}</div>`
             }
             <div>
@@ -1891,6 +1911,7 @@ async function openSaleDetailDrawer(saleId) {
   const taxStatusEl = document.getElementById('sale-detail-tax-status');
   if (taxStatusEl) taxStatusEl.textContent = 'Condición al registrar: ' +
     ({responsible:'Responsable de IVA', not_responsible:'No responsable de IVA',
+      historical:'Histórico importado: tarifa efectiva de origen',
       legacy:'Venta anterior a la configuración por empresa'}[sale.tax_status] || 'Sin registro histórico');
   const vatNum = parseFloat(sale.vat_total) || 0;
   const discountNum = parseFloat(sale.discount_total) || 0;

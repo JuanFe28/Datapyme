@@ -1,4 +1,78 @@
-# Estado vigente de Datapyme — piloto empresarial
+# Estado vigente — cierre del piloto acompañado
+
+## Fecha, hora y autor/agente
+
+17/11/2026, America/Bogota. Codex para Alvino; hora exacta no registrada.
+Repositorio JuanFe28/Datapyme, revisión sobre c7d3731. Cambios de Juan Felipe
+preservados. Carpeta local: `02_APLICATIVO_PYMES/.local/juanfe-demo-20261113`.
+
+## Fase y actividad del F-DC-124
+
+Preparación para uso y comentarios de empresas durante cinco días, actividades
+3.6–3.8 y correcciones del núcleo comercial. No se declara terminada la
+investigación ni su validación humana. Research Studio y F-DC-125 no se modificaron.
+
+## Resumen técnico de cambios
+
+Se corrigieron importación CSV/Excel, duplicados y previsualización, cantidades
+por peso y redondeo, accesibilidad, texto/atributos importados interpretables como
+HTML y cierre de práctica rechazado por el servidor. El historial conserva fecha,
+referencia única por empresa, costo e IVA de origen; no modifica stock ni al
+importarlo ni al anularlo. Tabla nueva aditiva `historical_sale_references`.
+
+Se retiraron métricas/gráficos de ejemplo para cuentas sin historia. La proyección
+requiere meses calendario completos consecutivos, conserva cero y describe R²
+como ajuste histórico. No se reescriben registros antiguos automáticamente.
+
+## Estado de pruebas y evidencia
+
+**96 pruebas Python aprobadas**, incluidas cuatro PostgreSQL 17 local, y **once
+JavaScript aprobadas**. Un aviso Starlette/httpx. PostgreSQL comprobó ventas y
+anulaciones simultáneas, recuperación `pg_dump`/`pg_restore`, práctica e históricos.
+
+Recorrido visible de los cuatro perfiles demo: propietario en tres prioridades
+de interfaz y superadmin. Alta/edición, venta/comprobante/anulación, falta de stock,
+IVA, importación y descarga CSV, histórico y venta de 0,25 kg, proyección y móvil
+390×844. Reinicios locales conservaron datos. No afirmar cada botón o línea probada.
+Detalle: `empresarial/docs/QA_PILOTO_2026_11_17.md`. Evidencias y bases privadas fuera
+de Git. No hubo operación con participantes reales.
+
+## Arranque y comprobaciones
+
+Desde `empresarial`, con base sintética explícita y entorno independiente:
+
+```text
+python -m pip install -r requirements.txt
+python -m pytest tests/unit tests/integration tests/security -o addopts=-ra -q
+node --test tests/frontend/*.test.cjs
+python -m uvicorn app.main:app --host 127.0.0.1 --port 8022
+```
+
+El comando normal omite cuatro pruebas PG si no se habilita expresamente su
+instancia sintética dedicada. Nunca usar una base real para ejecutarlas.
+Recorrido actual: aplicación 127.0.0.1:8022 y PostgreSQL 127.0.0.1:55439, solo demo.
+No es el enlace de las empresas. Producción: Compose existente, APP_ENV=production,
+SESSION_SECRET exclusiva y administrador privado; guía en
+`empresarial/docs/ENTREGA_PILOTO_2026_11_17.md`.
+
+## Siguiente paso exacto
+
+Juan Felipe tiene acceso al servidor: descargar esta revisión, respaldar, arrancar
+y confirmar `/ready`, HTTPS y conservación de un registro sintético tras reinicio.
+El servidor y su contenedor no se actualizaron desde este equipo. No reutilizar
+claves iniciales antiguas o cuentas demo públicas en producción. Revisar y conciliar
+registros de importaciones antiguas sin borrar/recalcular información real a ciegas.
+
+Con esa instalación comprobada, iniciar `empresarial/docs/PILOTO_CINCO_DIAS.md`:
+registrar fechas reales, versión, tareas, incidencias y comentarios auténticos.
+No se comprobó carga masiva sin límites, DIAN ni certificación contable. El cierre
+académico depende del campo y del director.
+
+---
+
+# Registro anterior de la misma fecha — histórico
+
+El corte siguiente se conserva como antecedente; el estado vigente es el anterior.
 
 ## Fecha, hora y autor/agente
 

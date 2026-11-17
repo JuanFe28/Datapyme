@@ -392,6 +392,11 @@ def void_sale_atomic(db: Session, tenant_id: str, user_id: str, sale_id: str) ->
         raise HTTPException(status_code=404, detail="Venta no encontrada.")
     if sale.status == "voided":
         raise HTTPException(status_code=409, detail="La venta ya fue anulada previamente.")
+    if sale.source == "historical":
+        sale.status = "voided"
+        db.add(UsageEvent(tenant_id=tenant_id, event_type="historical_sale_voided"))
+        db.flush()
+        return sale
 
     for item in sale.items:
         prod = db.query(Product).filter_by(tenant_id=tenant_id, id=item.product_id).first()

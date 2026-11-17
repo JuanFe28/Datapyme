@@ -196,14 +196,9 @@ def inspect_workbook(
 
     if ext == ".csv":
         sheets = ["Hoja Principal"]
-        try:
-            text_data = content.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            text_data = content.decode("latin-1")
-        lines = [line for line in text_data.splitlines() if line.strip()]
-        for line in lines[: MAX_SCAN_ROWS + 10]:
-            parts = [p.strip() for p in re.split(r"[,;|\t]", line)]
-            raw_matrix.append(parts)
+        from app.imports.batch_importer import read_csv_matrix
+
+        raw_matrix = read_csv_matrix(content)[: MAX_SCAN_ROWS + 10]
         selected_sheet = sheets[0]
     else:
         if not content.startswith(b"PK\x03\x04"):
@@ -339,17 +334,13 @@ def parse_mapped_workbook_products(
     Formatea y valida precios y existencias en COP.
     """
     ext = Path(filename).suffix.lower()
+    inspect_workbook(filename, content, target_sheet=sheet_name)
     raw_rows: list[list[Any]] = []
 
     if ext == ".csv":
-        try:
-            text_data = content.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            text_data = content.decode("latin-1")
-        lines = [line for line in text_data.splitlines() if line.strip()]
-        for line in lines:
-            parts = [p.strip() for p in re.split(r"[,;|\t]", line)]
-            raw_rows.append(parts)
+        from app.imports.batch_importer import read_csv_matrix
+
+        raw_rows = read_csv_matrix(content)
     else:
         wb = openpyxl.load_workbook(io.BytesIO(content), read_only=True, data_only=True)
         sheets = list(wb.sheetnames)
@@ -403,9 +394,20 @@ def parse_mapped_workbook_products(
 
         def read_number(raw: str, field: str, precision: str, row_number: int) -> Decimal:
             try:
+                cleaned_input = raw.replace("COP", "").replace("$", "").replace(" ", "")
+                if cleaned_input and not re.fullmatch(r"-?\d+(?:[.,]\d+)*", cleaned_input):
+                    raise ValueError("Texto mezclado con números")
                 if raw and raw != "-" and not re.search(r"\d", raw):
                     raise ValueError("Valor no numérico")
-                number = Decimal(clean_currency_or_number_string(raw)).quantize(Decimal(precision))
+                normalized = clean_currency_or_number_string(raw)
+                if (
+                    precision == "0.001"
+                    and "," in cleaned_input
+                    and "." not in cleaned_input
+                    and cleaned_input.count(",") == 1
+                ):
+                    normalized = cleaned_input.replace(",", ".")
+                number = Decimal(normalized).quantize(Decimal(precision))
                 if not number.is_finite() or number < 0:
                     raise ValueError("Valor negativo o no finito")
                 return number

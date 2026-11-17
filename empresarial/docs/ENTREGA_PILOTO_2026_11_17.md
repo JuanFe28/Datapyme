@@ -1,6 +1,6 @@
 # Entrega técnica para el piloto — 17/11/2026
 
-Versión candidata con 76 pruebas Python y cuatro JavaScript aprobadas. El acceso
+Versión de piloto con 96 pruebas Python y once JavaScript aprobadas. El acceso
 al servidor lo conserva Juan Felipe. Esta guía no es evidencia de despliegue.
 No se contrataron servicios ni se tocaron las bases reales.
 
@@ -116,13 +116,16 @@ su continuidad y la persona de soporte antes de compartirlo.
 
 ## Límites y pendientes
 
-No se verificó visualmente esta revisión por fallo de la herramienta del
-navegador. No se probó PostgreSQL, concurrencia con varios trabajadores,
-compatibilidad del contenedor ni recuperación remota en esta sesión. La prueba
-de restauración local sí recuperó ventas, líneas y stock en una base sintética.
+Se completó el recorrido visible, incluidos móvil, importación, venta por peso
+y los cuatro perfiles demo. PostgreSQL 17 local comprobó concurrencia de ventas y
+anulaciones, restauración e históricos. No se comprobó el contenedor ni PostgreSQL
+16 remoto. La restauración local recuperó ventas, líneas, IVA y stock sintéticos.
 Las pruebas E2E de navegador del repositorio no se ejecutaron: usan otro puerto
 y no deben dirigirse accidentalmente a la operación real. No se ha hecho una
 prueba de carga que permita prometer manejo masivo sin límites.
+Registro detallado: `QA_PILOTO_2026_11_17.md`. Para las empresas y el equipo:
+`PILOTO_CINCO_DIAS.md`. La tabla de comprobación del servidor sigue pendiente de
+ejecución en ese entorno concreto; no confundirla con las pruebas locales aprobadas.
 
 Los datos de participantes retirados de la fuente permanecen en commits previos:
 el equipo debe revisar las copias históricas y mantener privado el repositorio.

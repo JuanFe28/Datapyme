@@ -19,12 +19,36 @@ from app.core.commercial_service import (
     parse_colombian_decimal,
     sanitize_cell_text,
 )
-from app.core.models import ImportJob, Product, UsageEvent
+from app.core.models import ImportJob, Product, Tenant, UsageEvent
 from app.core.security import sha256_hex
 
 ALLOWED_UPLOAD_EXTS = {".csv", ".xlsx"}
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MiB
 MAX_UPLOAD_ROWS = 20_000
+
+
+def read_csv_matrix(content: bytes) -> list[list[str]]:
+    """Respeta comillas, separador del archivo y comas decimales dentro de celdas."""
+    try:
+        text_data = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        text_data = content.decode("latin-1")
+    try:
+        dialect = csv.Sniffer().sniff(text_data[:8192], delimiters=",;|\t")
+    except csv.Error:
+        dialect = csv.excel
+    try:
+        rows = []
+        for row in csv.reader(io.StringIO(text_data), dialect=dialect, strict=True):
+            if any(cell.strip() for cell in row):
+                rows.append([cell.strip() for cell in row])
+            if len(rows) > MAX_UPLOAD_ROWS + 15:
+                raise HTTPException(status_code=422, detail="El archivo supera las 20.000 filas.")
+        return rows
+    except csv.Error as exc:
+        raise HTTPException(
+            status_code=422, detail="CSV inválido; revise separadores y comillas."
+        ) from exc
 
 
 def parse_tabular_upload(filename: str, content: bytes) -> list[dict[str, str]]:
@@ -42,13 +66,17 @@ def parse_tabular_upload(filename: str, content: bytes) -> list[dict[str, str]]:
 
     rows: list[dict[str, str]] = []
     if ext == ".csv":
-        try:
-            text_data = content.decode("utf-8-sig")
-        except UnicodeDecodeError:
-            text_data = content.decode("latin-1")
-        reader = csv.DictReader(io.StringIO(text_data))
-        for row in reader:
-            norm = {(k or "").strip().lower(): str(v or "").strip() for k, v in row.items()}
+        matrix = read_csv_matrix(content)
+        if not matrix:
+            return []
+        headers = [h.lower() for h in matrix[0]]
+        for row in matrix[1:]:
+            if len(row) != len(headers):
+                raise HTTPException(
+                    status_code=422,
+                    detail="CSV con columnas desalineadas; revise comillas y separadores.",
+                )
+            norm = dict(zip(headers, row, strict=True))
             if any(norm.values()):
                 rows.append(norm)
             if len(rows) > MAX_UPLOAD_ROWS:
@@ -175,6 +203,22 @@ def import_products_batch(
             except (ValueError, KeyError, TypeError, HTTPException) as exc:
                 errors.append({"row": idx, "message": str(exc)})
 
+    seen = {sku.upper() for (sku,) in db.query(Product.sku).filter_by(tenant_id=tenant_id)}
+    checked_rows = []
+    for idx, item in enumerate(valid_rows, start=2):
+        item["sku"] = sanitize_cell_text(item["sku"], 64).upper()
+        item["name"] = sanitize_cell_text(item["name"], 180)
+        if not item["name"] or item["sku"] in seen or not 0 <= item["vat_rate"] <= 100:
+            errors.append(
+                {
+                    "row": idx,
+                    "message": "SKU repetido/existente, nombre vacío o tarifa IVA inválida. No se sobrescriben productos.",
+                }
+            )
+        else:
+            seen.add(item["sku"])
+            checked_rows.append(item)
+    valid_rows = checked_rows
     job = ImportJob(
         tenant_id=tenant_id,
         kind="products",
@@ -222,16 +266,36 @@ def import_sales_batch(
     content: bytes,
     mode: str = "preview",
 ) -> dict[str, Any]:
+    db.query(Tenant).filter_by(id=tenant_id).with_for_update().one()
+    fingerprint = sha256_hex(content.hex())
+    if (
+        mode == "commit"
+        and db.query(ImportJob)
+        .filter_by(tenant_id=tenant_id, kind="sales", sha256=fingerprint, status="committed")
+        .first()
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Este archivo de ventas ya fue aplicado. No se duplicaron ventas ni movimientos.",
+        )
     raw_rows = parse_tabular_upload(filename, content)
+    if any(row.get("occurred_at") or row.get("fecha") for row in raw_rows):
+        raise HTTPException(
+            status_code=422,
+            detail="Este archivo contiene fechas históricas. Elija Historial (sin cambiar stock) y aporte costo e IVA efectivos de origen.",
+        )
     valid_rows: list[dict[str, Any]] = []
     errors: list[dict[str, Any]] = []
 
+    reserved: dict[str, Decimal] = {}
     for idx, r in enumerate(raw_rows, start=2):
         try:
             sku = sanitize_cell_text(r.get("sku", ""), 64).upper()
             prod = db.query(Product).filter_by(tenant_id=tenant_id, sku=sku).first()
             if not prod:
                 raise ValueError(f"SKU '{sku}' no existe en el catálogo de la empresa.")
+            if not prod.is_active or prod.is_training_data:
+                raise ValueError("El producto está inactivo o pertenece a la práctica.")
             qty = parse_colombian_decimal(r.get("quantity") or r.get("cantidad", "0"), THREE_PLACES)
             unit_price = (
                 parse_colombian_decimal(r["unit_price"], TWO_PLACES)
@@ -244,6 +308,12 @@ def import_sales_batch(
 
             if qty <= 0 or unit_price < 0 or discount < 0:
                 raise ValueError("Cantidades o importes inválidos en fila de venta.")
+            if discount > qty * unit_price:
+                raise ValueError("El descuento supera el importe de la fila.")
+            total_requested = reserved.get(prod.id, Decimal(0)) + qty
+            if total_requested > prod.stock_qty:
+                raise ValueError("La cantidad acumulada del archivo supera el stock disponible.")
+            reserved[prod.id] = total_requested
 
             valid_rows.append(
                 {

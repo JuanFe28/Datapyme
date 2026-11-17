@@ -113,8 +113,8 @@
           Proyección Próximo Mes
           <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Estimación estadística de facturación para el siguiente mes.</span></span>
         </div>
-        <div class="metric-strip-value price-cell">{{ (forecast_data.next_period_ols | default(kpi_payload.kpis.net_revenue, true)) | cop }}</div>
-        <span class="metric-strip-badge badge-success">Ajuste R² {{ (forecast_data.r_squared | default(0.85, true)) | pct(1) }} (Muy Alta)</span>
+        <div class="metric-strip-value price-cell">{{ forecast_data.next_period_ols | cop if forecast_data.status == 'ok' else 'Datos insuficientes' }}</div>
+        <span class="metric-strip-badge badge-neutral">{{ ('Ajuste R² ' ~ (forecast_data.r_squared | pct(1))) if forecast_data.status == 'ok' else 'Sin proyección disponible' }}</span>
       </div>
 
       <div class="metric-strip-item">
@@ -122,17 +122,17 @@
           Tendencia del Negocio
           <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Variación estimada en ventas mes a mes calculada por OLS.</span></span>
         </div>
-        <div class="metric-strip-value price-cell">+{{ (forecast_data.beta_1 | default(39200, true)) | cop }}</div>
-        <span class="metric-strip-badge badge-neutral">Crecimiento OLS</span>
+        <div class="metric-strip-value price-cell">{{ forecast_data.beta_1 | cop if forecast_data.status == 'ok' else 'Datos insuficientes' }}</div>
+        <span class="metric-strip-badge badge-neutral">Variación mensual OLS</span>
       </div>
 
       <div class="metric-strip-item">
         <div class="metric-strip-label">
-          Ingresos Observados
-          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Ventas históricas acumuladas tomadas como base del análisis.</span></span>
+          Ventas registradas (30 días)
+          <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Ventas netas registradas en los últimos 30 días.</span></span>
         </div>
         <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
-        <span class="metric-strip-badge badge-neutral">{{ forecast_data.observed_periods | default(8, true) }} periodos analizados</span>
+        <span class="metric-strip-badge badge-neutral">{{ forecast_data.observed_periods | default(0) }} periodos analizados</span>
       </div>
 
       <div class="metric-strip-item">
@@ -140,8 +140,8 @@
           Promedio Reciente SMA-3
           <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Promedio simple de los últimos 3 meses analizados.</span></span>
         </div>
-        <div class="metric-strip-value price-cell">{{ (forecast_data.sma_3 | default(kpi_payload.kpis.net_revenue, true)) | cop }}</div>
-        <span class="metric-strip-badge badge-neutral">WMA-3: {{ (forecast_data.wma_3 | default(kpi_payload.kpis.net_revenue, true)) | cop }}</span>
+        <div class="metric-strip-value price-cell">{{ forecast_data.sma_3 | cop if forecast_data.status == 'ok' else 'Datos insuficientes' }}</div>
+        <span class="metric-strip-badge badge-neutral">WMA-3: {{ forecast_data.wma_3 | cop if forecast_data.status == 'ok' else 'Sin datos' }}</span>
       </div>
 
     {% else %}
@@ -275,7 +275,7 @@
         </div>
       </div>
       <div style="height: 270px; width: 100%;">
-        <canvas id="forecastOlsChart"></canvas>
+        {% if forecast_data.status == 'ok' %}<canvas id="forecastOlsChart"></canvas>{% else %}<p>{{ forecast_data.message }}</p>{% endif %}
       </div>
     </div>
   </section>
@@ -939,7 +939,7 @@
         {{ forecast_data.r_squared | pct(1) }}
       </div>
       <div style="font-size: 12px; color: var(--ink-muted); margin-top: 6px;">
-        Qué tan estable y predecible es el historial de tus ventas (R²: {{ forecast_data.r_squared }})
+        Ajuste de la recta a los datos observados (R²: {{ forecast_data.r_squared }}). No garantiza exactitud futura.
       </div>
     </div>
   </div>
@@ -1404,8 +1404,10 @@
           </label>
           <select id="import-type" class="form-input">
             <option value="products">Lista de mis productos e inventario</option>
-            <option value="sales">Historial de mis ventas realizadas</option>
+            <option value="sales">Ventas operativas actuales (descuentan stock)</option>
+            <option value="historical_sales">Historial de ventas (sin cambiar stock actual)</option>
           </select>
+          <p>Ventas operativas: se registran ahora y descuentan existencias. Historial: conserva fecha y referencia de origen, exige costo e IVA efectivos de cada artículo y no cambia el stock actual. No vuelva a cargar ventas que ya registró manualmente.</p>
         </div>
 
         <!-- Paso 2 -->
@@ -1421,9 +1423,10 @@
               <i data-lucide="download" style="width: 13px; height: 13px;"></i>
               Plantilla Productos (.csv)
             </a>
-            <a href="/static/plantilla_ventas_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 12px;">
+            <a href="{{ root_path }}/static/plantilla_ventas_operativas.csv" class="btn btn-secondary" download>Plantilla Ventas actuales (.csv)</a>
+            <a href="{{ root_path }}/static/plantilla_ventas_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 12px;">
               <i data-lucide="download" style="width: 13px; height: 13px;"></i>
-              Plantilla Ventas (.csv)
+              Plantilla Historial (.csv)
             </a>
           </div>
         </div>
@@ -1445,8 +1448,8 @@
           <div class="form-group">
             <label class="form-label" for="import-mode">Acción a realizar</label>
             <select id="import-mode" class="form-input">
-              <option value="commit">Guardar directamente en mi negocio</option>
-              <option value="preview">Solo revisar si el archivo está bien (sin guardar aún)</option>
+              <option value="commit">Guardar filas válidas en mi negocio</option>
+              <option value="preview" selected>Solo revisar si el archivo está bien (sin guardar aún)</option>
             </select>
           </div>
 

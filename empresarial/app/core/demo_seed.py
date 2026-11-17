@@ -835,7 +835,11 @@ def clear_contrast_demo_tenants(db: Session) -> dict[str, int]:
                 synchronize_session=False
             )
             db.execute(text(guard.format("ENABLE")))
-        from app.core.models import CompanyTaxChange, SaleTaxSnapshot
+        from app.core.models import CompanyTaxChange, HistoricalSaleReference, SaleTaxSnapshot
+
+        db.query(HistoricalSaleReference).filter(
+            HistoricalSaleReference.tenant_id.in_(demo_tids)
+        ).delete(synchronize_session=False)
 
         db.query(SaleTaxSnapshot).filter(SaleTaxSnapshot.tenant_id.in_(demo_tids)).delete(
             synchronize_session=False
