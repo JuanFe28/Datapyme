@@ -337,6 +337,21 @@ def export_habeas_data_bundle(
                 "total": str(s.total),
                 "cogs_total": str(s.cogs_total),
                 "status": s.status,
+                "customer_label": s.customer_label,
+                "payment_method": s.payment_method,
+                "is_training_data": bool(s.is_training_data),
+                "items": [
+                    {
+                        "product_id": item.product_id,
+                        "quantity": str(item.quantity),
+                        "unit_price": str(item.unit_price),
+                        "unit_cost_snapshot": str(item.unit_cost_snapshot),
+                        "vat_rate": str(item.vat_rate),
+                        "discount": str(item.discount),
+                        "line_total": str(item.line_total),
+                    }
+                    for item in s.items
+                ],
                 "tax_status": s.tax_snapshot.status if s.tax_snapshot else "legacy",
                 "tax_revision": s.tax_snapshot.revision if s.tax_snapshot else None,
                 "occurred_at": s.occurred_at.isoformat() if s.occurred_at else None,

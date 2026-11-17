@@ -114,6 +114,8 @@ def test_superadmin_provision_and_first_login_activation_flow(tmp_path):
         prof_res = client.get("/api/analytics/profitability?period_days=30")
         assert prof_res.status_code == 200
         assert "pnl" in prof_res.json()
+        assert all(p["is_training_data"] for p in client.get("/api/products").json())
+        assert client.get("/api/kpis").json()["kpis"]["inventory_value_at_cost"] == "0.00"
 
         # Verificar en BD que quedaron los 3 consentimientos encadenados para esa empresa
         session_factory = _get_session_factory(db_url)

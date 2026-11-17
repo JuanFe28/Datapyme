@@ -510,11 +510,15 @@ def get_tenant_profitability_payload(
     period_days: int = 30,
 ) -> dict[str, Any]:
     """Obtiene el informe completo de rentabilidad, pérdidas y rankings para un comercio."""
-    products = db.query(Product).filter_by(tenant_id=tenant_id, is_active=True).all()
-    sales = db.query(Sale).filter_by(tenant_id=tenant_id).all()
+    products = (
+        db.query(Product).filter_by(tenant_id=tenant_id, is_active=True, is_training_data=False).all()
+    )
+    sales = db.query(Sale).filter_by(tenant_id=tenant_id, is_training_data=False).all()
     sale_items = db.query(SaleItem).filter(SaleItem.tenant_id == tenant_id).all()
     shrink_movs = (
-        db.query(InventoryMovement).filter_by(tenant_id=tenant_id, movement_type="adjustment_out").all()
+        db.query(InventoryMovement)
+        .filter_by(tenant_id=tenant_id, movement_type="adjustment_out", is_training_data=False)
+        .all()
     )
 
     prod_dicts = [

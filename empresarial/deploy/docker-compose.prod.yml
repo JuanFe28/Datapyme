@@ -28,6 +28,8 @@ services:
     build:
       context: ..
       dockerfile: Dockerfile
+      args:
+        DATAPYME_RELEASE: ${DATAPYME_RELEASE:-unknown}
     container_name: datapyme_empresarial_app
     restart: unless-stopped
     depends_on:

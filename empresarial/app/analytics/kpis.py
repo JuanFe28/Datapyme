@@ -7,13 +7,14 @@ Reglas Financieras Inquebrantables:
 - División segura por cero cuando una PyME recién creada aún no registra ventas o inventario.
 """
 
+from datetime import timedelta
 from decimal import ROUND_HALF_UP, Decimal
 from typing import Any
 
 from sqlalchemy.orm import Session
 
 from app.core.commercial_service import classify_inventory_alerts
-from app.core.models import Product, Sale, SaleItem, UsageEvent
+from app.core.models import Product, Sale, SaleItem, UsageEvent, utcnow
 
 TWO_PLACES = Decimal("0.01")
 THREE_PLACES = Decimal("0.001")
@@ -207,8 +208,20 @@ def get_tenant_kpis_payload(
     Calcula todos los KPIs comerciales, alertas de stock y clasificación Pareto/Estancados
     para un `tenant_id` específico (Row-Level Isolation obligatorio).
     """
-    sales = db.query(Sale).filter_by(tenant_id=tenant_id).all()
-    products = db.query(Product).filter_by(tenant_id=tenant_id, is_active=True).all()
+    now = utcnow()
+    sales = (
+        db.query(Sale)
+        .filter(
+            Sale.tenant_id == tenant_id,
+            Sale.is_training_data.is_(False),
+            Sale.occurred_at >= now - timedelta(days=period_days),
+            Sale.occurred_at <= now,
+        )
+        .all()
+    )
+    products = (
+        db.query(Product).filter_by(tenant_id=tenant_id, is_active=True, is_training_data=False).all()
+    )
 
     inv_val_cost = Decimal("0.00")
     product_dicts: list[dict[str, Any]] = []
@@ -256,7 +269,9 @@ def get_tenant_kpis_payload(
             {"units_sold": Decimal("0.000"), "net_revenue": Decimal("0.00")},
         )
         entry["units_sold"] += Decimal(str(item.quantity)).quantize(THREE_PLACES)
-        entry["net_revenue"] += Decimal(str(item.line_total)).quantize(TWO_PLACES)
+        entry["net_revenue"] += (
+            Decimal(str(item.quantity)) * Decimal(str(item.unit_price)) - Decimal(str(item.discount))
+        ).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
 
     pareto = compute_pareto_and_stagnant(product_dicts, sold_by_product)
     alerts = classify_inventory_alerts(db, tenant_id)

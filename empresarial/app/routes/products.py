@@ -102,6 +102,15 @@ def update_product(
     prod = db.query(Product).filter_by(tenant_id=tenant.id, id=product_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
+    # Validar todos los importes antes de modificar el catálogo.
+    for field, places in (
+        ("cost_price", TWO_PLACES),
+        ("sale_price", TWO_PLACES),
+        ("min_stock", THREE_PLACES),
+    ):
+        value = getattr(payload, field)
+        if value is not None and parse_colombian_decimal(value, places) < 0:
+            raise HTTPException(status_code=422, detail="Los importes y mínimos deben ser no negativos.")
     if payload.sku is not None:
         clean_sku = sanitize_cell_text(payload.sku, 64)
         exist_sku = (

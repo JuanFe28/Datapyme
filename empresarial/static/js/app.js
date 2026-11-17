@@ -9,7 +9,7 @@ const ROOT_PATH = window.__ROOT_PATH__ || (window.location.pathname.startsWith('
 const copFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
   currency: 'COP',
-  maximumFractionDigits: 0,
+  maximumFractionDigits: 2,
 });
 
 function formatCOP(amount) {
@@ -1753,11 +1753,16 @@ async function handleEditProductSubmit(e) {
         unit_cost: payload.cost_price,
         reason: adjReason,
       };
-      await fetch(`${ROOT_PATH}/api/inventory/movements`, {
+      const movementResponse = await fetch(`${ROOT_PATH}/api/inventory/movements`, {
         method: 'POST',
         headers: getAuthHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify(movPayload),
       });
+      if (!movementResponse.ok) {
+        const error = await movementResponse.json();
+        showToast(`Datos del producto guardados. Ajuste de inventario NO aplicado: ${error.detail || 'Revise la cantidad y vuelva a intentar.'}`, 'error');
+        return;
+      }
     }
 
     showToast('Producto actualizado exitosamente', 'success');
@@ -1961,4 +1966,24 @@ async function handleCompanyTaxChange(event) {
   } catch (error) {
     result.textContent = 'No se pudo confirmar el cambio. Recarga para verificar el estado antes de reintentar.';
   } finally { button.disabled = false; }
+}
+async function submitDeletionRequest(event) {
+  event.preventDefault();
+  const reason = document.getElementById('deletion-reason').value.trim();
+  const status = document.getElementById('deletion-status');
+  const button = document.getElementById('btn-request-deletion');
+  if (reason.length < 5) { status.textContent = 'Describa el motivo (mínimo 5 caracteres).'; return; }
+  if (!confirm('Esta solicitud suspende el acceso de su empresa. ¿Desea registrarla?')) return;
+  button.disabled = true;
+  try {
+    const response = await fetch(`${ROOT_PATH}/api/me/deletion-request`, {
+      method: 'POST', headers: getAuthHeaders({'Content-Type':'application/json'}),
+      body: JSON.stringify({reason}),
+    });
+    const result = await response.json();
+    if (!response.ok) { status.textContent = result.detail || 'No se pudo registrar la solicitud.'; return; }
+    status.textContent = result.message;
+    window.location.assign(`${ROOT_PATH}/login`);
+  } catch (_) { status.textContent = 'No se pudo confirmar la solicitud. Recargue antes de volver a intentarlo.'; }
+  finally { button.disabled = false; }
 }

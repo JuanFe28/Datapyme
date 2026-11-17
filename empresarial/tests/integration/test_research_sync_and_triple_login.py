@@ -5,6 +5,7 @@ from decimal import Decimal
 import pyotp
 import pytest
 from fastapi.testclient import TestClient
+from research_fixture import research_database
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
@@ -35,7 +36,7 @@ def _seed_superadmin(db_url: str) -> None:
     engine.dispose()
 
 
-def test_sync_13_companies_triple_login_mfa_and_training_purge(tmp_path):
+def test_synthetic_sync_triple_login_mfa_and_training_purge(tmp_path):
     db_file = tmp_path / "full_prod_flow.db"
     db_url = f"sqlite:///{db_file.as_posix()}"
     application = create_app(db_url, testing=True)
@@ -51,14 +52,14 @@ def test_sync_13_companies_triple_login_mfa_and_training_purge(tmp_path):
         assert sa_login.status_code == 200
         sa_token = sa_login.json()["access_token"]
 
-        # 2. Sincronizar las 13 empresas encuestadas reales en estado cero (0 productos, 0 ventas)
+        # 2. Sincronizar una empresa ficticia en estado cero (0 productos, 0 ventas)
         engine = create_engine(db_url)
         SessionLocal = sessionmaker(bind=engine, expire_on_commit=False)
         with SessionLocal() as db:
-            synced = sync_research_companies(db)
-            assert len(synced) == 13
-            vafel = next(c for c in synced if c["username"] == "vafelsweet")
-            assert vafel["phone"] == "3052621817"
+            synced = sync_research_companies(db, sqlite_path=research_database(tmp_path / "research.db"))
+            assert len(synced) == 1
+            vafel = next(c for c in synced if c["username"] == "comerciosinteticoqa")
+            assert vafel["phone"] == "3000000001"
             assert vafel["primary_focus"] == "sales"
             assert db.query(Product).filter_by(tenant_id=vafel["tenant_id"]).count() == 0
             assert db.query(Sale).filter_by(tenant_id=vafel["tenant_id"]).count() == 0
@@ -67,12 +68,12 @@ def test_sync_13_companies_triple_login_mfa_and_training_purge(tmp_path):
         # 3. Verificar en /admin/impacto que las credenciales y botón WhatsApp aparecen, sin contaminar /api/admin/impact
         impact_api = client.get("/api/admin/impact", headers={"Authorization": f"Bearer {sa_token}"})
         assert impact_api.status_code == 200
-        assert "VaFel Sweet" not in impact_api.text
+        assert "Comercio Sintético QA" not in impact_api.text
 
-        # 4. Login Triple de VaFel Sweet usando el CELULAR (3052621817) + clave temporal -> redirige a activar-cuenta
+        # 4. Login Triple de Comercio Sintético QA usando el CELULAR (3000000001) + clave temporal -> redirige a activar-cuenta
         login_phone = client.post(
             "/login",
-            data={"email": "3052621817", "password": vafel["temporary_password"]},
+            data={"email": "3000000001", "password": vafel["temporary_password"]},
             follow_redirects=False,
         )
         assert login_phone.status_code == 303
@@ -82,8 +83,8 @@ def test_sync_13_companies_triple_login_mfa_and_training_purge(tmp_path):
         act_res = client.post(
             "/auth/activar-cuenta",
             data={
-                "password": "VafelPrivada2026!",
-                "confirm_password": "VafelPrivada2026!",
+                "password": "QAPrivada2026!",
+                "confirm_password": "QAPrivada2026!",
                 "accept_data_policy": "true",
                 "accept_aggregate_stats": "true",
             },
@@ -92,10 +93,10 @@ def test_sync_13_companies_triple_login_mfa_and_training_purge(tmp_path):
         assert act_res.status_code == 303
         assert act_res.headers["location"].endswith("/dashboard")
 
-        # 6. Login Triple usando USERNAME corto ("vafelsweet") y obtener token Bearer
+        # 6. Login Triple usando USERNAME corto ("comerciosinteticoqa") y obtener token Bearer
         tok_login = client.post(
             "/api/auth/login",
-            json={"email": "vafelsweet", "password": "VafelPrivada2026!"},
+            json={"email": "comerciosinteticoqa", "password": "QAPrivada2026!"},
         )
         assert tok_login.status_code == 200
         vafel_token = tok_login.json()["access_token"]
@@ -116,7 +117,7 @@ def test_sync_13_companies_triple_login_mfa_and_training_purge(tmp_path):
         # Nuevo login HTML con MFA activo debe pasar por /login/mfa
         mfa_redirect = client.post(
             "/login",
-            data={"email": "vafelsweet", "password": "VafelPrivada2026!"},
+            data={"email": "comerciosinteticoqa", "password": "QAPrivada2026!"},
             follow_redirects=False,
         )
         assert mfa_redirect.status_code == 303

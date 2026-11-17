@@ -9,6 +9,7 @@ Arquitectura modular desacoplada por capas:
 """
 
 import logging
+import os
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request
@@ -17,6 +18,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import sessionmaker
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -172,14 +174,16 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
                         conn.execute(text(s))
                     _install_pg_immutability(conn, "inventory_movements")
                     conn.commit()
-            except Exception as exc:  # noqa: BLE001
-                logging.getLogger("uvicorn.error").warning(f"Auto-migración de esquema: {exc}")
+            except Exception as exc:
+                raise RuntimeError(
+                    "No se pudo actualizar el esquema; arranque cancelado para proteger los datos."
+                ) from exc
 
         with SessionLocal() as db:
             try:
                 from app.core.demo_seed import seed_contrast_demo_tenants
 
-                if not testing and db.query(User).count() == 0:
+                if not testing and settings.environment == "development" and db.query(User).count() == 0:
                     logging.getLogger("uvicorn.error").info(
                         "Base de datos sin usuarios: sembrando empresas demo [DEMO-FDC125]..."
                     )
@@ -210,6 +214,7 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
     @application.middleware("http")
     async def security_headers_middleware(request: Request, call_next):
         response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
         response.headers.update(
             {
                 "X-Content-Type-Options": "nosniff",
@@ -228,6 +233,27 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
     @application.get("/health", tags=["health"])
     def health():
         return {"status": "ok", "service": "datapyme-empresarial"}
+
+    @application.get("/ready", tags=["health"])
+    def ready():
+        try:
+            with engine.connect() as connection:
+                connection.execute(text("SELECT username, mfa_enabled FROM users LIMIT 1"))
+                invalid = connection.execute(
+                    text("SELECT id FROM products WHERE stock_qty < 0 LIMIT 1")
+                ).first()
+                if invalid:
+                    return JSONResponse(
+                        status_code=503,
+                        content={"status": "review_required", "database": "inventory_inconsistent"},
+                    )
+            return {
+                "status": "ok",
+                "database": "ok",
+                "release": os.getenv("DATAPYME_RELEASE", "local-piloto-20261117"),
+            }
+        except SQLAlchemyError:
+            return JSONResponse(status_code=503, content={"status": "unavailable", "database": "error"})
 
     @application.exception_handler(StarletteHTTPException)
     async def html_login_redirect_handler(request: Request, exc: StarletteHTTPException):

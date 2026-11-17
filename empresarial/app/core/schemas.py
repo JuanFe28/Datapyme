@@ -111,7 +111,7 @@ class ProvisionTenantRequest(BaseModel):
     owner_full_name: str = Field(min_length=2, max_length=120)
     email: str = Field(min_length=5, max_length=254)
     phone: str | None = Field(default=None, max_length=24)
-    temporary_password: str = Field(min_length=10, max_length=128)
+    temporary_password: str | None = Field(default=None, min_length=10, max_length=128)
     priority_focus: Literal["sales", "inventory", "predictive", "balanced"] = "balanced"
     density: Literal["simple", "standard", "detailed"] = "standard"
     tax_status: Literal["responsible", "not_responsible", "pending"] = "pending"

@@ -67,6 +67,8 @@ def _is_https_request(request: Request) -> bool:
 
 
 def _issue_user_session(db: Session, request: Request, user: User) -> str:
+    user.failed_logins = 0
+    user.locked_until = None
     raw_token, tok_hash = generate_session_token()
     ip_raw = request.client.host if request.client else "127.0.0.1"
     db.add(
@@ -80,6 +82,15 @@ def _issue_user_session(db: Session, request: Request, user: User) -> str:
     )
     db.commit()
     return raw_token
+
+
+def _failed_mfa(db: Session, user: User) -> None:
+    """Comparte el bloqueo de intentos con la contraseña; solo el ingreso completo lo reinicia."""
+    user.failed_logins = (user.failed_logins or 0) + 1
+    if user.failed_logins >= 5:
+        user.locked_until = utcnow() + timedelta(minutes=15)
+        user.failed_logins = 0
+    db.commit()
 
 
 def _target_after_login(root_path: str, user: User) -> str:
@@ -115,6 +126,7 @@ def api_login(payload: LoginRequest, request: Request, db: Session = Depends(get
                 detail="Se requiere el código temporal de verificación en dos pasos (2FA).",
             )
         if not (verify_totp_code(user.mfa_secret, code) or verify_or_consume_backup_code(user, code)):
+            _failed_mfa(db, user)
             raise HTTPException(status_code=401, detail="Código de verificación en dos pasos inválido.")
     raw_token = _issue_user_session(db, request, user)
     return {
@@ -244,8 +256,12 @@ def login_mfa_submit(
     if not user or not user.is_active or not user.mfa_enabled:
         return RedirectResponse(f"{root_path}/login", status_code=303)
 
+    if user.locked_until and _as_aware(user.locked_until) > utcnow():
+        raise HTTPException(
+            status_code=429, detail="Cuenta bloqueada temporalmente por intentos fallidos."
+        )
     if not (verify_totp_code(user.mfa_secret, code) or verify_or_consume_backup_code(user, code)):
-        db.commit()
+        _failed_mfa(db, user)
         return request.app.state.templates.TemplateResponse(
             request=request,
             name="login_mfa.html",
@@ -278,6 +294,11 @@ def mfa_setup(
     if not user or not user.is_active:
         raise HTTPException(status_code=401, detail="Sesión inválida.")
 
+    if user.mfa_enabled:
+        raise HTTPException(
+            status_code=409,
+            detail="La verificación en dos pasos ya está activa. Solicite soporte para restablecerla.",
+        )
     secret = generate_totp_secret()
     account_label = user.username or user.email
     uri = build_totp_uri(secret, account_label)

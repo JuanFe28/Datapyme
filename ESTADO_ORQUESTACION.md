@@ -1,3 +1,11 @@
+# Corte técnico vigente — 17/11/2026
+
+Consultar [ESTADO_PROYECTO.md](ESTADO_PROYECTO.md) y la
+[guía del piloto](empresarial/docs/ENTREGA_PILOTO_2026_11_17.md).
+76 pruebas Python y cuatro JavaScript aprobadas localmente. Falta aplicar y
+verificar esta versión en PostgreSQL remoto; no se declara producción validada.
+Los informes anteriores de este archivo se conservan como historia.
+
 # ESTADO DE ORQUESTACIÓN Y ARQUITECTURA LIMPIA: DATAPYME (F-DC-124 / F-DC-125)
 
 > **IVA por empresa implementado 13/11/2026:** condición editable, historial y

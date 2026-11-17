@@ -1,4 +1,8 @@
-"""Rutas de auditoría de impacto para SuperAdmin y derechos de Habeas Data (Sprint 5, F-DC-125 y Ley 1581)."""
+"""Rutas de auditoría de impacto para SuperAdmin y derechos de Habeas Data."""
+
+import csv
+import io
+import json
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -8,6 +12,7 @@ from app.core.config import ROOT
 from app.core.dependencies import (
     SESSION_COOKIE,
     _as_aware,
+    ensure_production_account,
     get_current_context,
     get_db,
     get_superadmin_user,
@@ -16,11 +21,12 @@ from app.core.models import SessionToken, Tenant, User, utcnow
 from app.core.provisioning_service import provision_real_client_tenant
 from app.core.research_sync_service import (
     build_credentials_report_csv,
+    generate_temp_password,
     list_real_client_credentials,
     sync_research_companies,
 )
 from app.core.schemas import DeletionRequestPayload, ProvisionTenantRequest
-from app.core.security import sha256_hex
+from app.core.security import hash_password, sha256_hex
 from app.telemetry.impact_service import (
     compute_platform_impact_telemetry,
     export_habeas_data_bundle,
@@ -52,6 +58,7 @@ def render_superadmin_impact(
         return RedirectResponse(f"{root_path}/login", status_code=303)
     if user.role != "superadmin":
         return RedirectResponse(f"{root_path}/dashboard", status_code=303)
+    ensure_production_account(request, db, user)
 
     telemetry = compute_platform_impact_telemetry(db=db, k_threshold=3)
     scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
@@ -156,6 +163,29 @@ def reset_client_mfa_endpoint(
     return {"user_id": user.id, "mfa_enabled": False}
 
 
+@router.post("/api/admin/users/{user_id}/reset-temporary-password")
+def reset_pending_password(
+    user_id: str,
+    _admin: User = Depends(get_superadmin_user),
+    db: Session = Depends(get_db),
+):
+    user = db.get(User, user_id)
+    if not user or user.role != "owner" or not user.is_active:
+        raise HTTPException(status_code=404, detail="Usuario de empresa no encontrado.")
+    if not user.must_change_password:
+        raise HTTPException(
+            status_code=409,
+            detail="La cuenta ya fue activada; este control solo renueva claves iniciales.",
+        )
+    password = generate_temp_password()
+    user.password_hash = hash_password(password)
+    user.failed_logins, user.locked_until = 0, None
+    for session in db.query(SessionToken).filter_by(user_id=user.id, revoked_at=None):
+        session.revoked_at = utcnow()
+    db.commit()
+    return {"user_id": user.id, "temporary_password": password, "shown_once": True}
+
+
 @router.get("/api/admin/impact")
 def get_admin_impact_telemetry(
     k_threshold: int = Query(default=3, ge=3, le=10),
@@ -167,11 +197,37 @@ def get_admin_impact_telemetry(
 
 @router.get("/api/me/export")
 def export_my_tenant_data(
+    format: str = Query(default="json", pattern="^(json|csv)$"),
     ctx: tuple[User, Tenant] = Depends(get_current_context),
     db: Session = Depends(get_db),
 ):
     user, tenant = ctx
-    return export_habeas_data_bundle(db=db, tenant_id=tenant.id, user_id=user.id)
+    bundle = export_habeas_data_bundle(db=db, tenant_id=tenant.id, user_id=user.id)
+    if format == "json":
+        return bundle
+    output = io.StringIO(newline="")
+    writer = csv.writer(output)
+    writer.writerow(["section", "record_id", "field", "value"])
+
+    def cell(value):
+        text = str(value) if value is not None else ""
+        return "'" + text if text.lstrip().startswith(("=", "+", "-", "@", "\t", "\r")) else text
+
+    for section, records in bundle.items():
+        for record in records if isinstance(records, list) else [records]:
+            fields = record if isinstance(record, dict) else {"value": record}
+            for field, value in fields.items():
+                if isinstance(value, (dict, list)):
+                    value = json.dumps(value, ensure_ascii=False)
+                writer.writerow([cell(section), cell(fields.get("id", "")), cell(field), cell(value)])
+    return PlainTextResponse(
+        "\ufeff" + output.getvalue(),
+        media_type="text/csv; charset=utf-8",
+        headers={
+            "Content-Disposition": 'attachment; filename="datapyme_datos.csv"',
+            "Cache-Control": "no-store",
+        },
+    )
 
 
 @router.post("/api/me/deletion-request")

@@ -45,6 +45,22 @@ def get_db(request: Request):
         yield db
 
 
+def ensure_production_account(request: Request, db: Session, user: User) -> None:
+    """Las credenciales públicas de demostración no habilitan acceso al piloto real."""
+    if request.app.state.settings.environment not in ("production", "review"):
+        return
+    tenant = db.get(Tenant, user.tenant_id) if user.tenant_id else None
+    if (
+        user.email == "superadmin.demo@datapyme.co"
+        or user.email.startswith("demo.")
+        or (tenant and tenant.legal_name.startswith("[DEMO-FDC125]"))
+    ):
+        raise HTTPException(
+            status_code=403,
+            detail="Cuenta de demostración deshabilitada en producción. Use su cuenta privada.",
+        )
+
+
 def get_session_user_from_request(
     request: Request,
     db: Session,
@@ -64,6 +80,7 @@ def get_session_user_from_request(
     user = db.get(User, sess.user_id)
     if not user or not user.is_active:
         return None
+    ensure_production_account(request, db, user)
     return user
 
 
@@ -86,6 +103,7 @@ def get_current_context(
             status_code=403,
             detail="Activación pendiente: defina su contraseña definitiva en /auth/activar-cuenta.",
         )
+    ensure_production_account(request, db, user)
     tenant = db.get(Tenant, user.tenant_id)
     if not tenant or tenant.status != "active":
         raise HTTPException(status_code=403, detail="Empresa inactiva.")
@@ -109,6 +127,7 @@ def get_superadmin_user(
             status_code=403,
             detail="Acceso exclusivo para el rol de auditoría SuperAdmin (F-DC-125).",
         )
+    ensure_production_account(request, db, user)
     return user
 
 
@@ -137,6 +156,26 @@ def authenticate_user(
     """Login triple (usuario, correo o celular) con bloqueo temporal tras fallos."""
     now = utcnow()
     user = _find_user_by_identifier(db, email)
+    if user:
+        ensure_production_account(request, db, user)
+        if user.must_change_password and user.tenant_id:
+            tenant = db.get(Tenant, user.tenant_id)
+            if tenant and tenant.research_company_id:
+                from app.core.research_sync_service import normalize_username
+
+                # Bloquear únicamente el esquema heredado; nunca recuperar ni mostrar esa clave.
+                prefix = (
+                    re.sub(r"[^a-zA-Z]", "", normalize_username(tenant.trade_name or tenant.legal_name))[
+                        :6
+                    ].capitalize()
+                    or "Cliente"
+                )
+                legacy = f"Dp{prefix}{2026 + tenant.research_company_id}!"
+                if verify_password(legacy, user.password_hash):
+                    raise HTTPException(
+                        status_code=403,
+                        detail="La clave temporal antigua debe renovarse. Solicite una nueva al administrador.",
+                    )
     locked_until = _as_aware(user.locked_until) if user else None
     if user and locked_until and locked_until > now:
         raise HTTPException(
@@ -150,12 +189,12 @@ def authenticate_user(
                 user.failed_logins = 0
             db.commit()
         raise HTTPException(status_code=401, detail="Credenciales inválidas.")
-    user.failed_logins = 0
-    user.locked_until = None
     user.last_login_at = now
     if not create_session:
         db.commit()
         return user, ""
+    user.failed_logins = 0
+    user.locked_until = None
     raw_token, tok_hash = generate_session_token()
     ip_raw = request.client.host if request.client else "127.0.0.1"
     db.add(

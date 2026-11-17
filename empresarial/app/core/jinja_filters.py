@@ -1,7 +1,7 @@
 """Filtros y serializadores de Jinja2 para la capa de presentación de Datapyme Empresarial."""
 
 from datetime import datetime
-from decimal import Decimal
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
 from fastapi.templating import Jinja2Templates
@@ -53,11 +53,13 @@ def format_cop_filter(val: Any) -> str:
     if val is None or val == "" or str(val) == "Undefined":
         return "$ 0"
     try:
-        num = float(val)
-        rounded = round(num)
-        formatted = f"{rounded:,}".replace(",", ".")
+        num = Decimal(str(val)).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        if not num.is_finite():
+            return "$ 0"
+        formatted = f"{num:,.2f}".replace(",", "_").replace(".", ",").replace("_", ".")
+        formatted = formatted.removesuffix(",00")
         return f"$ {formatted}"
-    except (ValueError, TypeError):
+    except (ValueError, TypeError, InvalidOperation):
         return f"$ {val}"
 
 

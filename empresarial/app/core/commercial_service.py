@@ -4,6 +4,7 @@ Servicios de Dominio Comercial (Actividad 3.3 F-DC-124):
 - Registro Atómico de Ventas y Anulación con Reversa
 """
 
+import re
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
@@ -17,6 +18,7 @@ from app.core.models import (
     Sale,
     SaleItem,
     SaleTaxSnapshot,
+    Tenant,
     UsageEvent,
     utcnow,
 )
@@ -42,14 +44,11 @@ def parse_colombian_decimal(value: Any, places: Decimal = TWO_PLACES) -> Decimal
     """Normaliza formatos numéricos colombianos ($ 1.250.000,50 o 1250000.50)."""
     if value is None:
         return Decimal(0).quantize(places)
-    if isinstance(value, (int, float, Decimal)):
-        return Decimal(str(value)).quantize(places, rounding=ROUND_HALF_UP)
     s = str(value).strip().replace("$", "").replace("COP", "").replace(" ", "")
     if not s:
         return Decimal(0).quantize(places)
-    s = "".join(ch for ch in s if ch.isdigit() or ch in (",", ".", "-"))
-    if not s or s == "-":
-        return Decimal(0).quantize(places)
+    if not re.fullmatch(r"-?\d+(?:[.,]\d+)*", s):
+        raise HTTPException(status_code=422, detail="Formato numérico inválido.")
     if "." in s and "," in s:
         if s.rfind(",") > s.rfind("."):
             s = s.replace(".", "").replace(",", ".")
@@ -58,9 +57,14 @@ def parse_colombian_decimal(value: Any, places: Decimal = TWO_PLACES) -> Decimal
     elif "," in s:
         s = s.replace(",", ".")
     try:
-        return Decimal(s).quantize(places, rounding=ROUND_HALF_UP)
+        result = Decimal(s).quantize(places, rounding=ROUND_HALF_UP)
+        if not result.is_finite() or abs(result) >= Decimal(1000000000000):
+            raise InvalidOperation
+        return result
     except (InvalidOperation, ValueError) as exc:
-        raise ValueError(f"Formato numérico inválido: {value}") from exc
+        raise HTTPException(
+            status_code=422, detail="Formato numérico inválido o fuera de rango."
+        ) from exc
 
 
 def serialize_product(p: Product) -> dict[str, Any]:
@@ -90,6 +94,7 @@ def serialize_product(p: Product) -> dict[str, Any]:
         "image_url": p.image_url,
         "stock_status": status_label,
         "is_active": p.is_active,
+        "is_training_data": bool(p.is_training_data),
     }
 
 
@@ -179,11 +184,16 @@ def record_inventory_movement(
     reason: str,
     unit_cost: Decimal | None = None,
 ) -> tuple[Product, InventoryMovement]:
-    prod = db.query(Product).filter_by(tenant_id=tenant_id, id=product_id).first()
+    db.query(Tenant).filter_by(id=tenant_id).with_for_update().one()
+    prod = db.query(Product).filter_by(tenant_id=tenant_id, id=product_id).with_for_update().first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")
     if quantity == Decimal(0):
         raise HTTPException(status_code=422, detail="La cantidad del movimiento no puede ser cero.")
+    if not quantity.is_finite() or (
+        unit_cost is not None and (not unit_cost.is_finite() or unit_cost < 0)
+    ):
+        raise HTTPException(status_code=422, detail="Cantidad o costo inválido.")
 
     if movement_type in ("purchase_in", "return_in", "adjustment_in", "initial_load"):
         signed_qty = abs(quantity).quantize(THREE_PLACES)
@@ -239,6 +249,7 @@ def create_sale_atomic(
 ) -> Sale:
     from app.core.company_tax import effective_vat_rate, sale_tax_policy, tax_profile
 
+    db.query(Tenant).filter_by(id=tenant_id).with_for_update().one()
     if is_training_data and tax_profile(db, tenant_id)["status"] == "pending":
         policy = {"revision": 0, "status": "not_responsible"}
     else:
@@ -247,15 +258,23 @@ def create_sale_atomic(
         raise HTTPException(status_code=422, detail="La venta debe incluir al menos un ítem.")
 
     resolved_items: list[tuple[Product, Decimal, Decimal, Decimal]] = []
+    requested_quantities: dict[str, Decimal] = {}
     for item in items_input:
         prod = db.query(Product).filter_by(tenant_id=tenant_id, id=item["product_id"]).first()
         if not prod:
             raise HTTPException(status_code=404, detail="Producto no encontrado en el catálogo.")
+        if not prod.is_active:
+            raise HTTPException(status_code=409, detail="El producto está inactivo.")
+        if bool(prod.is_training_data) != bool(is_training_data):
+            raise HTTPException(
+                status_code=409, detail="No se pueden mezclar productos de práctica con ventas reales."
+            )
         qty = parse_colombian_decimal(item["quantity"], THREE_PLACES)
         if qty <= Decimal(0):
             raise HTTPException(status_code=422, detail="La cantidad de venta debe ser mayor a cero.")
         current_stock = Decimal(str(prod.stock_qty)).quantize(THREE_PLACES)
-        if current_stock < qty:
+        requested_quantities[prod.id] = requested_quantities.get(prod.id, Decimal(0)) + qty
+        if current_stock < requested_quantities[prod.id]:
             raise HTTPException(
                 status_code=409,
                 detail=f"Stock insuficiente para SKU '{prod.sku}': disponible {current_stock}, solicitado {qty}.",
@@ -367,7 +386,8 @@ def create_sale_atomic(
 
 def void_sale_atomic(db: Session, tenant_id: str, user_id: str, sale_id: str) -> Sale:
     """Anula una venta e inserta movimientos compensatorios return_in en el Kardex."""
-    sale = db.query(Sale).filter_by(tenant_id=tenant_id, id=sale_id).first()
+    db.query(Tenant).filter_by(id=tenant_id).with_for_update().one()
+    sale = db.query(Sale).filter_by(tenant_id=tenant_id, id=sale_id).with_for_update().first()
     if not sale:
         raise HTTPException(status_code=404, detail="Venta no encontrada.")
     if sale.status == "voided":
@@ -393,6 +413,7 @@ def void_sale_atomic(db: Session, tenant_id: str, user_id: str, sale_id: str) ->
                 unit_cost=Decimal(str(item.unit_cost_snapshot)).quantize(TWO_PLACES),
                 reason=f"Reversa por anulación de Venta N° {sale.sale_number}",
                 sale_id=sale.id,
+                is_training_data=bool(sale.is_training_data),
                 created_by=user_id,
             )
             db.add(rev)
@@ -406,7 +427,7 @@ def void_sale_atomic(db: Session, tenant_id: str, user_id: str, sale_id: str) ->
 def classify_inventory_alerts(db: Session, tenant_id: str) -> dict[str, list[dict[str, Any]]]:
     products = (
         db.query(Product)
-        .filter_by(tenant_id=tenant_id, is_active=True)
+        .filter_by(tenant_id=tenant_id, is_active=True, is_training_data=False)
         .order_by(Product.sku.asc())
         .all()
     )

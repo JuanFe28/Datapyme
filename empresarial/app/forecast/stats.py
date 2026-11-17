@@ -8,12 +8,14 @@ Restricción Normativa Inquebrantable (F-DC-124):
 """
 
 from collections import defaultdict
+from datetime import UTC, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal
+from itertools import pairwise
 from typing import Any
 
 from sqlalchemy.orm import Session
 
-from app.core.models import Sale, SaleItem, UsageEvent
+from app.core.models import Sale, SaleItem, UsageEvent, utcnow
 
 MANDATORY_FDC124_DISCLAIMER = (
     "Proyección estadística orientativa basada en Regresión Lineal Simple por Mínimos Cuadrados "
@@ -174,11 +176,22 @@ def get_tenant_forecast_payload(
     """
     sales = (
         db.query(Sale)
-        .filter(Sale.tenant_id == tenant_id, Sale.status != "voided")
+        .filter(Sale.tenant_id == tenant_id, Sale.status != "voided", Sale.is_training_data.is_(False))
         .order_by(Sale.occurred_at.asc(), Sale.sale_number.asc())
         .all()
     )
 
+    colombia = timezone(timedelta(hours=-5))
+    current_month = utcnow().astimezone(colombia).strftime("%Y-%m")
+
+    def month_key(value):
+        return (
+            (value.replace(tzinfo=UTC) if value.tzinfo is None else value)
+            .astimezone(colombia)
+            .strftime("%Y-%m")
+        )
+
+    sales = [s for s in sales if month_key(s.occurred_at) < current_month]
     bucket_totals: dict[str, Decimal] = defaultdict(lambda: Decimal("0.00"))
 
     if metric == "units_sold" and product_id:
@@ -188,32 +201,36 @@ def get_tenant_forecast_payload(
             parent_sale = sale_map.get(item.sale_id)
             if not parent_sale:
                 continue
-            period_key = parent_sale.occurred_at.strftime("%Y-%m")
+            period_key = month_key(parent_sale.occurred_at)
             bucket_totals[period_key] += Decimal(str(item.quantity))
     else:
         for s in sales:
-            period_key = s.occurred_at.strftime("%Y-%m")
+            period_key = month_key(s.occurred_at)
             net_val = (Decimal(str(s.subtotal)) - Decimal(str(s.discount_total))).quantize(
                 TWO_PLACES, rounding=ROUND_HALF_UP
             )
             bucket_totals[period_key] += net_val
 
     sorted_keys = sorted(bucket_totals.keys())
-    # Si todas las ventas de prueba cayeron en menos de 3 meses pero hay >= 3 ventas confirmadas,
-    # agrupamos por transacción individual para permitir la proyección operativa inmediata.
-    if len(sorted_keys) < 3 and len(sales) >= 3 and metric == "net_revenue":
-        labels = [f"V-{s.sale_number}" for s in sales]
-        values = [
-            float((Decimal(str(s.subtotal)) - Decimal(str(s.discount_total))).quantize(TWO_PLACES))
-            for s in sales
-        ]
-    else:
-        labels = sorted_keys
-        values = [float(bucket_totals[k]) for k in sorted_keys]
+    labels = sorted_keys
+    values = [float(bucket_totals[k]) for k in sorted_keys]
+    months = [int(k[:4]) * 12 + int(k[5:]) for k in sorted_keys]
+    missing_months = any(b - a != 1 for a, b in pairwise(months))
+    if missing_months:
+        # No confundir ausencia de cobertura con ventas cero ni comprimir el tiempo.
+        values = []
 
     result = compute_ols_and_moving_averages(series=values, horizon=horizon, period_labels=labels)
     result["tenant_id"] = tenant_id
     result["metric"] = metric
+    result["periodicity"] = "completed_calendar_months_colombia"
+    result.setdefault("projections", [])
+    if result["status"] != "ok":
+        result["message"] = (
+            "Faltan meses en el historial. Revise la cobertura de datos antes de proyectar."
+            if missing_months
+            else "Se requieren al menos tres meses calendario completos con ventas. El mes actual aún está en curso."
+        )
 
     if record_event:
         db.add(UsageEvent(tenant_id=tenant_id, event_type="forecast_executed"))

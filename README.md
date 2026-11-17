@@ -1,3 +1,12 @@
+# Estado del piloto — 17/11/2026
+
+Revisión vigente en [ESTADO_PROYECTO.md](ESTADO_PROYECTO.md). La versión candidata
+aprobó 76 pruebas Python y cuatro JavaScript; todavía requiere instalación y
+verificación en el servidor de Juan Felipe. No interpretar las declaraciones
+históricas siguientes como validación del despliegue o de pruebas con empresas.
+Guía: [entrega del piloto](empresarial/docs/ENTREGA_PILOTO_2026_11_17.md).
+Las cuentas demo públicas se admiten en desarrollo y se bloquean en producción.
+
 # Datapyme — Plataforma de Analítica Comercial y Entorno de Investigación (UTS F-DC-124 / F-DC-125)
 
 Sistema integral desarrollado para las **Unidades Tecnológicas de Santander (UTS)** en el marco del proyecto de investigación aplicada para la digitalización y analítica de micro y pequeñas empresas comerciales en Bucaramanga.

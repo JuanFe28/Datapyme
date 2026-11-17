@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block content %}
+{% if products | selectattr('is_training_data') | list %}
+<div role="status" style="padding:12px;margin-bottom:16px;background:var(--surface-card);border:1px solid var(--status-warning-border);border-radius:12px;">
+  <strong>Hay productos de práctica en esta cuenta.</strong>
+  No forman parte de los indicadores de operación real. No los use para registrar existencias reales.
+  <button type="button" class="btn btn-secondary" onclick="window.startSpotlightTour()">Revisar práctica y limpieza</button>
+</div>
+{% endif %}
 <div style="padding:12px;margin-bottom:16px;background:var(--surface-card);border-radius:12px;">
   <strong>IVA de empresa:</strong>
   {{ {'responsible':'Responsable de IVA', 'not_responsible':'No responsable de IVA', 'pending':'Pendiente de confirmar'}[company_tax.status] }}
@@ -41,7 +48,7 @@
         </div>
         <div class="metric-strip-value">{{ kpi_payload.kpis.inventory_turnover }}x</div>
         <span class="metric-strip-badge badge-neutral">
-          Se vende el {{ kpi_payload.kpis.inventory_turnover | pct(0) }} del stock al mes · Mercancía para ~{{ kpi_payload.kpis.days_of_coverage | default(407, true) }} días
+          Rotación estimada en 30 días · Cobertura: {{ kpi_payload.kpis.days_of_coverage if kpi_payload.kpis.days_of_coverage is not none else 'Sin datos suficientes' }} días
         </span>
       </div>
 
@@ -56,7 +63,7 @@
 
       <div class="metric-strip-item">
         <div class="metric-strip-label">
-          Ingresos Netos (Mes)
+          Ingresos Netos (30 días)
           <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Facturación total facturada descontando devoluciones y descuentos.</span></span>
         </div>
         <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
@@ -66,11 +73,11 @@
     {% elif layout_config.primary_focus == 'sales' %}
       <div class="metric-strip-item">
         <div class="metric-strip-label">
-          Ingresos Netos (Mes)
+          Ingresos Netos (30 días)
           <span class="kpi-help-tooltip" title="Ayuda">?<span class="tooltip-text">Ventas efectivas realizadas en el periodo actual.</span></span>
         </div>
         <div class="metric-strip-value price-cell">{{ kpi_payload.kpis.net_revenue | cop }}</div>
-        <span class="metric-strip-badge badge-success">+14.2% vs mes anterior</span>
+        <span class="metric-strip-badge badge-neutral">Ventas registradas, sin IVA</span>
       </div>
 
       <div class="metric-strip-item">
@@ -228,7 +235,7 @@
           <span class="pnl-metric-sub">Reposición unitaria exacta</span>
         </div>
         <div class="pnl-metric pnl-metric-profit">
-          <span class="pnl-metric-label">Ganancia Neta Comercial</span>
+          <span class="pnl-metric-label">Ganancia Neta Comercial antes de gastos generales</span>
           <strong class="pnl-metric-value" id="pnl-net-profit">{{ profitability.pnl.net_profit_after_losses_cop | cop }}</strong>
           <span class="pnl-metric-sub" id="pnl-net-margin">Margen neto: {{ profitability.pnl.net_margin_after_losses_pct }}%</span>
         </div>
@@ -241,7 +248,7 @@
 
       <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 12px;">
         <p role="note" style="font-size: 12px; color: var(--ink-secondary); margin: 0;">
-          Serie temporal auditable en pesos COP (sin IVA): compara ingresos netos, ganancia real después de mermas y costos/pérdidas según el horizonte (<span id="pnl-period-label">30D</span>).
+          Serie de ventas registradas en COP (sin IVA): ingresos menos costo de mercancía y mermas. No incluye arriendo, nómina, servicios ni otros gastos generales; no equivale a la utilidad neta contable. Periodo: <span id="pnl-period-label">30D</span>.
         </p>
         <span style="font-size: 12px; color: var(--ink-muted);" id="pnl-immobilized-note">
           Capital sin rotación (30D): <strong style="color: var(--ink-primary); font-variant-numeric: tabular-nums;">{{ profitability.pnl.immobilized_capital_30d_cop | cop }}</strong>
@@ -1094,11 +1101,11 @@
         En cumplimiento del derecho constitucional de Habeas Data, usted puede descargar en cualquier momento una copia íntegra de todos sus registros de ventas, catálogo de productos e inventarios.
       </p>
       <div style="display: flex; gap: 12px;">
-        <a href="/api/me/export?format=json" class="btn btn-secondary" download>
+        <a href="{{ root_path }}/api/me/export?format=json" class="btn btn-secondary" download>
           <i data-lucide="download" style="width: 14px; height: 14px;"></i>
           Exportar en JSON
         </a>
-        <a href="/api/me/export?format=csv" class="btn btn-secondary" download>
+        <a href="{{ root_path }}/api/me/export?format=csv" class="btn btn-secondary" download>
           <i data-lucide="file-spreadsheet" style="width: 14px; height: 14px;"></i>
           Exportar en CSV
         </a>
@@ -1110,8 +1117,11 @@
       <p style="font-size: 13px; color: var(--ink-secondary); line-height: 1.5; margin: 0 0 20px;">
         Puede solicitar la supresión total de sus datos operativos comerciales o revocar la autorización de uso de indicadores agregados anónimos.
       </p>
-      <form method="post" action="/api/me/deletion-request" onsubmit="return confirm('¿Confirma la solicitud de supresión de datos conforme a la Ley 1581?');">
-        <button type="submit" class="btn btn-ghost" style="color: var(--status-danger-text); border: 1px solid var(--status-danger-border);">
+      <form onsubmit="submitDeletionRequest(event)">
+        <label for="deletion-reason">Motivo de la solicitud</label>
+        <textarea id="deletion-reason" class="form-input" required minlength="5" maxlength="280"></textarea>
+        <p id="deletion-status" role="status"></p>
+        <button id="btn-request-deletion" type="submit" class="btn btn-ghost" style="color: var(--status-danger-text); border: 1px solid var(--status-danger-border);">
           <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
           Solicitar Supresión de Datos
         </button>

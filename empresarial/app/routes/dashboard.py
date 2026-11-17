@@ -267,8 +267,50 @@ def complete_onboarding_tour(
 ):
     _, tenant = ctx
     if payload.action == "purge_training":
+        training_ids = [
+            p.id for p in db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=True)
+        ]
+        if training_ids:
+            real_movement = (
+                db.query(InventoryMovement)
+                .filter(
+                    InventoryMovement.tenant_id == tenant.id,
+                    InventoryMovement.product_id.in_(training_ids),
+                    InventoryMovement.is_training_data.is_(False),
+                )
+                .first()
+            )
+            real_line = (
+                db.query(SaleItem)
+                .join(Sale, Sale.id == SaleItem.sale_id)
+                .filter(
+                    SaleItem.tenant_id == tenant.id,
+                    SaleItem.product_id.in_(training_ids),
+                    Sale.is_training_data.is_(False),
+                )
+                .first()
+            )
+            if real_movement or real_line:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Hay operaciones reales relacionadas con productos de práctica. Se conservó toda la información; solicite revisión.",
+                )
         training_sales = db.query(Sale).filter_by(tenant_id=tenant.id, is_training_data=True).all()
         t_sale_ids = [s.id for s in training_sales]
+        if (
+            t_sale_ids
+            and db.query(SaleItem)
+            .filter(
+                SaleItem.tenant_id == tenant.id,
+                SaleItem.sale_id.in_(t_sale_ids),
+                ~SaleItem.product_id.in_(training_ids),
+            )
+            .first()
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail="Una venta de práctica afecta inventario real. Se conservó toda la información; solicite revisión.",
+            )
         if t_sale_ids:
             db.query(SaleTaxSnapshot).filter(
                 SaleTaxSnapshot.tenant_id == tenant.id, SaleTaxSnapshot.sale_id.in_(t_sale_ids)
@@ -290,15 +332,7 @@ def complete_onboarding_tour(
         db.commit()
         return {"status": "purged", "onboarding_tour_completed": True}
 
-    db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=True).update(
-        {"is_training_data": False}, synchronize_session=False
-    )
-    db.query(InventoryMovement).filter_by(tenant_id=tenant.id, is_training_data=True).update(
-        {"is_training_data": False}, synchronize_session=False
-    )
-    db.query(Sale).filter_by(tenant_id=tenant.id, is_training_data=True).update(
-        {"is_training_data": False}, synchronize_session=False
-    )
+    # Conservar la práctica no la convierte en información comercial real.
     tenant.onboarding_tour_completed = True
     db.commit()
     return {"status": "kept", "onboarding_tour_completed": True}

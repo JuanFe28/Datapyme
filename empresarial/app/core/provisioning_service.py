@@ -308,7 +308,7 @@ def provision_real_client_tenant(
     municipality: str,
     owner_full_name: str,
     email: str,
-    temporary_password: str,
+    temporary_password: str | None = None,
     priority_focus: str = "balanced",
     density: str = "standard",
     tax_status: str = "pending",
@@ -317,7 +317,13 @@ def provision_real_client_tenant(
     phone: str | None = None,
 ) -> dict[str, Any]:
     """Crea una PyME cliente real con contraseña temporal (`must_change_password=True`)."""
-    from app.core.research_sync_service import extract_phone_and_email, make_unique_username
+    from app.core.research_sync_service import (
+        extract_phone_and_email,
+        generate_temp_password,
+        make_unique_username,
+    )
+
+    temporary_password = temporary_password or generate_temp_password()
 
     norm_email = email.strip().lower()
     if db.query(User).filter_by(email=norm_email).first():
@@ -412,6 +418,7 @@ def provision_real_client_tenant(
                 vat_rate=Decimal(vat_s),
                 initial_stock=Decimal(stock_s),
                 min_stock=Decimal(min_s),
+                is_training_data=True,
             )
             seeded_count += 1
 

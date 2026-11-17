@@ -720,6 +720,14 @@ def seed_contrast_demo_tenants(db: Session) -> dict[str, Any]:
 
         for idx, (days_ago, qty) in enumerate(sales_plan):
             occurred = now - timedelta(days=days_ago)
+            if idx < 12:
+                # Doce meses calendario consecutivos y cerrados, sin huecos inventados.
+                absolute_month = now.year * 12 + now.month - 1 - (12 - idx)
+                year, month = divmod(absolute_month, 12)
+                occurred = now.replace(year=year, month=month + 1, day=15, hour=12)
+                qty = Decimal(idx + 1)
+            else:
+                occurred = now
             items_input = [
                 {
                     "product_id": primary_prod.id,

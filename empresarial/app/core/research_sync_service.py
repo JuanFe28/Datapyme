@@ -4,12 +4,14 @@ import csv
 import io
 import json
 import re
+import secrets
 import sqlite3
 import unicodedata
 from decimal import Decimal
 from pathlib import Path
 from typing import Any
 
+from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.core.models import CompanyUIPreference, Tenant, User, UserViewSetting
@@ -33,302 +35,7 @@ SIZE_MAP: dict[str, str] = {
     "Mediana": "mediana",
 }
 
-# Catálogo exacto de las 13 empresas reales con encuesta de mercado completa en Research Studio
-PRODUCTION_SURVEYED_COMPANIES: list[dict[str, Any]] = [
-    {
-        "research_company_id": 4,
-        "trade_name": "VaFel Sweet",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Valentina Naranjo",
-        "contact_detail": "3052621817",
-        "answers": {
-            "M05": "Alimentos y bebidas",
-            "M07": ["Hojas de cálculo"],
-            "M08": ["Hojas de cálculo"],
-            "M10": ["Demora preparando informes"],
-            "M12": [
-                "Ventas por periodo",
-                "Productos más y menos vendidos",
-                "Comparación entre periodos",
-            ],
-            "M13": "No",
-            "M15": ["Precio"],
-            "M17": "Consulta de ventas e indicadores",
-        },
-    },
-    {
-        "research_company_id": 5,
-        "trade_name": "Eat healthy",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Laura Sofía Fandiño Bautista",
-        "contact_detail": "3133063165",
-        "answers": {
-            "M05": "Alimentos y bebidas",
-            "M07": [
-                "Registros manuales",
-                "Hojas de cálculo",
-                "Facturación / punto de venta",
-                "Software administrativo / ERP",
-                "Comercio electrónico",
-            ],
-            "M08": ["Registros manuales", "Hojas de cálculo"],
-            "M10": [
-                "Datos dispersos",
-                "No identifica fácilmente la rotación",
-                "Información desactualizada",
-            ],
-            "M12": [
-                "Productos más y menos vendidos",
-                "Rotación de productos",
-                "Comparación entre periodos",
-            ],
-            "M13": "No",
-            "M15": ["Precio", "Tiempo de implementación", "Falta de soporte / capacitación"],
-            "M17": "Rotación de productos",
-        },
-    },
-    {
-        "research_company_id": 7,
-        "trade_name": "BV Elixir",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Brandon Stiven Velasco Molina",
-        "contact_detail": "3053782020",
-        "answers": {
-            "M05": "Belleza y cuidado personal",
-            "M07": ["Registros manuales", "Hojas de cálculo"],
-            "M08": ["Registros manuales", "Hojas de cálculo"],
-            "M10": [
-                "Datos dispersos",
-                "No identifica fácilmente la rotación",
-                "Demora preparando informes",
-            ],
-            "M12": [
-                "Productos más y menos vendidos",
-                "Rotación de productos",
-                "Comparación entre periodos",
-            ],
-            "M13": "No",
-            "M15": ["Precio", "Falta de conocimientos tecnológicos", "Tiempo de implementación"],
-            "M17": "Inventarios y existencias",
-        },
-    },
-    {
-        "research_company_id": 8,
-        "trade_name": "My Dulce Encanto",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Carol Molina",
-        "contact_detail": "Velascobrandon1908@gmail.com",
-        "answers": {
-            "M05": "Belleza y cuidado personal",
-            "M07": ["Registros manuales", "Hojas de cálculo"],
-            "M08": ["Registros manuales", "Hojas de cálculo"],
-            "M10": [
-                "Datos dispersos",
-                "No identifica fácilmente la rotación",
-                "Diferencias en inventario",
-            ],
-            "M12": ["Ventas por periodo", "Productos más y menos vendidos", "Rotación de productos"],
-            "M13": "No",
-            "M15": ["Precio", "Falta de conocimientos tecnológicos", "Falta de soporte / capacitación"],
-            "M17": "Inventarios y existencias",
-        },
-    },
-    {
-        "research_company_id": 9,
-        "trade_name": "Susifashion",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Azucena Castillo",
-        "contact_detail": "3133967722",
-        "answers": {
-            "M05": "Ropa, calzado y accesorios",
-            "M07": ["Registros manuales"],
-            "M08": ["Registros manuales"],
-            "M10": ["No enfrenta dificultades relevantes"],
-            "M12": ["Rotación de productos"],
-            "M13": "No",
-            "M15": ["Ninguno"],
-            "M17": "Ninguna de las anteriores",
-        },
-    },
-    {
-        "research_company_id": 10,
-        "trade_name": "Cookie Bites",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Maria Paula Castañeda",
-        "contact_detail": "3156925655",
-        "answers": {
-            "M05": "Alimentos y bebidas",
-            "M07": ["Registros manuales"],
-            "M08": ["Registros manuales"],
-            "M10": ["No enfrenta dificultades relevantes"],
-            "M12": ["Ventas por periodo"],
-            "M13": "No",
-            "M15": ["Precio", "Falta de conocimientos tecnológicos", "Tiempo de implementación"],
-            "M17": "Consulta de ventas e indicadores",
-        },
-    },
-    {
-        "research_company_id": 11,
-        "trade_name": "Ghostline",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Juan Felipe Leon Efres",
-        "contact_detail": "3236181171",
-        "answers": {
-            "M05": "Ropa, calzado y accesorios",
-            "M07": ["Registros manuales"],
-            "M08": ["Registros manuales"],
-            "M10": ["Datos dispersos", "Información desactualizada"],
-            "M12": ["Ventas por periodo"],
-            "M13": "No",
-            "M15": ["Confidencialidad y seguridad"],
-            "M17": "Tendencias o estimaciones",
-        },
-    },
-    {
-        "research_company_id": 12,
-        "trade_name": "Style Stamp",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Valentina Carreño",
-        "contact_detail": "3212440920",
-        "answers": {
-            "M05": "Ropa, calzado y accesorios",
-            "M07": ["Registros manuales", "Hojas de cálculo"],
-            "M08": ["No lleva control sistemático"],
-            "M10": [
-                "Datos dispersos",
-                "No identifica fácilmente la rotación",
-                "Información desactualizada",
-            ],
-            "M12": ["Ventas por periodo", "Rotación de productos", "Tablero resumen de indicadores"],
-            "M13": "No está seguro",
-            "M15": ["Precio"],
-            "M17": "Inventarios y existencias",
-        },
-    },
-    {
-        "research_company_id": 13,
-        "trade_name": "Sala de belleza Nancy Spa",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Nancy Marlene Bonna García",
-        "contact_detail": "3108057903",
-        "answers": {
-            "M05": "Belleza y cuidado personal",
-            "M07": ["Registros manuales"],
-            "M08": ["Registros manuales"],
-            "M10": ["No enfrenta dificultades relevantes"],
-            "M12": ["Tendencias o estimaciones"],
-            "M13": "No",
-            "M15": ["Falta de conocimientos tecnológicos"],
-            "M17": "Inventarios y existencias",
-        },
-    },
-    {
-        "research_company_id": 14,
-        "trade_name": "Matilde",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Anderson Martinez",
-        "contact_detail": "3043613953",
-        "answers": {
-            "M05": "Alimentos y bebidas",
-            "M07": ["Facturación / punto de venta"],
-            "M08": ["Software administrativo integrado"],
-            "M10": ["No identifica fácilmente la rotación", "Demora preparando informes"],
-            "M12": ["Productos más y menos vendidos", "Existencias y alertas", "Rotación de productos"],
-            "M13": "No",
-            "M15": ["Precio", "Tiempo de implementación", "Integración de datos"],
-            "M17": "Consulta de ventas e indicadores",
-        },
-    },
-    {
-        "research_company_id": 15,
-        "trade_name": "Bioasesores sas",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Luis Carlos Rincón Delgado",
-        "contact_detail": "3222542932",
-        "answers": {
-            "M05": "Otra actividad comercial",
-            "M07": ["Hojas de cálculo", "Facturación / punto de venta"],
-            "M08": ["Hojas de cálculo"],
-            "M10": [
-                "Información desactualizada",
-                "Dificultad para analizar ventas",
-                "Demora preparando informes",
-            ],
-            "M12": [
-                "Ventas por periodo",
-                "Productos más y menos vendidos",
-                "Tablero resumen de indicadores",
-            ],
-            "M13": "No",
-            "M15": [
-                "Falta de conocimientos tecnológicos",
-                "Tiempo de implementación",
-                "Falta de soporte / capacitación",
-            ],
-            "M17": "Inventarios y existencias",
-        },
-    },
-    {
-        "research_company_id": 16,
-        "trade_name": "El esquinazo de los remates",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Lucia Castellanos",
-        "contact_detail": "3185086362",
-        "answers": {
-            "M05": "Otra actividad comercial",
-            "M07": ["Registros manuales"],
-            "M08": ["Registros manuales"],
-            "M10": ["No identifica fácilmente la rotación"],
-            "M12": ["Productos más y menos vendidos", "Rotación de productos"],
-            "M13": "No",
-            "M15": ["Tiempo de implementación"],
-            "M17": "Rotación de productos",
-        },
-    },
-    {
-        "research_company_id": 17,
-        "trade_name": "La Bodega Virtual",
-        "city": "Bucaramanga",
-        "size": "Pequeña",
-        "owner_full_name": "Sebastián Camacho",
-        "contact_detail": "3151279284",
-        "answers": {
-            "M05": "Ropa, calzado y accesorios",
-            "M07": [
-                "Registros manuales",
-                "Hojas de cálculo",
-                "Facturación / punto de venta",
-                "Software administrativo / ERP",
-            ],
-            "M08": ["Registros manuales", "Hojas de cálculo", "Software de inventarios"],
-            "M10": ["Información desactualizada", "Herramientas costosas o complejas"],
-            "M12": [
-                "Ventas por periodo",
-                "Productos más y menos vendidos",
-                "Tablero resumen de indicadores",
-            ],
-            "M13": "No",
-            "M15": [
-                "Falta de conocimientos tecnológicos",
-                "Tiempo de implementación",
-                "Falta de soporte / capacitación",
-            ],
-            "M17": "Inventarios y existencias",
-        },
-    },
-]
+# Los datos de participantes se leen únicamente de una fuente privada explícita.
 
 
 def normalize_username(trade_name: str, fallback: str = "empresa") -> str:
@@ -363,10 +70,9 @@ def extract_phone_and_email(detail: str, username: str) -> tuple[str | None, str
     return phone, email
 
 
-def generate_deterministic_temp_password(username: str, research_company_id: int) -> str:
-    """Contraseña temporal limpia y reproducible de mínimo 10 caracteres."""
-    prefix = re.sub(r"[^a-zA-Z]", "", username)[:6].capitalize() or "Cliente"
-    return f"Dp{prefix}{2026 + research_company_id}!"
+def generate_temp_password() -> str:
+    """Clave impredecible que se entrega una sola vez; solo se guarda su hash."""
+    return secrets.token_urlsafe(24)
 
 
 def load_companies_from_research_sqlite(sqlite_path: str | Path) -> list[dict[str, Any]]:
@@ -441,16 +147,19 @@ def sync_research_companies(
     db: Session,
     *,
     sqlite_path: str | Path | None = None,
-    access_url: str = "https://driving-where-bicycle-indiana.trycloudflare.com",
+    access_url: str = "",
 ) -> list[dict[str, Any]]:
-    """Sincroniza idempotente las 13 empresas reales hacia Datapyme Empresarial (en cero)."""
+    """Sincroniza una fuente privada explícita sin inventar empresas ni respuestas."""
     source_rows = (
         load_companies_from_research_sqlite(sqlite_path)
         if sqlite_path and Path(sqlite_path).exists()
         else []
     )
     if not source_rows:
-        source_rows = PRODUCTION_SURVEYED_COMPANIES
+        raise HTTPException(
+            status_code=409,
+            detail="No hay una fuente privada de investigación con empresas completas. No se crearon cuentas.",
+        )
 
     summary: list[dict[str, Any]] = []
     for item in source_rows:
@@ -503,7 +212,7 @@ def sync_research_companies(
         user = db.query(User).filter_by(tenant_id=tenant.id, role="owner").first()
         base_username = normalize_username(trade_name)
         phone, email = extract_phone_and_email(str(item.get("contact_detail") or ""), base_username)
-        temp_password = generate_deterministic_temp_password(base_username, cid)
+        temp_password = generate_temp_password()
 
         if not user:
             unique_username = make_unique_username(db, base_username)
@@ -570,7 +279,7 @@ def sync_research_companies(
         density_label = DENSITY_LABELS.get(
             profile.preferred_chart_density, profile.preferred_chart_density
         )
-        temp_disp = temp_password if user.must_change_password else "(Ya activada por cliente)"
+        temp_disp = temp_password if created else "(No recuperable; solicite una nueva clave temporal)"
         summary.append(
             {
                 "tenant_id": tenant.id,
@@ -609,7 +318,7 @@ def sync_research_companies(
 
 def list_real_client_credentials(
     db: Session,
-    access_url: str = "https://driving-where-bicycle-indiana.trycloudflare.com",
+    access_url: str = "",
 ) -> list[dict[str, Any]]:
     """Lista todas las empresas reales (no demos) para gestión de entrega y soporte MFA."""
     tenants = (
@@ -630,10 +339,7 @@ def list_real_client_credentials(
         density_label = DENSITY_LABELS.get(density, density)
 
         if tenant.research_company_id and user.must_change_password:
-            temp_disp = generate_deterministic_temp_password(
-                normalize_username(tenant.trade_name or tenant.legal_name),
-                int(tenant.research_company_id),
-            )
+            temp_disp = "(No recuperable; solicite una nueva clave temporal)"
         elif user.must_change_password:
             temp_disp = "(Definida al provisionar)"
         else:
