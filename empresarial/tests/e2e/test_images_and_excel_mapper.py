@@ -23,6 +23,12 @@ def create_sample_excel_path(tmp_path: Path) -> Path:
     ws.append(["HER-001", "Destornillador Estrella Pro", "Herramientas", "$ 6.500", "$ 11.000", "25"])
     ws.append(["PIN-002", "Brocha 2 Pulgadas Cerda Mono", "Pinturas", "$ 4.200", "$ 7.500", "40"])
     ws.append(["", "Tijera Cortatodo Industrial", "Manual", "$ 15.000", "$ 24.000", "12"])
+
+    ws_sales = wb.create_sheet("Ventas")
+    ws_sales.append(["Factura", "Fecha", "Producto", "Cantidad Vendida", "Precio Venta", "Total"])
+    ws_sales.append(["FAC-10", "2026-10-12", "Destornillador Estrella Pro", 2, "$ 11.000", "$ 22.000"])
+    ws_sales.append(["FAC-11", "2026-10-14", "Brocha 2 Pulgadas Cerda Mono", 3, "$ 7.500", "$ 22.500"])
+
     excel_file = tmp_path / "inventario_prueba.xlsx"
     wb.save(excel_file)
     return excel_file
@@ -63,11 +69,29 @@ def test_smart_excel_mapper_drawer_interaction(page: Page, tmp_path: Path):
     page.click("button[data-open-drawer='drawer-import']")
     expect(page.locator("#drawer-import")).to_be_visible()
 
-    # Generar y cargar archivo Excel desordenado
+    # Verificar botones de plantilla con flex-wrap sin desbordamiento dentro del desplegable opcional
+    page.locator("#drawer-import details summary").click()
+    links_box = page.locator("#import-template-links")
+    expect(links_box).to_be_visible()
+    wrap_info = links_box.evaluate(
+        "el => ({ wrap: window.getComputedStyle(el).flexWrap, sw: el.scrollWidth, cw: el.clientWidth })"
+    )
+    assert wrap_info["wrap"] == "wrap" and wrap_info["sw"] <= wrap_info["cw"] + 2, wrap_info
+
+    # Generar y cargar archivo Excel multi-hoja
     sample_excel = create_sample_excel_path(tmp_path)
     page.set_input_files("#import-file", str(sample_excel))
 
-    # Esperar a que el panel de mapeo inteligente aparezca
+    # Verificar el Resumen Visual Unificado (Productos + Ventas)
+    unified_panel = page.locator("#unified-import-summary-panel")
+    expect(unified_panel).to_be_visible(timeout=5000)
+    expect(page.locator("#unified-analysis-banner")).to_contain_text(
+        "Se encontraron 3 productos y 2 ventas registradas"
+    )
+    expect(page.locator("#unified-products-preview-table")).to_be_visible()
+    expect(page.locator("#unified-sales-preview-table")).to_be_visible()
+
+    # Esperar a que el panel de mapeo inteligente también aparezca
     mapper_panel = page.locator("#smart-mapper-panel")
     expect(mapper_panel).to_be_visible(timeout=5000)
 

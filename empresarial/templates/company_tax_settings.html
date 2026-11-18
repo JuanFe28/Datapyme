@@ -1,8 +1,6 @@
 <section style="padding:24px;margin-bottom:24px;background:var(--surface-card);border-radius:16px;" aria-labelledby="tax-settings-title">
   <h2 id="tax-settings-title">Condición de IVA de la empresa</h2>
-  <p>Configura la condición vigente y confirmada del comercio. Se aplicará a las operaciones nuevas desde que guardes.</p>
-  <p>Responsable: se usa la tarifa de cada artículo. No responsable: no se adiciona IVA. Pendiente: se bloquea registrar ventas hasta confirmar.</p>
-  <p>Se conservan los precios base, costos contables y ventas anteriores. Los cambios de costo por IVA de compras requieren revisión de sus soportes. Una tarifa cero no distingue por sí sola exento y excluido.</p>
+  <p style="font-size: 13px; color: var(--ink-secondary); margin: 4px 0 16px;">Indica si tu comercio cobra IVA en sus facturas o si vendes con precio final sin IVA.</p>
   {% if current_user.role == 'owner' %}
   <form id="company-tax-form">
     <label for="company-tax-status">Condición tributaria</label>

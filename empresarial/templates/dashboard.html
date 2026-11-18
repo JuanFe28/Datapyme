@@ -1098,7 +1098,7 @@
     <div style="background: var(--surface-card); border: var(--border-subtle); border-radius: var(--radius-card); padding: 24px; box-shadow: var(--shadow-sm);">
       <h3 style="font-size: 15px; font-weight: 600; margin: 0 0 10px;">Descarga de Datos en Formato Abierto</h3>
       <p style="font-size: 13px; color: var(--ink-secondary); line-height: 1.5; margin: 0 0 20px;">
-        En cumplimiento del derecho constitucional de Habeas Data, usted puede descargar en cualquier momento una copia íntegra de todos sus registros de ventas, catálogo de productos e inventarios.
+        Descarga en un clic una tabla de Excel (CSV) con todo tu catálogo de productos, inventario actual e historial de ventas.
       </p>
       <div style="display: flex; gap: 12px;">
         <a href="{{ root_path }}/api/me/export?format=json" class="btn btn-secondary" download>
@@ -1301,7 +1301,7 @@
 
     <form id="form-product">
       <div class="drawer-body">
-        <div style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
+        <div id="prod-code-name-row" style="display: grid; grid-template-columns: 1fr 2fr; gap: 16px;">
           <div class="form-group">
             <label class="form-label" for="prod-sku">SKU / Código *</label>
             <input type="text" id="prod-sku" class="form-input" required placeholder="EJ: PROD-01">
@@ -1347,21 +1347,26 @@
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div id="prod-pricing-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
-            <label class="form-label" for="prod-cost">Costo unitario contable (COP) *</label>
+            <label class="form-label" for="prod-cost">Costo de compra unitario (COP) *</label>
             <input type="number" id="prod-cost" class="form-input" min="0" step="0.01" required placeholder="0">
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-price">Precio base SIN IVA (COP) *</label>
+            <label class="form-label" for="prod-price">Precio de venta al público (COP) *</label>
             <input type="number" id="prod-price" class="form-input" min="0" step="0.01" required placeholder="0">
-            <label class="form-label" for="prod-vat-rate">Tarifa IVA confirmada (%) *</label>
-            <input type="number" id="prod-vat-rate" class="form-input" min="0" max="100" step="0.01" required placeholder="Ejemplo: 19, 5 o 0 según corresponda">
-            <p>Confirma el tratamiento con tu contador. El precio final incluye el IVA aplicable. El costo excluye impuestos recuperables e incluye los no recuperables.</p>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label class="form-label" for="prod-vat-rate">IVA del producto *</label>
+            <select id="prod-vat-rate" class="form-input" required>
+              <option value="0" selected>No aplica / Exento (0% - Precio final)</option>
+              <option value="5">IVA 5%</option>
+              <option value="19">IVA 19%</option>
+            </select>
           </div>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+        <div id="prod-stock-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
             <label class="form-label" for="prod-initial-stock">Stock Inicial *</label>
             <input type="number" id="prod-initial-stock" class="form-input" min="0" step="1" value="10" required>
@@ -1375,20 +1380,20 @@
 
       <div class="drawer-footer">
         <button type="button" class="btn btn-secondary" data-close-drawer="drawer-product">Cancelar</button>
-        <button type="submit" class="btn btn-primary" id="btn-submit-product">Guardar en Catálogo</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-product">Guardar Producto</button>
       </div>
     </form>
   </aside>
 </div>
 
 
-<!-- 3. Drawer: Importar Excel o CSV (3 Pasos Sencillos) -->
+<!-- 3. Drawer: Importador Unificado de Excel o CSV -->
 <div id="drawer-import" class="drawer-backdrop" aria-hidden="true">
-  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-import-title">
+  <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-import-title" style="max-width: 660px;">
     <div class="drawer-header">
       <div>
         <h3 id="drawer-import-title" class="drawer-title">Importar Archivo de Excel</h3>
-        <p class="drawer-subtitle">Carga masiva fácil y rápida para tu inventario o ventas.</p>
+        <p class="drawer-subtitle">Sube cualquier Excel (.xlsx) o CSV propio y detectaremos productos y ventas al instante.</p>
       </div>
       <button type="button" class="drawer-close-btn" data-close-drawer="drawer-import" aria-label="Cerrar panel">
         <i data-lucide="x" style="width: 16px; height: 16px;"></i>
@@ -1397,132 +1402,165 @@
 
     <form id="form-import">
       <div class="drawer-body">
-        <!-- Paso 1 -->
-        <div class="form-group" style="margin-bottom: 20px;">
-          <label class="form-label" for="import-type" style="font-size: 13px; color: var(--ink-primary);">
-            <strong>Paso 1:</strong> ¿Qué deseas cargar hoy?
+        <!-- Carga directa de cualquier archivo -->
+        <div class="form-group" style="margin-bottom: 16px;">
+          <label class="form-label" for="import-file" style="font-size: 13px; color: var(--ink-primary);">
+            <strong>Sube tu archivo de Excel o CSV *</strong>
           </label>
-          <select id="import-type" class="form-input">
-            <option value="products">Lista de mis productos e inventario</option>
-            <option value="sales">Ventas operativas actuales (descuentan stock)</option>
-            <option value="historical_sales">Historial de ventas (sin cambiar stock actual)</option>
-          </select>
-          <p>Ventas operativas: se registran ahora y descuentan existencias. Historial: conserva fecha y referencia de origen, exige costo e IVA efectivos de cada artículo y no cambia el stock actual. No vuelva a cargar ventas que ya registró manualmente.</p>
+          <input type="file" id="import-file" class="form-input" accept=".xlsx,.csv" required>
+          <div class="form-hint" style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">
+            No necesitas usar plantillas rígidas: lee cualquier hoja de cálculo (.xlsx o .csv) y detecta productos e historial de ventas automáticamente.
+          </div>
         </div>
 
-        <!-- Paso 2 -->
-        <div style="margin-bottom: 20px; padding: 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.06);">
-          <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-bottom: 8px;">
-            <strong>Paso 2:</strong> Descarga la plantilla de ejemplo
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px;">
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="import-type">Modo de detección</label>
+            <select id="import-type" class="form-input">
+              <option value="unified" selected>Detección automática integral (Productos y Ventas)</option>
+              <option value="products">Solo catálogo de productos</option>
+              <option value="sales">Solo ventas actuales (descuentan stock)</option>
+              <option value="historical_sales">Solo historial de ventas (sin cambiar stock)</option>
+            </select>
           </div>
-          <p style="font-size: 12px; color: var(--ink-muted); margin: 0 0 10px;">
-            Usa estas plantillas oficiales para diligenciar tus datos con las columnas correctas:
+          <div class="form-group" style="margin-bottom: 0;">
+            <label class="form-label" for="import-mode">Acción al confirmar</label>
+            <select id="import-mode" class="form-input">
+              <option value="commit" selected>Guardar todo en mi negocio</option>
+              <option value="preview">Solo revisar si el archivo está bien (sin guardar aún)</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- Resumen Visual Unificado (aparece al analizar archivo) -->
+        <div id="unified-import-summary-panel" style="display: none; margin-bottom: 16px; padding: 14px; border-radius: var(--radius-control); background: #F0FDF4; border: 1px solid #BBF7D0;">
+          <div id="unified-analysis-banner" style="font-size: 13px; font-weight: 700; color: #065F46; margin-bottom: 10px;">
+            Análisis de tu archivo completado: Se encontraron 0 productos y 0 ventas registradas
+          </div>
+
+          <div id="unified-products-preview-wrap" style="margin-bottom: 12px; display: none;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">Productos detectados</div>
+            <div class="preview-table-container">
+              <table id="unified-products-preview-table" class="preview-table">
+                <thead>
+                  <tr>
+                    <th>SKU</th>
+                    <th>Producto</th>
+                    <th>Categoría</th>
+                    <th>Costo</th>
+                    <th>Precio</th>
+                    <th>Stock</th>
+                  </tr>
+                </thead>
+                <tbody id="unified-products-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="unified-sales-preview-wrap" style="display: none;">
+            <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">Ventas registradas detectadas</div>
+            <div class="preview-table-container">
+              <table id="unified-sales-preview-table" class="preview-table">
+                <thead>
+                  <tr>
+                    <th>Ref.</th>
+                    <th>Fecha</th>
+                    <th>Producto</th>
+                    <th>Cant.</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody id="unified-sales-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enlace secundario opcional de plantillas (no obligatorio, sin desbordar) -->
+        <details style="margin-bottom: 16px; padding: 12px 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.06);">
+          <summary style="font-size: 12px; font-weight: 600; color: var(--ink-secondary); cursor: pointer;">
+            ¿No tienes un archivo aún? Descarga una plantilla vacía opcional (No es obligatorio usar plantilla)
+          </summary>
+          <p style="font-size: 12px; color: var(--ink-muted); margin: 8px 0 10px;">
+            Si prefieres partir desde un modelo limpio, puedes descargar cualquiera de estas plantillas CSV opcionales:
           </p>
-          <div style="display: flex; gap: 10px;">
-            <a href="/static/plantilla_productos_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 12px;">
+          <div id="import-template-links" style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <a href="{{ root_path }}/static/plantilla_productos_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 10px; white-space: normal; height: auto; text-align: center;">
               <i data-lucide="download" style="width: 13px; height: 13px;"></i>
               Plantilla Productos (.csv)
             </a>
-            <a href="{{ root_path }}/static/plantilla_ventas_operativas.csv" class="btn btn-secondary" download>Plantilla Ventas actuales (.csv)</a>
-            <a href="{{ root_path }}/static/plantilla_ventas_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 12px;">
+            <a href="{{ root_path }}/static/plantilla_ventas_operativas.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 10px; white-space: normal; height: auto; text-align: center;">
+              <i data-lucide="download" style="width: 13px; height: 13px;"></i>
+              Plantilla Ventas actuales (.csv)
+            </a>
+            <a href="{{ root_path }}/static/plantilla_ventas_ejemplo.csv" class="btn btn-secondary" download style="font-size: 12px; padding: 6px 10px; white-space: normal; height: auto; text-align: center;">
               <i data-lucide="download" style="width: 13px; height: 13px;"></i>
               Plantilla Historial (.csv)
             </a>
           </div>
-        </div>
+        </details>
 
-        <!-- Paso 3 -->
-        <div style="margin-bottom: 20px;">
-          <div style="font-size: 13px; font-weight: 600; color: var(--ink-primary); margin-bottom: 12px;">
-            <strong>Paso 3:</strong> Sube tu archivo y elige cómo procesarlo
+        <!-- Panel de Mapeo Avanzado (aparece al seleccionar archivo para inspección o ajuste fino) -->
+        <div id="smart-mapper-panel" class="excel-mapper-box" style="display: none;">
+          <div class="excel-mapper-header">
+            <span class="excel-mapper-title">
+              <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
+              Detalle de Columnas Detectadas
+            </span>
+            <span id="mapper-sheet-badge" class="badge-neutral" style="font-size: 11px;">Hoja 1</span>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="import-file">Seleccionar archivo de Excel o CSV *</label>
-            <input type="file" id="import-file" class="form-input" accept=".xlsx,.csv" required>
-            <div class="form-hint" style="font-size: 11px; color: var(--ink-muted); margin-top: 4px;">
-              Formatos soportados: hojas de cálculo Excel (.xlsx) o archivos separados por comas (.csv).
+          <div id="sheet-selector-group" class="form-group" style="display: none; margin-bottom: 12px;">
+            <label class="mapping-label" for="import-sheet-select">Hoja de cálculo a inspeccionar:</label>
+            <select id="import-sheet-select" class="mapping-select"></select>
+          </div>
+
+          <div class="mapping-grid">
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-sku">SKU / Código:</label>
+              <select id="map-col-sku" class="mapping-select" data-field="sku"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-name">Nombre del Producto *:</label>
+              <select id="map-col-name" class="mapping-select" data-field="name"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-category">Categoría:</label>
+              <select id="map-col-category" class="mapping-select" data-field="category"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-cost_price">Costo de Compra:</label>
+              <select id="map-col-cost_price" class="mapping-select" data-field="cost_price"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-sale_price">Precio de Venta *:</label>
+              <select id="map-col-sale_price" class="mapping-select" data-field="sale_price"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-initial_stock">Stock / Existencias:</label>
+              <select id="map-col-initial_stock" class="mapping-select" data-field="initial_stock"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-unit">Unidad de Medida:</label>
+              <select id="map-col-unit" class="mapping-select" data-field="unit"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-min_stock">Stock Mínimo:</label>
+              <select id="map-col-min_stock" class="mapping-select" data-field="min_stock"></select>
+            </div>
+            <div class="mapping-item">
+              <label class="mapping-label" for="map-col-vat_rate">IVA (%):</label>
+              <select id="map-col-vat_rate" class="mapping-select" data-field="vat_rate"></select>
             </div>
           </div>
 
-          <div class="form-group">
-            <label class="form-label" for="import-mode">Acción a realizar</label>
-            <select id="import-mode" class="form-input">
-              <option value="commit">Guardar filas válidas en mi negocio</option>
-              <option value="preview" selected>Solo revisar si el archivo está bien (sin guardar aún)</option>
-            </select>
-          </div>
-
-          <!-- Panel de Mapeo Inteligente (aparece al seleccionar archivo) -->
-          <div id="smart-mapper-panel" class="excel-mapper-box" style="display: none;">
-            <div class="excel-mapper-header">
-              <span class="excel-mapper-title">
-                <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
-                Asistente de Columnas de Excel
-              </span>
-              <span id="mapper-sheet-badge" class="badge-neutral" style="font-size: 11px;">Hoja 1</span>
-            </div>
-
-            <!-- Selector de Hoja si hay múltiples -->
-            <div id="sheet-selector-group" class="form-group" style="display: none; margin-bottom: 12px;">
-              <label class="mapping-label" for="import-sheet-select">Hoja de cálculo a importar:</label>
-              <select id="import-sheet-select" class="mapping-select"></select>
-            </div>
-
-            <div style="font-size: 11px; color: var(--ink-muted); margin-bottom: 10px;">
-              Detectamos las columnas de tu Excel automáticamente. Puedes verificar o ajustar el emparejamiento:
-            </div>
-
-            <!-- Cuadrícula de mapeo de campos -->
-            <div class="mapping-grid">
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-sku">SKU / Código (o autogenerar):</label>
-                <select id="map-col-sku" class="mapping-select" data-field="sku"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-name">Nombre del Producto *:</label>
-                <select id="map-col-name" class="mapping-select" data-field="name"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-category">Categoría:</label>
-                <select id="map-col-category" class="mapping-select" data-field="category"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-cost_price">Costo de Compra:</label>
-                <select id="map-col-cost_price" class="mapping-select" data-field="cost_price"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-sale_price">Precio base sin IVA *:</label>
-                <select id="map-col-sale_price" class="mapping-select" data-field="sale_price"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-initial_stock">Stock / Existencias:</label>
-                <select id="map-col-initial_stock" class="mapping-select" data-field="initial_stock"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-unit">Unidad de Medida:</label>
-                <select id="map-col-unit" class="mapping-select" data-field="unit"></select>
-              </div>
-              <div class="mapping-item">
-                <label class="mapping-label" for="map-col-min_stock">Stock Mínimo:</label>
-                <select id="map-col-min_stock" class="mapping-select" data-field="min_stock"></select>
-              </div>
-              <div class="mapping-item">
-                <label for="map-col-vat_rate">Tarifa IVA (%):</label>
-                <select id="map-col-vat_rate" class="mapping-select" data-field="vat_rate"></select>
-                <small>Si se omite, se conserva el valor heredado de 19%. Revisa antes de guardar.</small>
-              </div>
-            </div>
-
-            <!-- Previsualización de primeras 3 filas -->
-            <div style="margin-top: 12px;">
-              <span class="mapping-label" style="display: block; margin-bottom: 6px;">Previsualización de Primeras Filas:</span>
-              <div class="preview-table-container">
-                <table id="mapper-preview-table" class="preview-table">
-                  <thead id="mapper-preview-thead"></thead>
-                  <tbody id="mapper-preview-tbody"></tbody>
-                </table>
-              </div>
+          <div style="margin-top: 12px;">
+            <span class="mapping-label" style="display: block; margin-bottom: 6px;">Muestra de filas leídas:</span>
+            <div class="preview-table-container">
+              <table id="mapper-preview-table" class="preview-table">
+                <thead id="mapper-preview-thead"></thead>
+                <tbody id="mapper-preview-tbody"></tbody>
+              </table>
             </div>
           </div>
         </div>
@@ -1532,7 +1570,7 @@
 
       <div class="drawer-footer">
         <button type="button" class="btn btn-secondary" data-close-drawer="drawer-import">Cerrar</button>
-        <button type="submit" class="btn btn-primary" id="btn-submit-import">Confirmar e Importar Datos</button>
+        <button type="submit" class="btn btn-primary" id="btn-submit-import">Confirmar y Guardar Todo en Mi Cuenta</button>
       </div>
     </form>
   </aside>
@@ -1602,14 +1640,20 @@
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
-            <label class="form-label" for="edit-prod-cost">Costo unitario contable (COP) *</label>
+            <label class="form-label" for="edit-prod-cost">Costo de compra unitario (COP) *</label>
             <input type="number" id="edit-prod-cost" class="form-input" min="0" step="0.01" required>
           </div>
           <div class="form-group">
-            <label class="form-label" for="edit-prod-price">Precio base SIN IVA (COP) *</label>
+            <label class="form-label" for="edit-prod-price">Precio de venta al público (COP) *</label>
             <input type="number" id="edit-prod-price" class="form-input" min="0" step="0.01" required>
-            <label class="form-label" for="edit-prod-vat-rate">Tarifa IVA confirmada (%) *</label>
-            <input type="number" id="edit-prod-vat-rate" class="form-input" min="0" max="100" step="0.01" required>
+          </div>
+          <div class="form-group" style="grid-column: 1 / -1;">
+            <label class="form-label" for="edit-prod-vat-rate">IVA del producto *</label>
+            <select id="edit-prod-vat-rate" class="form-input" required>
+              <option value="0">No aplica / Exento (0% - Precio final)</option>
+              <option value="5">IVA 5%</option>
+              <option value="19">IVA 19%</option>
+            </select>
           </div>
         </div>
 

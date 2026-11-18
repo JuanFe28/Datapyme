@@ -83,8 +83,14 @@ def test_01_login_styling_and_quick_fill(page: Page):
     page.goto(f"{BASE_URL}/login")
     page.wait_for_load_state("networkidle")
 
-    # El login público corporativo no debe mostrar cuentas demo
+    # El login público corporativo no debe mostrar cuentas demo ni datos reales en placeholder
     assert page.locator(".login-demo-pill").count() == 0
+    placeholder_text = page.locator("#email").get_attribute("placeholder") or ""
+    assert placeholder_text == "Ej. micomercio, 3001234567 o gerencia@miempresa.co"
+    assert "vafelsweet" not in placeholder_text.lower()
+    expect(page.locator(".login-subtitle")).to_have_text(
+        "Gestión comercial, inventarios y rentabilidad para PyMEs"
+    )
 
     # 1. Verificar tarjeta y estilos aplicados
     card = page.locator(".login-card")
@@ -441,12 +447,32 @@ def test_08_superadmin_provision_and_client_activation(page: Page):
     page.wait_for_url("**/auth/activar-cuenta")
     page.wait_for_load_state("networkidle")
 
-    # 4. Definir contraseña definitiva + aceptar Ley 1581
+    # 4. Verificar checklist en vivo, doble chulito al coincidir, ambos checkboxes obligatorios y activar
+    submit_btn = page.locator("#btn-activate-submit")
+    expect(submit_btn).to_be_disabled()
+    expect(page.locator("text=Blindaje contra accesos no autorizados (Recomendado)")).to_be_visible()
+
+    page.fill("#password", "debil")
+    expect(page.locator("#req-length")).not_to_have_class(re.compile(r"valid"))
+
     page.fill("#password", "ClaveDefinitiva2026!")
+    expect(page.locator("#req-length")).to_have_class(re.compile(r"valid"))
+    expect(page.locator("#req-upper")).to_have_class(re.compile(r"valid"))
+    expect(page.locator("#req-number")).to_have_class(re.compile(r"valid"))
+    expect(page.locator("#req-symbol")).to_have_class(re.compile(r"valid"))
+
     page.fill("#confirm_password", "ClaveDefinitiva2026!")
+    expect(page.locator("#password-valid-check")).to_have_class(re.compile(r"visible"))
+    expect(page.locator("#confirm-valid-check")).to_have_class(re.compile(r"visible"))
+
+    # Al marcar solo un checkbox, el botón sigue deshabilitado
     page.check("#accept_data_policy")
+    expect(submit_btn).to_be_disabled()
+
+    # Al marcar ambos checkboxes, se habilita
     page.check("#accept_aggregate_stats")
-    page.locator("#btn-activate-submit").click()
+    expect(submit_btn).to_be_enabled()
+    submit_btn.click()
 
     page.wait_for_url("**/dashboard")
     page.wait_for_load_state("networkidle")
@@ -501,11 +527,51 @@ def test_10_spotlight_tour_and_cash_simulator(page: Page):
     expect(popover).to_be_visible()
     expect(popover).to_contain_text("Paso 1 de 5")
 
-    # Avanzar al Paso 2
-    page.locator("#btn-tour-next").click()
-    expect(popover).to_contain_text("Paso 2 de 5")
+    # Clic fuera del elemento iluminado NO debe cerrar el tutorial
+    page.mouse.click(12, 12)
+    expect(popover).to_be_visible()
 
-    # Omitir tutorial limpiamente
-    page.locator("#btn-tour-skip").click()
+    # Avanzar al Paso 2.1 -> debe abrir #drawer-product y elevar z-index sobre el drawer
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 2.1 de 5")
+    expect(page.locator("#drawer-product")).to_have_class(re.compile(r"open"))
+    z_idx = popover.evaluate("el => parseInt(window.getComputedStyle(el).zIndex || '0', 10)")
+    assert z_idx >= 100002, f"El popover del tutorial debe quedar por encima del drawer: {z_idx}"
+
+    # Retroceder con Anterior -> debe cerrar #drawer-product automáticamente
+    page.locator("#btn-tour-prev").click()
+    expect(popover).to_contain_text("Paso 1 de 5")
+    expect(page.locator("#drawer-product")).not_to_have_class(re.compile(r"open"))
+
+    # Recorrer sub-pasos 2.1 -> 2.2 -> 2.3 -> 3.1 (abre drawer-sale) -> 3.2 -> 4 (cierra drawer-sale) -> 5
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 2.1 de 5")
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 2.2 de 5")
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 2.3 de 5")
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 3.1 de 5")
+    expect(page.locator("#drawer-product")).not_to_have_class(re.compile(r"open"))
+    expect(page.locator("#drawer-sale")).to_have_class(re.compile(r"open"))
+
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 3.2 de 5")
+    page.locator("#btn-tour-next").click()
+    expect(popover).to_contain_text("Paso 4 de 5")
+    expect(page.locator("#drawer-sale")).not_to_have_class(re.compile(r"open"))
+
+    # Llegar al modal final y verificar botón sin recorte ni desbordamiento
+    page.locator("#btn-tour-next").click()
+    final_btn = page.locator("#btn-tour-purge-training")
+    expect(final_btn).to_be_visible()
+    expect(final_btn).to_have_text("Borrar datos de práctica (Dejar mi cuenta 100% en limpio)")
+    btn_fit = final_btn.evaluate(
+        "el => ({ ws: window.getComputedStyle(el).whiteSpace, sw: el.scrollWidth, cw: el.clientWidth })"
+    )
+    assert btn_fit["ws"] == "normal" and btn_fit["sw"] <= btn_fit["cw"] + 2, btn_fit
+
+    # Finalizar limpiamente
+    page.locator("#btn-tour-keep-training").click()
     page.wait_for_load_state("networkidle")
     expect(page.locator(".dp-spotlight-popover")).to_have_count(0)

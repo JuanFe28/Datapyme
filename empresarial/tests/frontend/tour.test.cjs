@@ -17,7 +17,7 @@ test('a rejected cleanup keeps the tour and explains why instead of pretending i
   });
   vm.runInContext(fs.readFileSync(path.join(__dirname,'../../static/js/spotlight_tour.js'),'utf8'),ctx);
   ctx.window.startSpotlightTour();
-  for(let i=0;i<4;i++)buttons.get('#btn-tour-next')();
+  for(let i=0;i<7;i++)buttons.get('#btn-tour-next')();
   await buttons.get('#btn-tour-purge-training')();
   assert.equal(reloads,0);
   assert.equal(ctx.window.__SPOTLIGHT_TRAINING_ACTIVE__,true);

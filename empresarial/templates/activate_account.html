@@ -19,7 +19,7 @@
     }
     .activate-card {
       width: 100%;
-      max-width: 520px;
+      max-width: 540px;
       background: var(--surface-card);
       border: 1px solid rgba(15, 23, 42, 0.08);
       border-radius: var(--radius-modal);
@@ -50,6 +50,77 @@
       color: var(--ink-primary);
       margin-top: 3px;
     }
+    .pwd-input-wrap {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .pwd-input-wrap input {
+      width: 100%;
+      padding-right: 38px;
+      transition: border-color 150ms ease, box-shadow 150ms ease;
+    }
+    .pwd-input-wrap input.input-matched {
+      border-color: #059669;
+      box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.14);
+    }
+    .pwd-match-indicator {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 15px;
+      font-weight: 700;
+      color: #059669;
+      display: none;
+      pointer-events: none;
+      line-height: 1;
+    }
+    .pwd-match-indicator.visible {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .pwd-checklist {
+      list-style: none;
+      margin: 10px 0 0;
+      padding: 10px 12px;
+      border-radius: var(--radius-control);
+      background: var(--surface-subtle);
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 12px;
+    }
+    .pwd-req-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 12px;
+      color: var(--ink-muted);
+      transition: color 140ms ease;
+    }
+    .pwd-req-item .pwd-req-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 16px;
+      height: 16px;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 700;
+      background: #E2E8F0;
+      color: #64748B;
+      flex-shrink: 0;
+    }
+    .pwd-req-item.valid {
+      color: #059669;
+      font-weight: 600;
+    }
+    .pwd-req-item.valid .pwd-req-icon {
+      background: #059669;
+      color: #FFFFFF;
+    }
     .consent-check {
       display: flex;
       align-items: flex-start;
@@ -58,6 +129,7 @@
       font-size: 13px;
       color: var(--ink-secondary);
       line-height: 1.45;
+      cursor: pointer;
     }
     .consent-check input[type="checkbox"] {
       width: 18px;
@@ -66,9 +138,22 @@
       flex-shrink: 0;
       accent-color: var(--accent-primary);
     }
+    .mfa-shield-card {
+      margin: 16px 0;
+      padding: 16px;
+      border-radius: var(--radius-control);
+      background: linear-gradient(135deg, rgba(13, 122, 111, 0.05), rgba(16, 185, 129, 0.04));
+      border: 1px solid rgba(13, 122, 111, 0.2);
+    }
+    #btn-activate-submit:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(0.2);
+    }
     @media (max-width: 540px) {
       .activate-card { padding: 24px 18px; }
       .profile-summary-strip { grid-template-columns: 1fr; }
+      .pwd-checklist { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -89,7 +174,7 @@
 
       <div class="profile-summary-strip" aria-label="Resumen de interfaz personalizada">
         <div class="profile-summary-item">
-          <span>Enfoque según encuesta</span>
+          <span>Enfoque asignado</span>
           <strong>{{ focus_label }}</strong>
         </div>
         <div class="profile-summary-item">
@@ -104,36 +189,54 @@
       </div>
       {% endif %}
 
-      <form method="post" action="{{ root_path | default('') }}/auth/activar-cuenta">
+      <form id="activate-form" method="post" action="{{ root_path | default('') }}/auth/activar-cuenta">
         <div class="form-group">
           <label for="password">Nueva contraseña privada (mínimo 10 caracteres)</label>
-          <input id="password" name="password" type="password" required minlength="10" autocomplete="new-password" placeholder="Elige una clave segura que solo tú conozcas">
+          <div class="pwd-input-wrap">
+            <input id="password" name="password" type="password" class="form-input" required minlength="10" autocomplete="new-password" placeholder="Elige una clave segura que solo tú conozcas">
+            <span id="password-valid-check" class="pwd-match-indicator" aria-hidden="true">&#10003;</span>
+          </div>
+
+          <ul id="password-checklist" class="pwd-checklist" aria-live="polite">
+            <li id="req-length" class="pwd-req-item"><span class="pwd-req-icon">-</span><span>Mínimo 10 caracteres</span></li>
+            <li id="req-upper" class="pwd-req-item"><span class="pwd-req-icon">-</span><span>Al menos una letra mayúscula (A-Z)</span></li>
+            <li id="req-number" class="pwd-req-item"><span class="pwd-req-icon">-</span><span>Al menos un número (0-9)</span></li>
+            <li id="req-symbol" class="pwd-req-item"><span class="pwd-req-icon">-</span><span>Al menos un símbolo (!@#$%^&amp;*.,_-)</span></li>
+          </ul>
         </div>
 
         <div class="form-group">
           <label for="confirm_password">Confirmar nueva contraseña</label>
-          <input id="confirm_password" name="confirm_password" type="password" required minlength="10" autocomplete="new-password" placeholder="Repite tu nueva contraseña">
+          <div class="pwd-input-wrap">
+            <input id="confirm_password" name="confirm_password" type="password" class="form-input" required minlength="10" autocomplete="new-password" placeholder="Repite tu nueva contraseña">
+            <span id="confirm-valid-check" class="pwd-match-indicator" aria-hidden="true">&#10003;</span>
+          </div>
+          <div id="pwd-match-hint" style="font-size: 12px; color: var(--ink-muted); margin-top: 5px; min-height: 16px;"></div>
         </div>
 
         <label class="consent-check" for="accept_data_policy">
           <input id="accept_data_policy" name="accept_data_policy" type="checkbox" value="true" required>
-          <span>Acepto la Política de Tratamiento de Datos Personales (Ley 1581 de 2012) y los Términos de Validación del prototipo Datapyme.</span>
+          <span><strong>Obligatorio:</strong> Acepto la Política de Tratamiento de Datos Personales (Ley 1581 de 2012) y los Términos de Uso de Datapyme Empresarial.</span>
         </label>
 
         <label class="consent-check" for="accept_aggregate_stats">
-          <input id="accept_aggregate_stats" name="accept_aggregate_stats" type="checkbox" value="true">
-          <span>Autorizo el aporte de indicadores estadísticos anónimos (sin nombre de mi empresa ni datos personales) para estudios del sector comercial.</span>
+          <input id="accept_aggregate_stats" name="accept_aggregate_stats" type="checkbox" value="true" required>
+          <span><strong>Obligatorio:</strong> Autorizo el aporte de indicadores estadísticos anónimos (sin nombre de mi empresa ni datos personales) para estudios del sector comercial.</span>
         </label>
 
         <!-- Verificación en Dos Pasos (Opcional · Recomendado) -->
-        <div style="margin: 14px 0; padding: 14px; border-radius: var(--radius-control); background: var(--surface-subtle); border: 1px solid rgba(15, 23, 42, 0.08);">
-          <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
-            <div>
-              <strong style="font-size: 13px; color: var(--ink-primary);">Verificación en Dos Pasos · 2FA (Opcional · Recomendado)</strong>
-              <div style="font-size: 11px; color: var(--ink-secondary); margin-top: 2px;">Protege tu ingreso con Google Authenticator, Microsoft Authenticator o Authy (100% gratuito).</div>
+        <div class="mfa-shield-card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap;">
+            <div style="flex: 1; min-width: 240px;">
+              <div style="margin-bottom: 6px;">
+                <span class="badge-success" style="font-size: 11px; padding: 3px 9px; font-weight: 600;">Nivel de seguridad: Alta protección</span>
+              </div>
+              <strong style="display: block; font-size: 13px; color: var(--ink-primary); line-height: 1.4;">
+                Blindaje contra accesos no autorizados (Recomendado): Protege la caja y el inventario de tu negocio activando el código de seguridad desde tu celular (Google Authenticator)
+              </strong>
             </div>
-            <button type="button" id="btn-setup-mfa-activate" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px; min-height: 36px;">
-              Configurar 2FA ahora
+            <button type="button" id="btn-setup-mfa-activate" class="btn btn-secondary" style="font-size: 12px; padding: 8px 14px; min-height: 38px; white-space: nowrap;">
+              Activar blindaje 2FA
             </button>
           </div>
 
@@ -141,7 +244,7 @@
             <div style="display: flex; gap: 14px; align-items: flex-start; flex-wrap: wrap;">
               <div id="activate-mfa-qr" style="background: #fff; padding: 8px; border-radius: 8px; border: 1px solid rgba(15, 23, 42, 0.08);"></div>
               <div style="flex: 1; min-width: 200px;">
-                <div style="font-size: 12px; color: var(--ink-secondary); margin-bottom: 6px;">Escanea el QR e ingresa el código temporal de 6 dígitos para activarlo (puedes guardar estos 5 códigos de respaldo):</div>
+                <div style="font-size: 12px; color: var(--ink-secondary); margin-bottom: 6px;">Escanea el QR con Google Authenticator e ingresa el código temporal de 6 dígitos (guarda estos 5 códigos de respaldo):</div>
                 <div id="activate-mfa-backups" style="font-family: var(--font-mono); font-size: 11px; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid rgba(15, 23, 42, 0.08); margin-bottom: 8px;"></div>
                 <div style="display: flex; gap: 8px;">
                   <input id="activate-mfa-code" type="text" maxlength="6" placeholder="Código 6 dígitos" style="flex: 1; height: 38px; padding: 0 10px; border: 1px solid rgba(15,23,42,0.18); border-radius: 8px; font-family: var(--font-mono);">
@@ -153,7 +256,7 @@
           </div>
         </div>
 
-        <button type="submit" id="btn-activate-submit" class="btn btn-primary login-btn-submit" style="margin-top: 16px;">
+        <button type="submit" id="btn-activate-submit" class="btn btn-primary login-btn-submit" style="margin-top: 16px;" disabled>
           Guardar Clave y Entrar al Panel
         </button>
       </form>
@@ -166,6 +269,77 @@
 
   <script>
     (function () {
+      const CHECK = String.fromCharCode(10003);
+      const pwdInput = document.getElementById('password');
+      const confirmInput = document.getElementById('confirm_password');
+      const pwdCheckEl = document.getElementById('password-valid-check');
+      const confirmCheckEl = document.getElementById('confirm-valid-check');
+      const matchHint = document.getElementById('pwd-match-hint');
+      const policyCheck = document.getElementById('accept_data_policy');
+      const statsCheck = document.getElementById('accept_aggregate_stats');
+      const submitBtn = document.getElementById('btn-activate-submit');
+
+      const reqs = {
+        length: { el: document.getElementById('req-length'), test: (v) => v.length >= 10 },
+        upper: { el: document.getElementById('req-upper'), test: (v) => /[A-ZÁÉÍÓÚÑ]/.test(v) },
+        number: { el: document.getElementById('req-number'), test: (v) => /[0-9]/.test(v) },
+        symbol: { el: document.getElementById('req-symbol'), test: (v) => /[^A-Za-z0-9\s]/.test(v) },
+      };
+
+      function evaluateActivationForm() {
+        const val = pwdInput ? pwdInput.value : '';
+        const conf = confirmInput ? confirmInput.value : '';
+
+        let allValid = true;
+        Object.values(reqs).forEach((rule) => {
+          const ok = rule.test(val);
+          if (!ok) allValid = false;
+          if (rule.el) {
+            rule.el.classList.toggle('valid', ok);
+            const icon = rule.el.querySelector('.pwd-req-icon');
+            if (icon) icon.textContent = ok ? CHECK : '-';
+          }
+        });
+
+        const matched = allValid && conf.length > 0 && val === conf;
+        if (pwdCheckEl) {
+          pwdCheckEl.textContent = CHECK;
+          pwdCheckEl.classList.toggle('visible', matched);
+        }
+        if (confirmCheckEl) {
+          confirmCheckEl.textContent = CHECK;
+          confirmCheckEl.classList.toggle('visible', matched);
+        }
+        if (pwdInput) pwdInput.classList.toggle('input-matched', matched);
+        if (confirmInput) confirmInput.classList.toggle('input-matched', matched);
+
+        if (matchHint) {
+          if (!conf.length) {
+            matchHint.textContent = '';
+          } else if (val !== conf) {
+            matchHint.style.color = '#DC2626';
+            matchHint.textContent = 'Las contraseñas aún no coinciden.';
+          } else if (!allValid) {
+            matchHint.style.color = '#D97706';
+            matchHint.textContent = 'Coinciden, pero faltan requisitos arriba.';
+          } else {
+            matchHint.style.color = '#059669';
+            matchHint.textContent = `${CHECK} Contraseñas válidas y coincidentes.`;
+          }
+        }
+
+        const legalOk = Boolean(policyCheck && policyCheck.checked && statsCheck && statsCheck.checked);
+        if (submitBtn) {
+          submitBtn.disabled = !(allValid && matched && legalOk);
+        }
+      }
+
+      if (pwdInput) pwdInput.addEventListener('input', evaluateActivationForm);
+      if (confirmInput) confirmInput.addEventListener('input', evaluateActivationForm);
+      if (policyCheck) policyCheck.addEventListener('change', evaluateActivationForm);
+      if (statsCheck) statsCheck.addEventListener('change', evaluateActivationForm);
+      evaluateActivationForm();
+
       const setupBtn = document.getElementById('btn-setup-mfa-activate');
       const box = document.getElementById('activate-mfa-box');
       const qrEl = document.getElementById('activate-mfa-qr');

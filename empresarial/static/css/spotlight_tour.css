@@ -2,13 +2,14 @@
 .dp-spotlight-layer {
   position: fixed;
   inset: 0;
-  z-index: 9000;
+  z-index: 100000;
   pointer-events: none;
 }
 
 .dp-spotlight-backdrop {
   position: fixed;
   inset: 0;
+  z-index: 100000;
   background: rgba(15, 23, 42, 0.56);
   pointer-events: auto;
 }
@@ -16,22 +17,23 @@
 .dp-spotlight-highlight {
   position: fixed;
   border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.62), 0 0 0 3px #14B8A6;
+  box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.58), 0 0 0 3px #14B8A6;
   transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
   pointer-events: none;
-  z-index: 9001;
+  z-index: 100001;
 }
 
 .dp-spotlight-popover {
   position: fixed;
-  z-index: 9002;
+  z-index: 100002;
   pointer-events: auto;
-  width: min(360px, calc(100vw - 24px));
+  width: min(370px, calc(100vw - 24px));
   background: #FFFFFF;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 14px;
-  box-shadow: 0 20px 44px -8px rgba(15, 23, 42, 0.25);
+  box-shadow: 0 20px 44px -8px rgba(15, 23, 42, 0.28);
   padding: 18px 20px;
+  box-sizing: border-box;
 }
 
 .dp-spotlight-step-tag {
@@ -70,12 +72,24 @@
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 9003;
+  z-index: 100003;
   pointer-events: auto;
-  width: min(460px, calc(100vw - 24px));
+  width: min(470px, calc(100vw - 24px));
   background: #FFFFFF;
   border-radius: 16px;
-  border: 1px solid rgba(15, 23, 42, 0.1);
+  border: 1px solid rgba(15, 23, 42, 0.12);
   box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.35);
   padding: 26px 24px;
+  box-sizing: border-box;
+}
+
+.dp-spotlight-final-btn {
+  white-space: normal;
+  line-height: 1.35;
+  padding: 12px 16px;
+  width: 100%;
+  box-sizing: border-box;
+  text-align: center;
+  height: auto;
+  min-height: 44px;
 }

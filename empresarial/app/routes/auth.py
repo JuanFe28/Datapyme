@@ -1,5 +1,6 @@
 """Rutas de autenticación, sesión y registro de empresas (Sprints 1 y 7, F-DC-124)."""
 
+import re
 from datetime import timedelta
 from decimal import Decimal
 
@@ -517,12 +518,20 @@ def activate_account_submit(
         return RedirectResponse(f"{root_path}/login", status_code=303)
 
     templates = request.app.state.templates
-    if len(password) < 10:
+    if (
+        len(password) < 10
+        or not re.search(r"[A-ZÁÉÍÓÚÑ]", password)
+        or not re.search(r"\d", password)
+        or not re.search(r"[^A-Za-z0-9\s]", password)
+    ):
         return templates.TemplateResponse(
             request=request,
             name="activate_account.html",
             context=_activation_context(
-                db, request, user, "La nueva contraseña debe tener al menos 10 caracteres."
+                db,
+                request,
+                user,
+                "La contraseña debe tener mínimo 10 caracteres, 1 mayúscula, 1 número y 1 símbolo especial.",
             ),
             status_code=422,
         )
@@ -545,7 +554,7 @@ def activate_account_submit(
             ),
             status_code=422,
         )
-    if not accept_data_policy:
+    if not accept_data_policy or not accept_aggregate_stats:
         return templates.TemplateResponse(
             request=request,
             name="activate_account.html",
@@ -553,7 +562,7 @@ def activate_account_submit(
                 db,
                 request,
                 user,
-                "Debes aceptar la Política de Tratamiento de Datos (Ley 1581 de 2012) para continuar.",
+                "Debes marcar ambas casillas de autorización legal y estadística para activar tu cuenta.",
             ),
             status_code=422,
         )

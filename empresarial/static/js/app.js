@@ -276,17 +276,23 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // Cerrar al hacer click fuera del drawer (en el backdrop)
+  // Cerrar al hacer click fuera del drawer (en el backdrop), bloqueado durante tour activo
   document.querySelectorAll('.drawer-backdrop').forEach((backdrop) => {
     backdrop.addEventListener('click', (e) => {
+      if (window.__SPOTLIGHT_TRAINING_ACTIVE__ && document.querySelector('.dp-spotlight-layer')) {
+        return;
+      }
       if (e.target === backdrop) {
         backdrop.classList.remove('open');
       }
     });
   });
 
-  // Cerrar al pulsar Escape
+  // Cerrar al pulsar Escape, bloqueado durante tour activo
   document.addEventListener('keydown', (e) => {
+    if (window.__SPOTLIGHT_TRAINING_ACTIVE__ && document.querySelector('.dp-spotlight-layer')) {
+      return;
+    }
     if (e.key === 'Escape') {
       document.querySelectorAll('.drawer-backdrop.open').forEach((el) => el.classList.remove('open'));
     }
@@ -1333,23 +1339,108 @@ async function handleProductImageSelection(e) {
 }
 
 let currentImportInspection = null;
+let currentUnifiedAnalysis = null;
+
+function renderUnifiedSummaryPanel(data) {
+  const panel = document.getElementById('unified-import-summary-panel');
+  const banner = document.getElementById('unified-analysis-banner');
+  const prodWrap = document.getElementById('unified-products-preview-wrap');
+  const prodTbody = document.getElementById('unified-products-tbody');
+  const saleWrap = document.getElementById('unified-sales-preview-wrap');
+  const saleTbody = document.getElementById('unified-sales-tbody');
+  if (!panel || !banner) return;
+
+  currentUnifiedAnalysis = data;
+  panel.style.display = 'block';
+  const prods = Array.isArray(data.products) ? data.products : [];
+  const sales = Array.isArray(data.sales) ? data.sales : [];
+  banner.textContent =
+    data.summary_text ||
+    `Análisis de tu archivo completado: Se encontraron ${prods.length} productos y ${sales.length} ventas registradas`;
+
+  if (prodWrap && prodTbody) {
+    prodTbody.innerHTML = '';
+    if (prods.length) {
+      prodWrap.style.display = 'block';
+      prods.slice(0, 8).forEach((p) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: var(--font-mono);">${escapeHtmlText(p.sku)}</td>
+          <td>${escapeHtmlText(p.name)}</td>
+          <td>${escapeHtmlText(p.category)}</td>
+          <td class="price-cell">${formatCOP(Number(p.cost_price || 0))}</td>
+          <td class="price-cell">${formatCOP(Number(p.sale_price || 0))}</td>
+          <td class="price-cell">${formatQtyValue(p.initial_stock)}</td>
+        `;
+        prodTbody.appendChild(tr);
+      });
+    } else {
+      prodWrap.style.display = 'none';
+    }
+  }
+
+  if (saleWrap && saleTbody) {
+    saleTbody.innerHTML = '';
+    if (sales.length) {
+      saleWrap.style.display = 'block';
+      sales.slice(0, 8).forEach((s) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td style="font-family: var(--font-mono);">${escapeHtmlText(s.sale_reference)}</td>
+          <td>${escapeHtmlText(s.occurred_at || 'Actual')}</td>
+          <td>${escapeHtmlText(s.product_name)}</td>
+          <td class="price-cell">${formatQtyValue(s.quantity)}</td>
+          <td class="price-cell">${formatCOP(Number(s.line_total || 0))}</td>
+        `;
+        saleTbody.appendChild(tr);
+      });
+    } else {
+      saleWrap.style.display = 'none';
+    }
+  }
+}
 
 async function handleImportFileInspection(e, targetSheet = null) {
   const fileInput = document.getElementById('import-file');
   const mapperPanel = document.getElementById('smart-mapper-panel');
+  const unifiedPanel = document.getElementById('unified-import-summary-panel');
   if (!fileInput || !fileInput.files.length) {
     if (mapperPanel) mapperPanel.style.display = 'none';
+    if (unifiedPanel) unifiedPanel.style.display = 'none';
     return;
   }
 
   const file = fileInput.files[0];
   const type = document.getElementById('import-type').value;
-  if (type !== 'products') {
+
+  showToast('Analizando estructura de tu archivo...', 'info');
+
+  if (type === 'unified' || type === 'products') {
+    const uForm = new FormData();
+    uForm.append('file', file);
+    try {
+      const uResp = await fetch(`${ROOT_PATH}/api/imports/unified?mode=preview`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: uForm,
+      });
+      if (uResp.ok) {
+        const uData = await uResp.json();
+        renderUnifiedSummaryPanel(uData);
+      } else if (unifiedPanel) {
+        unifiedPanel.style.display = 'none';
+      }
+    } catch (_) {
+      if (unifiedPanel) unifiedPanel.style.display = 'none';
+    }
+  } else if (unifiedPanel) {
+    unifiedPanel.style.display = 'none';
+  }
+
+  if (type !== 'products' && type !== 'unified') {
     if (mapperPanel) mapperPanel.style.display = 'none';
     return;
   }
-
-  showToast('Analizando estructura del archivo...', 'info');
 
   const formData = new FormData();
   formData.append('file', file);
@@ -1417,7 +1508,7 @@ async function handleImportFileInspection(e, targetSheet = null) {
     // Renderizar previsualización
     renderMapperPreviewTable(data.sample_rows || [], columns);
 
-    showToast(`Estructura detectada: Encabezados en fila ${data.header_row_index}`, 'success');
+    showToast(`Análisis completado (encabezados en fila ${data.header_row_index})`, 'success');
   } catch (err) {
     showToast('Error al inspeccionar columnas del archivo', 'error');
   }
@@ -1496,7 +1587,7 @@ async function handleProductSubmit(e) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Guardar en Catálogo';
+      btn.textContent = 'Guardar Producto';
     }
   }
 }
@@ -1541,9 +1632,12 @@ async function handleImportSubmit(e) {
   }
 
   const endpoint =
-    type === 'products'
+    type === 'unified'
+      ? `/api/imports/unified?mode=${mode}`
+      : type === 'products'
       ? `/api/imports/products?mode=${mode}`
-      : type === 'historical_sales' ? `/api/imports/historical-sales?mode=${mode}`
+      : type === 'historical_sales'
+      ? `/api/imports/historical-sales?mode=${mode}`
       : `/api/imports/sales?mode=${mode}`;
 
   try {
@@ -1560,9 +1654,17 @@ async function handleImportSubmit(e) {
       : 'Error en validación del archivo';
     if (resDiv) {
       resDiv.style.display = 'block';
-      resDiv.textContent = resp.ok
-        ? `Resultado: ${data.rows_ok} filas válidas, ${data.rows_rejected} rechazadas. ${mode === 'preview' ? 'Revisión sin guardar productos ni ventas.' : 'Importación guardada.'}`
-        : errorMessage;
+      if (resp.ok && type === 'unified') {
+        renderUnifiedSummaryPanel(data);
+        resDiv.textContent =
+          mode === 'preview'
+            ? data.summary_text
+            : `Guardado en tu cuenta: ${data.products_created} productos nuevos y ${data.sales_created} ventas registradas.`;
+      } else {
+        resDiv.textContent = resp.ok
+          ? `Resultado: ${data.rows_ok} filas válidas, ${data.rows_rejected} rechazadas. ${mode === 'preview' ? 'Revisión sin guardar productos ni ventas.' : 'Importación guardada.'}`
+          : errorMessage;
+      }
       if (resp.ok && Array.isArray(data.errors)) {
         data.errors.forEach((item) => {
           const line = document.createElement('div');
@@ -1584,7 +1686,7 @@ async function handleImportSubmit(e) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Confirmar e Importar Datos';
+      btn.textContent = 'Confirmar y Guardar Todo en Mi Cuenta';
     }
   }
 }
@@ -1653,7 +1755,11 @@ function openEditProductDrawer(productId) {
   document.getElementById('edit-prod-unit').value = prod.unit || 'und';
   document.getElementById('edit-prod-cost').value = parseFloat(prod.cost_price) || 0;
   document.getElementById('edit-prod-price').value = parseFloat(prod.sale_price) || 0;
-  document.getElementById('edit-prod-vat-rate').value = prod.vat_rate;
+  const vatEl = document.getElementById('edit-prod-vat-rate');
+  if (vatEl) {
+    const normVat = String(Math.round(Number(prod.vat_rate) || 0));
+    vatEl.value = ['0', '5', '19'].includes(normVat) ? normVat : '0';
+  }
   document.getElementById('edit-prod-stock-display').value = `${prod.stock_qty || 0} ${prod.unit || 'und'}`;
   document.getElementById('edit-prod-min-stock').value = parseFloat(prod.min_stock) || 0;
   document.getElementById('edit-prod-image-url').value = prod.image_url || '';
