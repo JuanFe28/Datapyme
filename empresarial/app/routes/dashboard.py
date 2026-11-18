@@ -153,8 +153,7 @@ def render_adaptive_dashboard(
     page = min(sales_page or 1, sales_pages)
     sales_offset = (page - 1) * page_size
     sales_history = [
-        serialize_sale(sale)
-        for sale in ordered_sales.offset(sales_offset).limit(page_size).all()
+        serialize_sale(sale) for sale in ordered_sales.offset(sales_offset).limit(page_size).all()
     ]
     recent_sales = (
         sales_history[:15]
@@ -163,8 +162,9 @@ def render_adaptive_dashboard(
     )
     practice_skus = [
         sku
-        for (sku,) in db.query(Product.sku)
-        .filter(Product.tenant_id == tenant.id, Product.sku.ilike("PRUEBA-%"))
+        for (sku,) in db.query(Product.sku).filter(
+            Product.tenant_id == tenant.id, Product.sku.ilike("PRUEBA-%")
+        )
     ]
     current_tax = tax_profile(db, tenant.id)
     for product in products:

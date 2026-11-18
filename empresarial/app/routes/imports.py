@@ -100,9 +100,7 @@ async def import_unified_endpoint(
         )
     existing_by_sku = {p.sku.upper(): p for p in existing_products if not p.is_training_data}
     existing_by_name = {
-        sanitize_cell_text(p.name, 180).casefold(): p
-        for p in existing_by_sku.values()
-        if p.is_active
+        sanitize_cell_text(p.name, 180).casefold(): p for p in existing_by_sku.values() if p.is_active
     }
 
     job = ImportJob(
