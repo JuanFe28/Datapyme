@@ -7,6 +7,7 @@ from app.core.commercial_service import (
     THREE_PLACES,
     TWO_PLACES,
     create_product_with_initial_stock,
+    normalize_unit_of_measure,
     parse_colombian_decimal,
     sanitize_cell_text,
     serialize_product,
@@ -130,7 +131,7 @@ def update_product(
     if payload.category is not None:
         prod.category = sanitize_cell_text(payload.category, 90)
     if payload.unit is not None:
-        prod.unit = sanitize_cell_text(payload.unit, 20)
+        prod.unit = normalize_unit_of_measure(payload.unit)
     if payload.cost_price is not None:
         prod.cost_price = parse_colombian_decimal(payload.cost_price, TWO_PLACES)
     if payload.sale_price is not None:

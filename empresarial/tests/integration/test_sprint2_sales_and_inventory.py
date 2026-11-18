@@ -248,3 +248,84 @@ def test_inventory_alerts_classification(client):
     assert [x["sku"] for x in alerts["out_of_stock"]] == ["SKU-OUT"]
     assert [x["sku"] for x in alerts["stockout_risk"]] == ["SKU-RISK"]
     assert [x["sku"] for x in alerts["overstock"]] == ["SKU-OVER"]
+
+
+def test_perfumery_ml_g_l_units_sale_dashboard_csv_and_import(client):
+    """Act. 3.8: Verifica creación, venta, tabla, comprobante, exportación CSV e importación en ml, g y l."""
+    token, _ = _register_company(
+        client, email="perfumeria@esencias.co", name="Perfumería Esencias Bucaramanga"
+    )
+    headers = {"Authorization": f"Bearer {token}"}
+
+    # 1. Crear producto de perfumería en mililitros (100 ml iniciales)
+    prod_res = client.post(
+        "/api/products",
+        headers=headers,
+        json={
+            "sku": "PERF-100ML",
+            "name": "Esencia Vainilla Premium",
+            "category": "Perfumería",
+            "unit": "ml",
+            "cost_price": "900.00",
+            "sale_price": "1800.00",
+            "vat_rate": "0.00",
+            "initial_stock": "100",
+            "min_stock": "20",
+        },
+    )
+    assert prod_res.status_code == 201, prod_res.text
+    prod = prod_res.json()
+    assert prod["unit"] == "ml"
+    assert Decimal(prod["stock_qty"]) == Decimal("100.000")
+
+    # 2. Vender 5 ml -> stock restante exacto = 95 ml
+    sale_res = client.post(
+        "/api/sales",
+        headers=headers,
+        json={
+            "customer_label": "Cliente Mostrador",
+            "payment_method": "cash",
+            "items": [{"product_id": prod["id"], "quantity": "5"}],
+        },
+    )
+    assert sale_res.status_code == 201, sale_res.text
+    sale_data = sale_res.json()
+    assert Decimal(sale_data["total"]) == Decimal("9000.00")
+    assert sale_data["items"][0]["product_unit"] == "ml"
+    assert Decimal(sale_data["items"][0]["quantity"]) == Decimal("5.000")
+
+    updated = client.get(f"/api/products/{prod['id']}", headers=headers).json()
+    assert Decimal(updated["stock_qty"]) == Decimal("95.000")
+    assert updated["unit"] == "ml"
+
+    # 3. Verificar en dashboard HTML el selector (ml, g, l + existentes) y stock "95 ml"
+    dash = client.get("/dashboard", headers={**headers, "Accept": "text/html"})
+    assert dash.status_code == 200
+    assert '<option value="ml">Mililitro (ml)</option>' in dash.text
+    assert '<option value="g">Gramo (g)</option>' in dash.text
+    assert '<option value="l">Litro (L)</option>' in dash.text
+    assert '<option value="galon">Galón</option>' in dash.text
+    assert "95 ml" in dash.text
+
+    # 4. Verificar unidad en exportación CSV Habeas Data
+    csv_export = client.get("/api/me/export?format=csv", headers=headers)
+    assert csv_export.status_code == 200
+    assert "unit,ml" in csv_export.text
+
+    # 5. Verificar normalización de textos en importación CSV ("mililitros", "gramos", "litros")
+    csv_payload = (
+        "sku,name,category,unit,cost_price,sale_price,vat_rate,initial_stock,min_stock\n"
+        "ES-01,Extracto Rosa,Perfumería,mililitros,800,1600,0,50,10\n"
+        "CR-01,Crema Base,Cosmética,gramos,300,700,0,250,50\n"
+        "AL-01,Alcohol Perfumería,Insumos,litros,15000,25000,0,2.5,0.5\n"
+    ).encode()
+    imp = client.post(
+        "/api/imports/products?mode=commit",
+        headers=headers,
+        files={"file": ("perfumeria.csv", csv_payload, "text/csv")},
+    )
+    assert imp.status_code == 201, imp.text
+    by_sku = {p["sku"]: p for p in client.get("/api/products", headers=headers).json()}
+    assert by_sku["ES-01"]["unit"] == "ml"
+    assert by_sku["CR-01"]["unit"] == "g"
+    assert by_sku["AL-01"]["unit"] == "l"

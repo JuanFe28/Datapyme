@@ -17,6 +17,8 @@ from typing import Any
 import openpyxl
 from fastapi import HTTPException
 
+from app.core.commercial_service import normalize_unit_of_measure
+
 ALLOWED_EXTENSIONS = {".xlsx", ".csv"}
 MAX_SCAN_ROWS = 15
 MAX_UPLOAD_BYTES = 5 * 1024 * 1024  # 5 MiB
@@ -683,7 +685,7 @@ def parse_mapped_workbook_products(
             auto_sku_counter += 1
 
         category = get_val(row_data, "category") or "General"
-        unit = get_val(row_data, "unit") or "und"
+        unit = normalize_unit_of_measure(get_val(row_data, "unit") or "und")
 
         def read_number(raw: str, field: str, precision: str, row_number: int) -> Decimal:
             try:
@@ -1063,7 +1065,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             "sku": clean_sku,
             "name": clean_name or clean_sku,
             "category": _clean_unified_text(category, 90) or "General",
-            "unit": _clean_unified_text(unit, 20) or "und",
+            "unit": normalize_unit_of_measure(unit),
             "cost_price": cost_price,
             "sale_price": sale_price,
             "vat_rate": vat_rate if vat_rate <= Decimal("100.00") else Decimal("0.00"),

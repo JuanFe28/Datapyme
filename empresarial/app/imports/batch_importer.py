@@ -16,6 +16,7 @@ from app.core.commercial_service import (
     TWO_PLACES,
     create_product_with_initial_stock,
     create_sale_atomic,
+    normalize_unit_of_measure,
     parse_colombian_decimal,
     sanitize_cell_text,
 )
@@ -149,7 +150,7 @@ def import_products_batch(
                     "sku": item["sku"],
                     "name": item["name"],
                     "category": item["category"],
-                    "unit": item["unit"],
+                    "unit": normalize_unit_of_measure(item["unit"]),
                     "cost_price": item["cost_price"],
                     "sale_price": item["sale_price"],
                     "vat_rate": item["vat_rate"],
@@ -167,7 +168,7 @@ def import_products_batch(
                     sanitize_cell_text(r.get("category", "") or r.get("categoria", "General"), 90)
                     or "General"
                 )
-                unit = sanitize_cell_text(r.get("unit", "") or r.get("unidad", "und"), 20) or "und"
+                unit = normalize_unit_of_measure(r.get("unit", "") or r.get("unidad", "und"))
                 cost_price = parse_colombian_decimal(
                     r.get("cost_price") or r.get("costo", "0"), TWO_PLACES
                 )

@@ -1129,7 +1129,7 @@ function renderCart() {
     prods.forEach((p) => {
       const opt = document.createElement('option');
       opt.value = p.id;
-      opt.textContent = `${p.sku} - ${p.name} (Stock: ${p.stock_qty} | ${formatCOP(p.sale_price)})`;
+      opt.textContent = `${p.sku} - ${p.name} (Stock: ${formatQtyValue(p.stock_qty)} ${p.unit || 'und'} | ${formatCOP(p.sale_price)})`;
       opt.setAttribute('data-price', p.sale_price);
       opt.setAttribute('data-stock', p.stock_qty);
       if (p.id === line.product_id) {
@@ -1985,7 +1985,17 @@ function openEditProductDrawer(productId) {
   document.getElementById('edit-prod-sku').value = prod.sku || '';
   document.getElementById('edit-prod-name').value = prod.name || '';
   document.getElementById('edit-prod-category').value = prod.category || 'General';
-  document.getElementById('edit-prod-unit').value = prod.unit || 'und';
+  const editUnitSel = document.getElementById('edit-prod-unit');
+  if (editUnitSel) {
+    const unitVal = prod.unit || 'und';
+    if (!Array.from(editUnitSel.options || []).some((o) => o.value === unitVal)) {
+      const extraOpt = document.createElement('option');
+      extraOpt.value = unitVal;
+      extraOpt.textContent = unitVal;
+      editUnitSel.appendChild(extraOpt);
+    }
+    editUnitSel.value = unitVal;
+  }
   document.getElementById('edit-prod-cost').value = parseFloat(prod.cost_price) || 0;
   document.getElementById('edit-prod-price').value = parseFloat(prod.sale_price) || 0;
   const vatEl = document.getElementById('edit-prod-vat-rate');

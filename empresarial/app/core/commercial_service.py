@@ -5,6 +5,7 @@ Servicios de Dominio Comercial (Actividad 3.3 F-DC-124):
 """
 
 import re
+import unicodedata
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
@@ -38,6 +39,59 @@ def sanitize_cell_text(value: Any, max_len: int = 180) -> str:
         raw = raw[1:].strip()
     clean = "".join(ch for ch in raw if ch.isprintable() or ch in ("\n", " "))
     return clean[:max_len].strip()
+
+
+UNIT_OF_MEASURE_ALIASES: dict[str, str] = {
+    "und": "und",
+    "unid": "und",
+    "unidad": "und",
+    "unidades": "und",
+    "u": "und",
+    "pz": "und",
+    "pieza": "und",
+    "piezas": "und",
+    "bulto": "bulto",
+    "bultos": "bulto",
+    "kg": "kg",
+    "kilo": "kg",
+    "kilos": "kg",
+    "kilogramo": "kg",
+    "kilogramos": "kg",
+    "g": "g",
+    "gr": "g",
+    "grs": "g",
+    "gramo": "g",
+    "gramos": "g",
+    "ml": "ml",
+    "mililitro": "ml",
+    "mililitros": "ml",
+    "cc": "ml",
+    "cm3": "ml",
+    "l": "l",
+    "lt": "l",
+    "lts": "l",
+    "litro": "l",
+    "litros": "l",
+    "par": "par",
+    "pares": "par",
+    "paq": "paq",
+    "paquete": "paq",
+    "paquetes": "paq",
+    "galon": "galon",
+    "galones": "galon",
+    "gal": "galon",
+}
+
+
+def normalize_unit_of_measure(raw_unit: Any) -> str:
+    """Normaliza unidades comerciales (und, bulto, kg, g, ml, l, par, paq, galon) en API e importaciones."""
+    clean = sanitize_cell_text(raw_unit, 20)
+    if not clean:
+        return "und"
+    ascii_key = "".join(
+        ch for ch in unicodedata.normalize("NFKD", clean.lower()) if not unicodedata.combining(ch)
+    ).strip(" .()")
+    return UNIT_OF_MEASURE_ALIASES.get(ascii_key, clean)
 
 
 def parse_colombian_decimal(value: Any, places: Decimal = TWO_PLACES) -> Decimal:
@@ -118,7 +172,7 @@ def create_product_with_initial_stock(
     clean_sku = sanitize_cell_text(sku, 64).upper()
     clean_name = sanitize_cell_text(name, 180)
     clean_cat = sanitize_cell_text(category, 90) or "General"
-    clean_unit = sanitize_cell_text(unit, 20) or "und"
+    clean_unit = normalize_unit_of_measure(unit)
     if (
         any(
             not value.is_finite() or value < 0
@@ -487,6 +541,7 @@ __all__ = [
     "create_sale_atomic",
     "import_products_batch",
     "import_sales_batch",
+    "normalize_unit_of_measure",
     "parse_colombian_decimal",
     "parse_tabular_upload",
     "record_inventory_movement",
