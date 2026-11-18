@@ -5,6 +5,10 @@
 
 const ROOT_PATH = window.__ROOT_PATH__ || (window.location.pathname.startsWith('/empresarial') ? '/empresarial' : '');
 
+function prefersReducedMotion() {
+  return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+}
+
 // Formateador estándar de Pesos Colombianos
 const copFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -45,17 +49,27 @@ function showToast(message, type = 'info') {
 window.showToast = showToast;
 
 // 2. Control de Slide-Over Drawers
-function openDrawer(drawerId) {
+const drawerTriggers = new WeakMap();
+
+function openDrawer(drawerId, { focus = true } = {}) {
   const backdrop = document.getElementById(drawerId);
-  if (backdrop) {
-    backdrop.classList.add('open');
-    backdrop.setAttribute('aria-hidden', 'false');
-    if (drawerId === 'drawer-sale' && cartLines.length === 0) {
+  if (!backdrop || backdrop.classList.contains('open')) return;
+  backdrop.inert = false;
+  backdrop.classList.add('open');
+  backdrop.setAttribute('aria-hidden', 'false');
+  if (drawerId === 'drawer-sale') {
+    if (!focus) cartLines = [];
+    if (!cartLines.length) {
+      renderCart();
       addCartLine();
     }
-    const firstInput = backdrop.querySelector('input:not([type=hidden]), select');
-    if (firstInput) {
-      setTimeout(() => firstInput.focus(), 150);
+  }
+  if (focus) {
+    drawerTriggers.set(backdrop, document.activeElement);
+    const panel = backdrop.querySelector('.drawer-panel');
+    if (panel) {
+      panel.tabIndex = -1;
+      panel.focus({ preventScroll: true });
     }
   }
 }
@@ -63,10 +77,15 @@ window.openDrawer = openDrawer;
 
 function closeDrawer(drawerId) {
   const backdrop = document.getElementById(drawerId);
-  if (backdrop) {
-    backdrop.classList.remove('open');
-    backdrop.setAttribute('aria-hidden', 'true');
+  if (!backdrop) return;
+  if (document.activeElement && backdrop.contains(document.activeElement)) {
+    document.activeElement.blur();
+    drawerTriggers.get(backdrop)?.focus({ preventScroll: true });
   }
+  drawerTriggers.delete(backdrop);
+  backdrop.inert = true;
+  backdrop.classList.remove('open');
+  backdrop.setAttribute('aria-hidden', 'true');
 }
 window.closeDrawer = closeDrawer;
 
@@ -76,9 +95,9 @@ let inventoryChart = null;
 let forecastChart = null;
 let forecastModuleChart = null;
 let paymentMethodChart = null;
-let activeHeroTab = 'inventory';
 let dashboardData = {};
 const profitabilityCache = {};
+let salesRangeRequest = 0;
 
 function escapeHtmlText(str) {
   return String(str ?? '')
@@ -174,14 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Configurar foco inicial del gráfico
-  if (dashboardData.primary_focus) {
-    activeHeroTab =
-      dashboardData.primary_focus === 'sales'
-        ? 'sales'
-        : dashboardData.primary_focus === 'predictive'
-        ? 'forecast'
-        : 'inventory';
+  if (window.Chart && prefersReducedMotion()) {
+    window.Chart.defaults.animation = false;
   }
 
   // Inicializar Gráficas
@@ -302,7 +315,7 @@ document.addEventListener('DOMContentLoaded', () => {
     link.addEventListener('click', (e) => {
       e.preventDefault();
       const targetId = link.getAttribute('data-section');
-      if (targetId) switchModuleSection(targetId, link);
+      if (targetId) switchModuleSection(targetId);
     });
   });
 
@@ -311,9 +324,13 @@ document.addEventListener('DOMContentLoaded', () => {
     tab.addEventListener('click', (e) => {
       e.preventDefault();
       const targetId = tab.getAttribute('data-section');
-      if (targetId) switchModuleSection(targetId, tab);
+      if (targetId) switchModuleSection(targetId);
     });
   });
+
+  if (dashboardData.initial_section === 'section-sales') {
+    switchModuleSection('section-sales', { animate: false });
+  }
 
   // Conectar botones que abren drawers
   document.querySelectorAll('[data-open-drawer]').forEach((btn) => {
@@ -340,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
       if (e.target === backdrop) {
-        backdrop.classList.remove('open');
+        closeDrawer(backdrop.id);
       }
     });
   });
@@ -351,7 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
     if (e.key === 'Escape') {
-      document.querySelectorAll('.drawer-backdrop.open').forEach((el) => el.classList.remove('open'));
+      document.querySelectorAll('.drawer-backdrop.open').forEach((el) => closeDrawer(el.id));
     }
   });
 
@@ -448,57 +465,47 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // --- LÓGICA DE NAVEGACIÓN ENTRE MÓDULOS (MENÚ LATERAL Y BARRA MÓVIL) ---
-function switchModuleSection(sectionId, clickedLink) {
-  // Actualizar clases activas en sidebar y barra inferior móvil
-  document.querySelectorAll('.sidebar-nav-link').forEach((l) => l.classList.remove('active'));
-  document.querySelectorAll('.mobile-tab-item').forEach((t) => t.classList.remove('active'));
-
-  // Activar links correspondientes en ambos componentes
-  document.querySelectorAll(`[data-section="${sectionId}"]`).forEach((el) => el.classList.add('active'));
-
-  const sections = document.querySelectorAll('.dashboard-module-section');
-  const targetSection = document.getElementById(sectionId);
-
-  if (targetSection && sections.length > 0) {
-    sections.forEach((s) => (s.style.display = 'none'));
-    targetSection.style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  } else {
-    const targetAnchor = document.getElementById(sectionId) || document.querySelector(`[data-anchor="${sectionId}"]`);
-    if (targetAnchor) {
-      targetAnchor.scrollIntoView({ behavior: 'smooth' });
-    }
-  }
-
-  // Refrescar tamaño de gráficas si se muestran
-  if (salesChart) salesChart.resize();
-  if (inventoryChart) inventoryChart.resize();
-  if (forecastChart) forecastChart.resize();
-  if (forecastModuleChart) forecastModuleChart.resize();
+function showPanel(panel, visible, animate = true) {
+  if (!panel) return;
+  const wasHidden = panel.style.display === 'none';
+  panel.style.display = visible ? 'block' : 'none';
+  if (!visible) panel.classList.remove('panel-enter');
+  if (visible && wasHidden && animate) panel.classList.add('panel-enter');
 }
 
-// --- LÓGICA DE PESTAÑAS DEL HERO (VENTAS / INVENTARIO / PRONÓSTICO) ---
-function switchHeroTab(tabName) {
-  activeHeroTab = tabName;
+function switchModuleSection(sectionId, { animate = true } = {}) {
+  const target = document.getElementById(sectionId);
+  if (!target) return;
 
-  document.querySelectorAll('.tab-btn').forEach((b) => {
-    b.classList.toggle('active', b.getAttribute('data-tab') === tabName);
+  document.querySelectorAll('.sidebar-nav-link, .mobile-tab-item').forEach((link) => {
+    const active = link.getAttribute('data-section') === sectionId;
+    link.classList.toggle('active', active);
+    if (active) link.setAttribute('aria-current', 'page');
+    else link.removeAttribute('aria-current');
   });
 
-  document.querySelectorAll('.tab-panel').forEach((p) => {
-    p.style.display = 'none';
-  });
-
-  const panel = document.getElementById(`tab-content-${tabName}`);
-  if (panel) {
-    panel.style.display = 'block';
+  const behavior = animate && !prefersReducedMotion() ? 'smooth' : 'instant';
+  if (target.classList.contains('dashboard-module-section')) {
+    document.querySelectorAll('.dashboard-module-section').forEach((panel) => {
+      showPanel(panel, panel === target, animate);
+    });
+    window.scrollTo({ top: 0, behavior });
+  } else {
+    target.scrollIntoView({ behavior });
   }
 
-  setTimeout(() => {
-    if (tabName === 'sales' && salesChart) salesChart.resize();
-    if (tabName === 'inventory' && inventoryChart) inventoryChart.resize();
-    if (tabName === 'forecast' && forecastChart) forecastChart.resize();
-  }, 50);
+  [salesChart, inventoryChart, forecastChart, forecastModuleChart, paymentMethodChart]
+    .forEach((chart) => chart?.resize());
+}
+
+function switchHeroTab(tabName) {
+  document.querySelectorAll('.tab-btn').forEach((button) => {
+    button.classList.toggle('active', button.getAttribute('data-tab') === tabName);
+  });
+
+  const activePanel = document.getElementById('tab-content-' + tabName);
+  document.querySelectorAll('.tab-panel').forEach((panel) => showPanel(panel, panel === activePanel));
+  ({ sales: salesChart, inventory: inventoryChart, forecast: forecastChart })[tabName]?.resize();
 }
 
 function getRangeDays(rangeLabel) {
@@ -528,8 +535,8 @@ function switchRankingView(viewName, btn) {
 
   const topPanel = document.getElementById('ranking-panel-top');
   const leastPanel = document.getElementById('ranking-panel-least');
-  if (topPanel) topPanel.style.display = viewName === 'top' ? 'block' : 'none';
-  if (leastPanel) leastPanel.style.display = viewName === 'least' ? 'block' : 'none';
+  showPanel(topPanel, viewName === 'top');
+  showPanel(leastPanel, viewName === 'least');
 }
 
 function buildThumbnailHtml(item) {
@@ -544,6 +551,21 @@ function applyProfitabilityPayload(payload, rangeLabel) {
   if (!payload) return;
   const pnl = payload.pnl || {};
   const series = getSeriesFromPayload(payload);
+  const hasSales = Number(payload.confirmed_sales_count) > 0;
+  const status = document.getElementById('sales-period-status');
+  if (status) {
+    status.replaceChildren();
+    if (!hasSales) {
+      const history = document.createElement('a');
+      const mode = dashboardData.view_mode === 'general' ? 'general' : 'personalized';
+      history.href = ROOT_PATH + '/dashboard?view_mode=' + mode + '&sales_page=1';
+      history.textContent = 'ver el historial completo de ventas';
+      status.append('No hay ventas confirmadas en este periodo. Puedes cambiar el periodo o ', history, '.');
+    }
+  }
+
+  const chartWrapper = document.getElementById('sales-chart-wrapper');
+  if (chartWrapper) chartWrapper.hidden = !hasSales && !Number(pnl.shrinkage_movements_count);
 
   if (salesChart) {
     salesChart.data.labels = series.labels;
@@ -713,26 +735,35 @@ function initPaymentMethodChart() {
 
 // --- FILTRADO TEMPORAL DINÁMICO REAL (7D, 30D, 90D, 12M) ---
 async function updateChartRange(rangeLabel, btn) {
-  document.querySelectorAll('.hero-header .horizon-btn').forEach((b) => b.classList.remove('active'));
-  if (btn) btn.classList.add('active');
-
+  const requestId = ++salesRangeRequest;
+  const status = document.getElementById('sales-period-status');
   const days = getRangeDays(rangeLabel);
-  if (profitabilityCache[days]) {
-    applyProfitabilityPayload(profitabilityCache[days], rangeLabel);
-    return;
-  }
 
   try {
-    const res = await fetch(`${ROOT_PATH}/api/analytics/profitability?period_days=${days}`, {
-      headers: getAuthHeaders(),
-      credentials: 'same-origin',
+    let payload = profitabilityCache[days];
+    if (!payload) {
+      if (status) status.textContent = 'Cargando ventas del periodo…';
+      const res = await fetch(`${ROOT_PATH}/api/analytics/profitability?period_days=${days}`, {
+        headers: getAuthHeaders(),
+        credentials: 'same-origin',
+      });
+      if (!res.ok) throw new Error('No se pudo consultar el periodo de ventas.');
+      payload = await res.json();
+      profitabilityCache[days] = payload;
+    }
+
+    if (requestId !== salesRangeRequest) return;
+    document.querySelectorAll('.hero-header .horizon-btn').forEach((button) => {
+      const active = button === btn;
+      button.classList.toggle('active', active);
+      button.setAttribute('aria-pressed', String(active));
     });
-    if (!res.ok) return;
-    const payload = await res.json();
-    profitabilityCache[days] = payload;
     applyProfitabilityPayload(payload, rangeLabel);
-  } catch (err) {
-    console.error('Error actualizando horizonte de rentabilidad:', err);
+  } catch (error) {
+    if (requestId === salesRangeRequest && status) {
+      status.textContent = 'No se pudo cargar el periodo. Los datos anteriores siguen visibles.';
+    }
+    console.error('Error actualizando horizonte de rentabilidad:', error);
   }
 }
 
@@ -745,9 +776,9 @@ function switchTableTab(viewName, btn) {
   const vSales = document.getElementById('table-view-sales');
   const vPareto = document.getElementById('table-view-pareto');
 
-  if (vInventory) vInventory.style.display = viewName === 'inventory' ? 'block' : 'none';
-  if (vSales) vSales.style.display = viewName === 'sales' ? 'block' : 'none';
-  if (vPareto) vPareto.style.display = viewName === 'pareto' ? 'block' : 'none';
+  showPanel(vInventory, viewName === 'inventory');
+  showPanel(vSales, viewName === 'sales');
+  showPanel(vPareto, viewName === 'pareto');
 }
 
 // --- INICIALIZACIÓN DE GRÁFICAS (CHART.JS) ---
@@ -855,8 +886,7 @@ function initInventoryChart() {
   const ctx = document.getElementById('inventoryStockChart');
   if (!ctx || !window.Chart) return;
 
-  const prods = dashboardData.products || [];
-  const topProds = prods.slice(0, 8);
+  const topProds = getProductsCatalog().slice(0, 8);
   const labels = topProds.map((p) => p.sku || 'SKU');
   const stockData = topProds.map((p) => parseFloat(p.stock_qty) || 0);
   const minData = topProds.map((p) => parseFloat(p.min_stock) || 0);
@@ -864,17 +894,17 @@ function initInventoryChart() {
   inventoryChart = new Chart(ctx, {
     type: 'bar',
     data: {
-      labels: labels.length ? labels : ['CEM-ARG-50', 'TAL-BOS-650', 'MAR-EST-16', 'PIN-VIN-05'],
+      labels,
       datasets: [
         {
           label: 'Stock Actual',
-          data: stockData.length ? stockData : [30, 15, 24, 20],
+          data: stockData,
           backgroundColor: '#0D7A6F',
           borderRadius: 6,
         },
         {
           label: 'Stock Mínimo',
-          data: minData.length ? minData : [25, 4, 6, 5],
+          data: minData,
           backgroundColor: '#E2E8F0',
           borderRadius: 6,
         },
@@ -1057,7 +1087,8 @@ function initForecastModuleChart() {
 
 // --- CARRITO MULTI-PRODUCTO EN "+ REGISTRAR VENTA" ---
 function getProductsCatalog() {
-  return dashboardData.products || [];
+  const practice = Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__);
+  return (dashboardData.products || []).filter((product) => Boolean(product.is_training_data) === practice);
 }
 
 function renderCart() {
@@ -1298,10 +1329,14 @@ async function handleSaleSubmit(e) {
 
   if (!cartLines.length) {
     showToast('Agregue al menos un producto a la venta', 'error');
-    if (btn) btn.disabled = false;
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = 'Confirmar Venta';
+    }
     return;
   }
 
+  const training = Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__);
   const itemsPayload = cartLines.map((it) => ({
     product_id: it.product_id,
     quantity: it.quantity,
@@ -1317,13 +1352,23 @@ async function handleSaleSubmit(e) {
         customer_label: customer,
         payment_method: payment,
         items: itemsPayload,
-        is_training_data: Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__),
+        is_training_data: training,
       }),
     });
     if (resp.ok) {
-      showToast('Venta registrada con éxito. Kardex actualizado.', 'success');
-      closeDrawer('drawer-sale');
-      setTimeout(() => location.reload(), 700);
+      if (training && window.advanceSpotlightTour) {
+        const sale = await resp.json();
+        for (const item of sale.items) {
+          const product = getProductsCatalog().find((entry) => entry.id === item.product_id);
+          if (product) product.stock_qty = Math.round((Number(product.stock_qty) - Number(item.quantity)) * 1000) / 1000;
+        }
+        showToast('Venta de práctica registrada.', 'success');
+        window.advanceSpotlightTour('drawer-sale');
+      } else {
+        showToast('Venta registrada con éxito. Kardex actualizado.', 'success');
+        closeDrawer('drawer-sale');
+        setTimeout(() => location.reload(), 700);
+      }
     } else {
       const err = await resp.json();
       showToast(err.detail || 'Error al registrar la venta', 'error');
@@ -1725,9 +1770,17 @@ async function handleProductSubmit(e) {
       body: JSON.stringify(payload),
     });
     if (resp.ok) {
-      showToast('Producto agregado al catálogo exitosamente', 'success');
-      closeDrawer('drawer-product');
-      setTimeout(() => location.reload(), 700);
+      if (payload.is_training_data && window.advanceSpotlightTour) {
+        const product = await resp.json();
+        (dashboardData.products ??= []).push(product);
+        e.target.reset();
+        showToast('Producto de práctica guardado.', 'success');
+        window.advanceSpotlightTour('drawer-product');
+      } else {
+        showToast('Producto agregado al catálogo exitosamente', 'success');
+        closeDrawer('drawer-product');
+        setTimeout(() => location.reload(), 700);
+      }
     } else {
       const err = await resp.json();
       showToast(err.detail || 'Error al crear el producto', 'error');

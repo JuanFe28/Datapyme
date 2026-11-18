@@ -136,3 +136,25 @@ def test_imported_closed_months_produce_forecast_and_cleanup_does_not_affect_his
     )
     assert len(client.get("/api/sales", headers=h).json()) == 3
     assert client.get("/api/products/" + p["id"], headers=h).json()["stock_qty"] == "5.000"
+
+
+def test_sales_module_pages_past_recent_sales_and_accepts_zero_minimum_stock(client):
+    headers = account(client)
+    catalog(client, headers)
+    data = "sale_number,occurred_at,sku,quantity,unit_price,unit_cost,vat_rate\n" + "\n".join(
+        f"REF-{number},2026-08-15,HIST1,1,100,60,0" for number in range(26)
+    )
+    response = upload(client, headers, data.encode())
+    assert response.status_code == 201
+
+    first = client.get("/dashboard?sales_page=1", headers=headers)
+    second = client.get("/dashboard?sales_page=2", headers=headers)
+    assert first.status_code == second.status_code == 200
+
+    first_history = first.text.split('id="section-sales"', 1)[1].split('id="section-forecast"', 1)[0]
+    second_history = second.text.split('id="section-sales"', 1)[1].split('id="section-forecast"', 1)[0]
+    assert first_history.count('class="btn btn-secondary btn-view-sale"') == 25
+    assert second_history.count('class="btn btn-secondary btn-view-sale"') == 1
+    assert "25 de 26 ventas" in first_history
+    assert "26 de 26 ventas" in second_history
+    assert "Histórica" in second_history

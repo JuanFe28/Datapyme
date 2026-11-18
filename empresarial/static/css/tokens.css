@@ -542,6 +542,8 @@ textarea::placeholder {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   border-bottom: 1px solid rgba(15, 23, 42, 0.06);
   padding-bottom: 16px;
   margin-bottom: 20px;
@@ -963,7 +965,6 @@ textarea::placeholder {
 }
 
 .toast {
-  pointer-events: auto;
   background: #0F172A;
   color: #FFFFFF;
   padding: 12px 18px;
@@ -1661,6 +1662,33 @@ html, body {
 }
 
 @media (max-width: 640px) {
+  .hero-card {
+    padding: 16px;
+  }
+  .hero-header {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .hero-header .tab-nav {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    width: 100%;
+    gap: 4px;
+  }
+  .hero-header .tab-btn {
+    min-height: 44px;
+    padding: 6px 4px;
+    overflow-wrap: anywhere;
+  }
+  .hero-header .horizon-pills {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    width: 100%;
+  }
+  .hero-header .horizon-btn {
+    min-height: 44px;
+    padding-inline: 4px;
+  }
   .pnl-summary-strip,
   .value-prop-grid,
   .value-prop-grid-4 {
@@ -1820,5 +1848,59 @@ html, body {
   .action-advisor-grid,
   .insights-visual-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+.sales-chart-wrapper {
+  height: 290px;
+  min-width: 0;
+}
+
+.sales-period-status {
+  color: var(--ink-secondary);
+  font-size: 13px;
+  margin: 12px 0;
+}
+
+.sales-period-status:empty {
+  display: none;
+}
+
+.sales-period-status a {
+  color: var(--accent-primary);
+}
+
+.sales-pagination,
+.sales-pagination-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.sales-pagination {
+  justify-content: space-between;
+  padding: 12px 16px;
+  color: var(--ink-secondary);
+  font-size: 13px;
+}
+
+.panel-enter {
+  animation: panelEnter 160ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes panelEnter {
+  from { opacity: 0.65; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

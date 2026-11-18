@@ -121,6 +121,7 @@ def get_tenant_preferences(
 def render_adaptive_dashboard(
     request: Request,
     view_mode: Literal["personalized", "general"] | None = Query(default=None),
+    sales_page: int | None = Query(default=None, ge=1),
     ctx: tuple[User, Tenant] = Depends(get_current_context),
     db: Session = Depends(get_db),
 ):
@@ -144,14 +145,22 @@ def render_adaptive_dashboard(
         .order_by(Product.stock_qty.asc())
         .all()
     ]
-    recent_sales = [
-        serialize_sale(s)
-        for s in db.query(Sale)
-        .filter_by(tenant_id=tenant.id)
-        .order_by(Sale.sale_number.desc())
-        .limit(15)
-        .all()
+    tenant_sales = db.query(Sale).filter_by(tenant_id=tenant.id)
+    ordered_sales = tenant_sales.order_by(Sale.sale_number.desc())
+    page_size = 25
+    sales_total = tenant_sales.count()
+    sales_pages = max(1, (sales_total + page_size - 1) // page_size)
+    page = min(sales_page or 1, sales_pages)
+    sales_offset = (page - 1) * page_size
+    sales_history = [
+        serialize_sale(sale)
+        for sale in ordered_sales.offset(sales_offset).limit(page_size).all()
     ]
+    recent_sales = (
+        sales_history[:15]
+        if page == 1
+        else [serialize_sale(sale) for sale in ordered_sales.limit(15).all()]
+    )
     current_tax = tax_profile(db, tenant.id)
     for product in products:
         rate = Decimal(product["vat_rate"]) if current_tax["status"] == "responsible" else Decimal(0)
@@ -170,7 +179,7 @@ def render_adaptive_dashboard(
         record_event=False,
     )
 
-    all_sales = db.query(Sale).filter_by(tenant_id=tenant.id).all()
+    all_sales = tenant_sales.all()
     all_items = db.query(SaleItem).filter(SaleItem.tenant_id == tenant.id).all()
     action_plan = compute_weekly_action_plan(
         products=products,
@@ -215,10 +224,12 @@ def render_adaptive_dashboard(
         {
             "company_tax": tax_profile(db, tenant.id),
             "token": active_token,
+            "initial_section": "section-sales" if sales_page is not None else "section-home",
             "primary_focus": layout_cfg.get("primary_focus"),
             "density": layout_cfg.get("density"),
             "view_mode": resolved_mode,
             "onboarding_tour_completed": bool(tenant.onboarding_tour_completed),
+            "tour_scope": tenant.id,
             "mfa_enabled": bool(user.mfa_enabled),
             "products": products,
             "recent_sales": recent_sales,
@@ -251,6 +262,12 @@ def render_adaptive_dashboard(
             "onboarding_tour_completed": bool(tenant.onboarding_tour_completed),
             "products": products,
             "recent_sales": recent_sales,
+            "sales_history": sales_history,
+            "sales_requested": sales_page is not None,
+            "sales_page": page,
+            "sales_pages": sales_pages,
+            "sales_offset": sales_offset,
+            "sales_total": sales_total,
             "forecast_data": forecast_data,
             "dashboard_json": dashboard_json,
             "last_consent": last_consent,

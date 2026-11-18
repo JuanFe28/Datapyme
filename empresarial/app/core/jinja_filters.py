@@ -26,6 +26,7 @@ def serialize_sale(sale: Sale) -> dict[str, Any]:
         "cogs_total": str(Decimal(str(sale.cogs_total)).quantize(TWO_PLACES)),
         "status": sale.status,
         "source": sale.source,
+        "is_training_data": bool(sale.is_training_data),
         "external_reference": sale.historical_reference.reference if sale.historical_reference else None,
         "tax_status": sale.tax_snapshot.status if sale.tax_snapshot else "legacy",
         "tax_revision": sale.tax_snapshot.revision if sale.tax_snapshot else None,

@@ -17,13 +17,25 @@ test('receipt treats imported product names and image attributes as data, not HT
 
 test('opening a drawer exposes its content to assistive technology and closing hides it', () => {
   const attrs = new Map([['aria-hidden','true']]);
-  const element={classList:{add(){},remove(){}},querySelector(){return null;},setAttribute(k,v){attrs.set(k,v);}};
+  const openClasses = new Set();
+  const element = {
+    inert: true,
+    classList: {
+      contains: (value) => openClasses.has(value),
+      add: (value) => openClasses.add(value),
+      remove: (value) => openClasses.delete(value),
+    },
+    querySelector() { return null; },
+    setAttribute(key, value) { attrs.set(key, value); },
+  };
   const ctx=vm.createContext({Intl,window:{location:{pathname:'/dashboard'}},document:{addEventListener(){},getElementById(){return element;}}});
   vm.runInContext(script,ctx);
   vm.runInContext("openDrawer('drawer-sale-detail')",ctx);
   assert.equal(attrs.get('aria-hidden'),'false');
+  assert.equal(element.inert, false);
   vm.runInContext("closeDrawer('drawer-sale-detail')",ctx);
   assert.equal(attrs.get('aria-hidden'),'true');
+  assert.equal(element.inert, true);
 });
 
 test('COP presentation preserves cents used in the persisted total', () => {

@@ -26,7 +26,7 @@
 <!-- ========================================== -->
 <!-- SECCIÓN 1: PANEL PRINCIPAL (BENTO ADAPTATIVO) -->
 <!-- ========================================== -->
-<div id="section-home" class="dashboard-module-section">
+<div id="section-home" class="dashboard-module-section"{% if sales_requested %} style="display: none;"{% endif %}>
   <!-- 1. FRANJA UNIFICADA DE MÉTRICAS (UNIFIED METRIC STRIP) -->
   <section class="metric-strip-container" aria-label="Indicadores Clave de Desempeño">
     {% if layout_config.primary_focus == 'inventory' %}
@@ -213,16 +213,22 @@
         </button>
       </div>
 
-      <div class="horizon-pills">
-        <button type="button" class="horizon-btn">7D</button>
-        <button type="button" class="horizon-btn active">30D</button>
-        <button type="button" class="horizon-btn">90D</button>
-        <button type="button" class="horizon-btn">12M</button>
+      <div class="horizon-pills" role="group" aria-label="Periodo de ventas">
+        <button type="button" class="horizon-btn" aria-label="Últimos 7 días" aria-pressed="false">7D</button>
+        <button type="button" class="horizon-btn active" aria-label="Últimos 30 días" aria-pressed="true">30D</button>
+        <button type="button" class="horizon-btn" aria-label="Últimos 90 días" aria-pressed="false">90D</button>
+        <button type="button" class="horizon-btn" aria-label="Últimos 12 meses" aria-pressed="false">12M</button>
       </div>
     </div>
 
     <!-- Vista Tab: Ventas y Estado de Pérdidas y Ganancias (P&L) -->
     <div id="tab-content-sales" class="tab-panel" style="{% if layout_config.primary_focus != 'sales' and layout_config.primary_focus != 'balanced' %}display: none;{% endif %}">
+      <p id="sales-period-status" class="sales-period-status" role="status">
+        {%- if profitability.confirmed_sales_count == 0 %}
+          No hay ventas confirmadas en los últimos 30 días. Puedes cambiar el periodo o
+          <a href="{{ root_path }}/dashboard?view_mode={{ layout_config.view_mode }}&amp;sales_page=1">ver el historial completo de ventas</a>.
+        {%- endif -%}
+      </p>
       <div class="pnl-summary-strip" id="pnl-summary-strip">
         <div class="pnl-metric">
           <span class="pnl-metric-label">Ventas Netas (Sin IVA)</span>
@@ -254,16 +260,21 @@
           Capital sin rotación (30D): <strong style="color: var(--ink-primary); font-variant-numeric: tabular-nums;">{{ profitability.pnl.immobilized_capital_30d_cop | cop }}</strong>
         </span>
       </div>
-      <div style="height: 290px; width: 100%;">
-        <canvas id="salesTrendChart"></canvas>
+      <div id="sales-chart-wrapper" class="sales-chart-wrapper"
+           {% if profitability.confirmed_sales_count == 0 and profitability.pnl.shrinkage_movements_count == 0 %}hidden{% endif %}>
+        <canvas id="salesTrendChart" role="img" aria-label="Evolución de ingresos, ganancia y costos del periodo"></canvas>
       </div>
     </div>
 
     <!-- Vista Tab: Inventario -->
     <div id="tab-content-inventory" class="tab-panel" style="{% if layout_config.primary_focus != 'inventory' %}display: none;{% endif %}">
+      {% if not products | rejectattr('is_training_data') | first %}
+      <p class="sales-period-status">Aún no hay productos registrados para mostrar el inventario.</p>
+      {% else %}
       <div style="height: 300px; width: 100%;">
         <canvas id="inventoryStockChart"></canvas>
       </div>
+      {% endif %}
     </div>
 
     <!-- Vista Tab: Proyección Estadística -->
@@ -479,7 +490,7 @@
                 <div class="stock-progress-track">
                   {% set stock_num = prod.stock_qty | float %}
                   {% set min_num = prod.min_stock | float %}
-                  {% set pct = (stock_num / (min_num * 3 | default(1))) * 100 %}
+                  {% set pct = stock_num / (min_num * 3) * 100 if min_num > 0 else (100 if stock_num > 0 else 0) %}
                   {% set pct_clamped = 100 if pct > 100 else (5 if pct < 5 else pct) %}
                   <div class="stock-progress-fill {% if stock_num == 0 %}danger{% elif stock_num <= min_num %}warning{% else %}ok{% endif %}"
                        style="width: {{ pct_clamped }}%;"></div>
@@ -814,7 +825,7 @@
 <!-- ============================================== -->
 <!-- SECCIÓN 3: MÓDULO COMPLETO DE VENTAS Y FACTURACIÓN -->
 <!-- ============================================== -->
-<div id="section-sales" class="dashboard-module-section" style="display: none;">
+<div id="section-sales" class="dashboard-module-section"{% if not sales_requested %} style="display: none;"{% endif %}>
   <div class="module-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px;">
     <div>
       <h2 style="font-size: 20px; font-weight: 600; margin: 0;">Ventas y Facturación</h2>
@@ -826,8 +837,8 @@
     </button>
   </div>
 
-  <section class="data-table-card">
-    <div class="table-responsive">
+  <section class="data-table-card" aria-label="Historial de ventas">
+    <div class="table-responsive" tabindex="0" role="region" aria-label="Tabla de ventas">
       <table class="polaris-table data-table">
       <thead>
         <tr>
@@ -843,7 +854,7 @@
         </tr>
       </thead>
       <tbody>
-        {% for sale in recent_sales %}
+        {% for sale in sales_history %}
         <tr>
           <td style="font-weight: 600;">
             <a href="#" class="sale-number-link" data-sale-id="{{ sale.id }}" style="color: var(--accent-primary); text-decoration: none;" title="Ver detalle de la venta #{{ sale.sale_number }}">
@@ -857,10 +868,14 @@
           <td class="price-cell" style="text-align: right;">{{ sale.vat_total | cop }}</td>
           <td class="price-cell" style="text-align: right; font-weight: 600; color: var(--accent-primary);">{{ sale.total | cop }}</td>
           <td>
-            {% if sale.status != 'voided' %}
-              <span class="badge-success">Confirmada</span>
-            {% else %}
+            {% if sale.status == 'voided' %}
               <span class="badge-danger">Anulada</span>
+            {% elif sale.is_training_data %}
+              <span class="badge-neutral">Práctica</span>
+            {% elif sale.source == 'historical' %}
+              <span class="badge-info">Histórica</span>
+            {% else %}
+              <span class="badge-success">Confirmada</span>
             {% endif %}
           </td>
           <td style="text-align: right; white-space: nowrap;">
@@ -876,10 +891,25 @@
             {% endif %}
           </td>
         </tr>
+        {% else %}
+        <tr><td colspan="9">Aún no hay ventas registradas.</td></tr>
         {% endfor %}
       </tbody>
     </table>
     </div>
+    {% if sales_total %}
+    <nav class="sales-pagination" aria-label="Páginas del historial de ventas">
+      <span>{{ sales_offset + 1 }}–{{ sales_offset + (sales_history | length) }} de {{ sales_total }} ventas</span>
+      <div class="sales-pagination-actions">
+        {% if sales_page > 1 %}
+        <a class="btn btn-secondary" href="{{ root_path }}/dashboard?view_mode={{ layout_config.view_mode }}&amp;sales_page={{ sales_page - 1 }}">Anterior</a>
+        {% endif %}
+        {% if sales_page < sales_pages %}
+        <a class="btn btn-secondary" href="{{ root_path }}/dashboard?view_mode={{ layout_config.view_mode }}&amp;sales_page={{ sales_page + 1 }}">Siguiente</a>
+        {% endif %}
+      </div>
+    </nav>
+    {% endif %}
   </section>
 </div>
 
@@ -1213,7 +1243,7 @@
 <!-- ============================================== -->
 
 <!-- 1. Drawer: Registrar Nueva Venta (Carrito Multi-Producto) -->
-<div id="drawer-sale" class="drawer-backdrop" aria-hidden="true">
+<div id="drawer-sale" class="drawer-backdrop" aria-hidden="true" inert>
   <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-sale-title">
     <div class="drawer-header">
       <div>
@@ -1287,7 +1317,7 @@
 
 
 <!-- 2. Drawer: Crear Nuevo Producto -->
-<div id="drawer-product" class="drawer-backdrop" aria-hidden="true">
+<div id="drawer-product" class="drawer-backdrop" aria-hidden="true" inert>
   <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-product-title">
     <div class="drawer-header">
       <div>
@@ -1388,7 +1418,7 @@
 
 
 <!-- 3. Drawer: Importador Unificado de Excel o CSV -->
-<div id="drawer-import" class="drawer-backdrop" aria-hidden="true">
+<div id="drawer-import" class="drawer-backdrop" aria-hidden="true" inert>
   <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-import-title" style="max-width: 660px;">
     <div class="drawer-header">
       <div>
@@ -1601,7 +1631,7 @@
 </div>
 
 <!-- 4. Drawer: Editar Producto en Catálogo -->
-<div id="drawer-edit-product" class="drawer-backdrop" aria-hidden="true">
+<div id="drawer-edit-product" class="drawer-backdrop" aria-hidden="true" inert>
   <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-edit-product-title">
     <div class="drawer-header">
       <div>
@@ -1749,7 +1779,7 @@
 </div>
 
 <!-- 5. Drawer: Detalle y Comprobante de Venta -->
-<div id="drawer-sale-detail" class="drawer-backdrop" aria-hidden="true">
+<div id="drawer-sale-detail" class="drawer-backdrop" aria-hidden="true" inert>
   <aside class="drawer-panel" role="dialog" aria-modal="true" aria-labelledby="drawer-sale-detail-title" style="max-width: 620px;">
     <div class="drawer-header">
       <div>

@@ -11,16 +11,24 @@
   inset: 0;
   z-index: 100000;
   background: rgba(15, 23, 42, 0.56);
-  pointer-events: auto;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.dp-spotlight-layer:has(.dp-spotlight-highlight[hidden]) .dp-spotlight-backdrop {
+  opacity: 1;
 }
 
 .dp-spotlight-highlight {
   position: fixed;
   border-radius: 12px;
   box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.58), 0 0 0 3px #14B8A6;
-  transition: top 220ms ease, left 220ms ease, width 220ms ease, height 220ms ease;
   pointer-events: none;
   z-index: 100001;
+}
+
+.dp-spotlight-highlight.is-moving {
+  transition: top 180ms ease-out, left 180ms ease-out, width 180ms ease-out, height 180ms ease-out;
 }
 
 .dp-spotlight-popover {
@@ -32,8 +40,16 @@
   border: 1px solid rgba(15, 23, 42, 0.12);
   border-radius: 14px;
   box-shadow: 0 20px 44px -8px rgba(15, 23, 42, 0.28);
-  padding: 18px 20px;
+  padding: 16px;
   box-sizing: border-box;
+  overflow: auto;
+  overscroll-behavior: contain;
+  visibility: hidden;
+}
+
+.dp-spotlight-popover.is-positioned {
+  visibility: visible;
+  animation: panelEnter 160ms ease-out both;
 }
 
 .dp-spotlight-step-tag {
@@ -67,6 +83,24 @@
   flex-wrap: wrap;
 }
 
+.dp-spotlight-navigation {
+  margin-inline-start: auto;
+  display: flex;
+  gap: 6px;
+}
+
+.dp-spotlight-actions .btn {
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.dp-spotlight-final-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .dp-spotlight-modal-card {
   position: fixed;
   top: 50%;
@@ -79,8 +113,12 @@
   border-radius: 16px;
   border: 1px solid rgba(15, 23, 42, 0.12);
   box-shadow: 0 24px 60px -12px rgba(15, 23, 42, 0.35);
-  padding: 26px 24px;
+  padding: 24px;
   box-sizing: border-box;
+  max-height: calc(100dvh - 24px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  animation: panelEnter 160ms ease-out both;
 }
 
 .dp-spotlight-final-btn {
@@ -92,4 +130,13 @@
   text-align: center;
   height: auto;
   min-height: 44px;
+}
+
+body:has(.dp-spotlight-layer) .toast-container {
+  top: max(12px, env(safe-area-inset-top));
+  right: 12px;
+  left: 12px;
+  bottom: auto;
+  align-items: flex-end;
+  z-index: 100004;
 }

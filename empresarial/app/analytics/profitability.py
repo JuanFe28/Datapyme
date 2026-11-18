@@ -81,7 +81,7 @@ def compute_pure_profitability(
         occurred_at = _as_aware_utc(s.get("occurred_at")) or ref_now
         entry = {**s, "_occurred": occurred_at}
         confirmed_sales[sid] = entry
-        if occurred_at >= cutoff:
+        if cutoff <= occurred_at <= ref_now:
             period_sales[sid] = entry
             sub = _q2(Decimal(str(s.get("subtotal", "0"))))
             disc = _q2(Decimal(str(s.get("discount_total", "0"))))
@@ -116,7 +116,7 @@ def compute_pure_profitability(
         prev_dt = last_sale_by_product.get(pid)
         if prev_dt is None or occurred_at > prev_dt:
             last_sale_by_product[pid] = occurred_at
-        if occurred_at >= cutoff_30d:
+        if cutoff_30d <= occurred_at <= ref_now:
             sold_30d_products.add(pid)
 
         if sid not in period_sales or pid not in prod_stats:
@@ -149,7 +149,7 @@ def compute_pure_profitability(
         if str(mov.get("movement_type")) != "adjustment_out":
             continue
         occurred_at = _as_aware_utc(mov.get("occurred_at")) or ref_now
-        if occurred_at < cutoff:
+        if not cutoff <= occurred_at <= ref_now:
             continue
         pid = str(mov["product_id"])
         qty_abs = abs(_q3(Decimal(str(mov.get("quantity", "0")))))
@@ -293,6 +293,7 @@ def compute_pure_profitability(
         shrinkage_movements=shrinkage_movements,
         products_by_id=products_by_id,
         period_days=period_days,
+        cutoff=cutoff,
         ref_now=ref_now,
     )
 
@@ -379,6 +380,7 @@ def compute_pure_profitability(
 
     return {
         "period_days": period_days,
+        "confirmed_sales_count": len(period_sales),
         "pnl": {
             "gross_sales_without_vat": str(gross_sales_without_vat),
             "discount_total": str(discount_total),
@@ -409,22 +411,25 @@ def _build_period_series(
     shrinkage_movements: list[dict[str, Any]],
     products_by_id: dict[str, dict[str, Any]],
     period_days: int,
+    cutoff: datetime,
     ref_now: datetime,
 ) -> dict[str, list[Any]]:
     """Agrupa ingresos, ganancia neta real y costos/pérdidas en cubetas reales del periodo."""
     today = ref_now.date()
+    start_day = cutoff.date()
+    span_days = (today - start_day).days + 1
     buckets: list[tuple[str, datetime, datetime]] = []
 
     if period_days <= 7:
-        for d_off in range(6, -1, -1):
-            day = today - timedelta(days=d_off)
-            start = datetime(day.year, day.month, day.day, tzinfo=UTC)
+        for offset in range(period_days):
+            start = cutoff + timedelta(days=offset)
             end = start + timedelta(days=1)
+            day = end.date()
+            if offset == period_days - 1:
+                end += timedelta(microseconds=1)
             buckets.append((f"{day.day:02d} {_MONTH_NAMES_ES[day.month - 1]}", start, end))
     elif period_days <= 31:
         n_buckets = 4
-        start_day = today - timedelta(days=period_days - 1)
-        span_days = period_days
         for i in range(n_buckets):
             off_start = (i * span_days) // n_buckets
             off_end = ((i + 1) * span_days) // n_buckets
@@ -437,8 +442,7 @@ def _build_period_series(
             buckets.append((f"{b_start_d.day:02d} {_MONTH_NAMES_ES[b_start_d.month - 1]}", start, end))
     elif period_days <= 95:
         n_buckets = 6
-        step = max(1, period_days // n_buckets)
-        start_day = today - timedelta(days=period_days - 1)
+        step = span_days // n_buckets
         for i in range(n_buckets):
             b_start_d = start_day + timedelta(days=i * step)
             b_end_d = (
@@ -449,20 +453,13 @@ def _build_period_series(
             label = f"{b_start_d.day:02d} {_MONTH_NAMES_ES[b_start_d.month - 1]}"
             buckets.append((label, start, end))
     else:
-        yr, mo = today.year, today.month
-        months_list: list[tuple[int, int]] = []
-        for _ in range(12):
-            months_list.append((yr, mo))
-            mo -= 1
-            if mo == 0:
-                mo = 12
-                yr -= 1
-        months_list.reverse()
-        for y, m in months_list:
-            start = datetime(y, m, 1, tzinfo=UTC)
+        start = datetime(start_day.year, start_day.month, 1, tzinfo=UTC)
+        while start <= ref_now:
+            y, m = start.year, start.month
             ny, nm = (y + 1, 1) if m == 12 else (y, m + 1)
             end = datetime(ny, nm, 1, tzinfo=UTC)
             buckets.append((f"{_MONTH_NAMES_ES[m - 1]} {str(y)[2:]}", start, end))
+            start = end
 
     labels = [b[0] for b in buckets]
     revs = [Decimal("0.00")] * len(buckets)
@@ -483,6 +480,8 @@ def _build_period_series(
         if str(mov.get("movement_type")) != "adjustment_out":
             continue
         occ = _as_aware_utc(mov.get("occurred_at")) or ref_now
+        if not cutoff <= occ <= ref_now:
+            continue
         pid = str(mov["product_id"])
         qty_abs = abs(_q3(Decimal(str(mov.get("quantity", "0")))))
         uc = (

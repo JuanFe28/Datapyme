@@ -9,7 +9,7 @@
   const STEPS = [
     {
       stepLabel: 'Paso 1 de 5',
-      selector: '#weekly-action-plan',
+      selector: '#weekly-action-plan h3',
       openDrawer: null,
       title: 'Tu Plan de Acción Comercial',
       desc: 'Aquí verás cada semana qué productos están por agotarse, cuánto efectivo puedes liberar de productos estancados y el avance hacia tu meta mensual.',
@@ -33,7 +33,6 @@
     {
       stepLabel: 'Paso 2.3 de 5 · Nuevo Producto',
       selector: '#prod-stock-row, #prod-initial-stock',
-      secondarySelector: '#btn-submit-product',
       openDrawer: 'drawer-product',
       prefillProduct: true,
       title: 'Stock Inicial, Mínimo y Guardar',
@@ -41,8 +40,8 @@
     },
     {
       stepLabel: 'Paso 3.1 de 5 · Registrar Venta',
-      selector: '#sale-cart-items',
-      fallbackSelector: '#drawer-sale .drawer-body',
+      selector: '#sale-cart-items .cart-item-row',
+      fallbackSelector: '#sale-cart-items',
       openDrawer: 'drawer-sale',
       title: 'Selección de Producto y Cantidad',
       desc: 'En "+ Registrar Venta" eliges el producto del carrito y la cantidad vendida (unidades o peso). Esta práctica no afecta tus indicadores reales.',
@@ -52,13 +51,13 @@
       selector: '#btn-submit-sale',
       openDrawer: 'drawer-sale',
       title: 'Confirmar Venta',
-      desc: 'Revisa el total a cobrar y pulsa "Confirmar Venta" para descontar el inventario automáticamente y generar el comprobante.',
+      desc: 'Revisa el total y pulsa "Confirmar Venta" para registrar una venta y descontar únicamente stock de práctica.',
     },
     {
       stepLabel: 'Paso 4 de 5 · Importar Excel',
       selector: '[data-open-drawer="drawer-import"]',
       openDrawer: null,
-      title: 'Carga rápida desde Excel y Ranking',
+      title: 'Carga rápida desde Excel',
       desc: 'Cuando tengas tu catálogo o ventas en Excel o CSV, usa "Importar Excel" para detectarlos automáticamente en un solo paso.',
     },
     {
@@ -66,13 +65,15 @@
       selector: null,
       openDrawer: null,
       title: 'Entrenamiento completado',
-      desc: 'Ya conoces cómo registrar productos, facturar ventas e interpretar tu rentabilidad. ¿Cómo deseas dejar tu cuenta para empezar?',
+      desc: 'Puedes conservar los productos y ventas de práctica o borrarlos. Las operaciones reales se conservan.',
       isFinalModal: true,
     },
   ];
 
   let currentStepIdx = 0;
   let layerEl = null;
+  let completing = false;
+  let tourScope;
 
   function readState() {
     try {
@@ -112,7 +113,7 @@
       const targetDrawer = document.getElementById(step.openDrawer);
       if (targetDrawer && targetDrawer.classList && !targetDrawer.classList.contains('open')) {
         if (typeof window.openDrawer === 'function') {
-          window.openDrawer(step.openDrawer);
+          window.openDrawer(step.openDrawer, { focus: false });
         } else {
           targetDrawer.classList.add('open');
         }
@@ -146,107 +147,97 @@
     if (!cart || (cart.children && cart.children.length > 0)) return;
     if (typeof cart.innerHTML === 'string' && !cart.innerHTML.trim()) {
       cart.innerHTML =
-        '<div id="tour-empty-cart-hint" style="padding: 12px; border-radius: 8px; background: #F8FAFC; border: 1px dashed #CBD5E1; font-size: 12px; color: #475569;">Guarda primero un producto de práctica (Paso 2) para seleccionarlo aquí en el carrito.</div>';
+        '<div id="tour-empty-cart-hint" style="padding: 12px; border-radius: 8px; background: #F8FAFC; border: 1px dashed #CBD5E1; font-size: 12px; color: #475569;">Para probar una venta, vuelve al paso 2 y guarda un producto de práctica.</div>';
     }
   }
 
   function destroyLayer() {
-    if (layerEl) {
-      layerEl.remove();
-      layerEl = null;
-    }
+    layerEl?.remove();
+    layerEl = null;
     window.removeEventListener('resize', repositionActive);
     window.removeEventListener('scroll', repositionActive, true);
+    window.visualViewport?.removeEventListener('resize', repositionActive);
+    window.visualViewport?.removeEventListener('scroll', repositionActive);
+    document.removeEventListener('click', guardInteraction, true);
+    document.removeEventListener('focusin', guardInteraction, true);
   }
 
-  function findVisibleTarget(selector, fallbackSelector) {
-    const tryList = [selector, fallbackSelector].filter(Boolean);
-    for (const sel of tryList) {
-      const candidates = document.querySelectorAll(sel);
-      for (const el of candidates) {
-        if (typeof el.getBoundingClientRect === 'function') {
-          const rect = el.getBoundingClientRect();
-          if (rect.width > 0 && rect.height > 0) return el;
-        }
+  function guardInteraction(event) {
+    const step = STEPS[currentStepIdx];
+    const drawer = step.openDrawer && document.getElementById(step.openDrawer);
+    if (layerEl.contains(event.target)) return;
+    if (drawer && drawer.contains(event.target) && !event.target.closest('[data-close-drawer]')) return;
+
+    if (event.type === 'click') {
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    } else {
+      layerEl.querySelector('[role="dialog"]')?.focus({ preventScroll: true });
+    }
+  }
+
+  function findVisibleTarget(step) {
+    for (const selector of [step.selector, step.fallbackSelector].filter(Boolean)) {
+      for (const candidate of document.querySelectorAll(selector)) {
+        const { width, height } = candidate.getBoundingClientRect();
+        if (width > 0 && height > 0 && getComputedStyle(candidate).visibility === 'visible') return candidate;
       }
-      if (candidates[0]) return candidates[0];
     }
     return null;
   }
 
-  function computeTargetRect(step) {
-    const primary = findVisibleTarget(step.selector, step.fallbackSelector);
-    if (!primary || typeof primary.getBoundingClientRect !== 'function') return null;
-    const r1 = primary.getBoundingClientRect();
-    let left = r1.left;
-    let top = r1.top;
-    let right = r1.right;
-    let bottom = r1.bottom;
+  function repositionActive(animate = false) {
+    if (!layerEl || STEPS[currentStepIdx].isFinalModal) return;
+    const step = STEPS[currentStepIdx];
+    const highlight = layerEl.querySelector('.dp-spotlight-highlight');
+    const card = layerEl.querySelector('.dp-spotlight-popover');
+    if (!card || !highlight) return;
 
-    if (step.secondarySelector) {
-      const secondary = findVisibleTarget(step.secondarySelector);
-      if (secondary && typeof secondary.getBoundingClientRect === 'function') {
-        const r2 = secondary.getBoundingClientRect();
-        if (r2.width > 0 && r2.height > 0) {
-          left = Math.min(left, r2.left);
-          top = Math.min(top, r2.top);
-          right = Math.max(right, r2.right);
-          bottom = Math.max(bottom, r2.bottom);
-        }
+    const visual = window.visualViewport;
+    const viewport = {
+      left: visual?.offsetLeft ?? 0,
+      top: visual?.offsetTop ?? 0,
+      width: visual?.width ?? window.innerWidth,
+      height: visual?.height ?? window.innerHeight,
+    };
+    const pad = 12;
+    const right = viewport.left + viewport.width;
+    const bottom = viewport.top + viewport.height;
+    card.style.maxHeight = Math.max(100, Math.floor(viewport.height * 0.45)) + 'px';
+    const size = card.getBoundingClientRect();
+    const rect = findVisibleTarget(step)?.getBoundingClientRect();
+    highlight.classList.toggle('is-moving', animate === true);
+    highlight.hidden = !rect || rect.bottom <= viewport.top || rect.top >= bottom;
+    let left = viewport.left + (viewport.width - size.width) / 2;
+    let top = bottom - size.height - pad;
+
+    if (!highlight.hidden) {
+      const focusLeft = Math.max(viewport.left, rect.left - 6);
+      const focusTop = Math.max(viewport.top, rect.top - 6);
+      highlight.style.left = focusLeft + 'px';
+      highlight.style.top = focusTop + 'px';
+      highlight.style.width = Math.max(0, Math.min(right, rect.right + 6) - focusLeft) + 'px';
+      highlight.style.height = Math.min(bottom, rect.bottom + 6) - focusTop + 'px';
+
+      if (step.openDrawer && rect.left - size.width - pad >= viewport.left + pad) {
+        left = rect.left - size.width - pad;
+        top = rect.top;
+      } else {
+        const above = rect.top - size.height - pad;
+        const below = rect.bottom + pad;
+        left = rect.left;
+        top = below + size.height <= bottom - pad || above < viewport.top + pad ? below : above;
       }
     }
 
-    return {
-      left,
-      top,
-      right,
-      bottom,
-      width: Math.max(0, right - left),
-      height: Math.max(0, bottom - top),
-    };
-  }
-
-  function positionPopoverNearRect(popover, rect, step) {
-    if (typeof popover.getBoundingClientRect !== 'function') return;
-    const pad = 12;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const popRect = popover.getBoundingClientRect();
-
-    // Si estamos guiando dentro de un drawer lateral derecho en escritorio, posicionar a la izquierda para no tapar los campos
-    if (step && step.openDrawer && vw >= 820 && rect.left > popRect.width + 24) {
-      const leftPos = Math.max(pad, rect.left - popRect.width - 20);
-      const topPos = Math.min(Math.max(pad, rect.top), Math.max(pad, vh - popRect.height - pad));
-      popover.style.top = `${topPos}px`;
-      popover.style.left = `${leftPos}px`;
-      return;
-    }
-
-    let top = rect.bottom + 12;
-    if (top + popRect.height > vh - pad) {
-      top = Math.max(pad, rect.top - popRect.height - 12);
-    }
-    const left = Math.min(Math.max(pad, rect.left), Math.max(pad, vw - popRect.width - pad));
-    popover.style.top = `${top}px`;
-    popover.style.left = `${left}px`;
-  }
-
-  function repositionActive() {
-    if (!layerEl) return;
-    const step = STEPS[currentStepIdx];
-    if (!step || step.isFinalModal) return;
-    const rect = computeTargetRect(step);
-    const hl = layerEl.querySelector('.dp-spotlight-highlight');
-    const pop = layerEl.querySelector('.dp-spotlight-popover');
-    if (!rect || !hl || !pop) return;
-    hl.style.top = `${Math.max(4, rect.top - 6)}px`;
-    hl.style.left = `${Math.max(4, rect.left - 6)}px`;
-    hl.style.width = `${rect.width + 12}px`;
-    hl.style.height = `${rect.height + 12}px`;
-    positionPopoverNearRect(pop, rect, step);
+    card.style.left = Math.max(viewport.left + pad, Math.min(left, right - size.width - pad)) + 'px';
+    card.style.top = Math.max(viewport.top + pad, Math.min(top, bottom - size.height - pad)) + 'px';
+    card.classList.add('is-positioned');
   }
 
   async function completeTour(action) {
+    if (completing) return;
+    completing = true;
     const headers = { 'Content-Type': 'application/json' };
     if (window.dashboardDataToken) {
       headers['Authorization'] = `Bearer ${window.dashboardDataToken}`;
@@ -277,84 +268,98 @@
       console.error('Error al cerrar recorrido:', err);
       alert('No se pudo confirmar el cierre. No se borró la práctica; recarga antes de volver a intentarlo.');
       return;
+    } finally {
+      completing = false;
     }
     clearState();
     destroyLayer();
     window.location.reload();
   }
 
-  function renderStep(idx) {
-    destroyLayer();
+  async function renderStep(idx) {
+    if (completing) return;
     currentStepIdx = Math.max(0, Math.min(STEPS.length - 1, idx));
     const step = STEPS[currentStepIdx];
     window.__SPOTLIGHT_TRAINING_ACTIVE__ = true;
-    saveState({ active: true, step: currentStepIdx, training: true });
-
+    saveState({ active: true, step: currentStepIdx, scope: tourScope });
+    if (currentStepIdx === 0) window.switchModuleSection?.('section-home', { animate: false });
     syncDrawersForStep(step);
 
-    layerEl = document.createElement('div');
-    layerEl.className = 'dp-spotlight-layer';
-
-    if (step.isFinalModal) {
+    if (!layerEl) {
+      layerEl = document.createElement('div');
+      layerEl.className = 'dp-spotlight-layer';
       layerEl.innerHTML = `
         <div class="dp-spotlight-backdrop"></div>
-        <div class="dp-spotlight-modal-card" role="dialog" aria-modal="true">
-          <div class="dp-spotlight-step-tag">${step.stepLabel}</div>
-          <h3 class="dp-spotlight-title">${step.title}</h3>
-          <p class="dp-spotlight-desc">${step.desc}</p>
-          <div style="display: flex; flex-direction: column; gap: 10px;">
+        <div class="dp-spotlight-highlight" hidden></div>
+        <div class="dp-spotlight-content"></div>
+      `;
+      document.body.appendChild(layerEl);
+      window.addEventListener('resize', repositionActive);
+      window.addEventListener('scroll', repositionActive, true);
+      window.visualViewport?.addEventListener('resize', repositionActive);
+      window.visualViewport?.addEventListener('scroll', repositionActive);
+      document.addEventListener('click', guardInteraction, true);
+      document.addEventListener('focusin', guardInteraction, true);
+    }
+
+    const content = layerEl.querySelector('.dp-spotlight-content');
+    const heading = `
+      <div class="dp-spotlight-step-tag">${step.stepLabel}</div>
+      <h3 id="spotlight-title" class="dp-spotlight-title">${step.title}</h3>
+      <p id="spotlight-description" class="dp-spotlight-desc">${step.desc}</p>
+    `;
+    if (step.isFinalModal) {
+      layerEl.querySelector('.dp-spotlight-highlight').hidden = true;
+      content.innerHTML = `
+        <div class="dp-spotlight-modal-card" role="dialog" aria-modal="true"
+             aria-labelledby="spotlight-title" aria-describedby="spotlight-description" tabindex="-1">
+          ${heading}
+          <div class="dp-spotlight-final-actions">
             <button type="button" id="btn-tour-purge-training" class="btn btn-primary dp-spotlight-final-btn">
               Borrar datos de práctica (Dejar mi cuenta 100% en limpio)
             </button>
             <button type="button" id="btn-tour-keep-training" class="btn btn-secondary dp-spotlight-final-btn">
-              Conservar estos datos como práctica
+              Conservar datos de práctica
             </button>
-            <button type="button" id="btn-tour-prev" class="btn btn-ghost" style="font-size: 12px;">
-              Anterior
-            </button>
+            <button type="button" id="btn-tour-prev" class="btn btn-ghost">Anterior</button>
           </div>
         </div>
       `;
-      document.body.appendChild(layerEl);
-      layerEl.querySelector('#btn-tour-purge-training').addEventListener('click', () => completeTour('purge_training'));
-      layerEl.querySelector('#btn-tour-keep-training').addEventListener('click', () => completeTour('keep_training'));
-      layerEl.querySelector('#btn-tour-prev').addEventListener('click', () => renderStep(currentStepIdx - 1));
+      content.querySelector('[role="dialog"]').focus({ preventScroll: true });
+      content.querySelector('#btn-tour-purge-training').addEventListener('click', () => completeTour('purge_training'));
+      content.querySelector('#btn-tour-keep-training').addEventListener('click', () => completeTour('keep_training'));
+      content.querySelector('#btn-tour-prev').addEventListener('click', () => renderStep(currentStepIdx - 1));
       return;
     }
 
-    const target = findVisibleTarget(step.selector, step.fallbackSelector);
-    if (target && typeof target.scrollIntoView === 'function') {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-
-    layerEl.innerHTML = `
-      <div class="dp-spotlight-highlight"></div>
-      <div class="dp-spotlight-popover" role="dialog" aria-modal="true">
-        <div class="dp-spotlight-step-tag">${step.stepLabel}</div>
-        <h3 class="dp-spotlight-title">${step.title}</h3>
-        <p class="dp-spotlight-desc">${step.desc}</p>
+    content.innerHTML = `
+      <div class="dp-spotlight-popover" role="dialog" tabindex="-1"
+           aria-labelledby="spotlight-title" aria-describedby="spotlight-description">
+        ${heading}
         <div class="dp-spotlight-actions">
-          <button type="button" id="btn-tour-skip" class="btn btn-ghost" style="font-size: 12px; padding: 6px 8px;">Omitir tutorial</button>
-          <div style="display: flex; gap: 6px;">
-            <button type="button" id="btn-tour-prev" class="btn btn-secondary" style="font-size: 12px; padding: 6px 12px;" ${currentStepIdx === 0 ? 'disabled' : ''}>Anterior</button>
-            <button type="button" id="btn-tour-next" class="btn btn-primary" style="font-size: 12px; padding: 6px 12px;">Siguiente</button>
+          <button type="button" id="btn-tour-skip" class="btn btn-ghost">Omitir tutorial</button>
+          <div class="dp-spotlight-navigation">
+            <button type="button" id="btn-tour-prev" class="btn btn-secondary" ${currentStepIdx === 0 ? 'disabled' : ''}>Anterior</button>
+            <button type="button" id="btn-tour-next" class="btn btn-primary">Siguiente</button>
           </div>
         </div>
       </div>
     `;
-    document.body.appendChild(layerEl);
+    const card = content.querySelector('.dp-spotlight-popover');
+    content.querySelector('#btn-tour-skip').addEventListener('click', () => completeTour('keep_training'));
+    content.querySelector('#btn-tour-prev').addEventListener('click', () => renderStep(currentStepIdx - 1));
+    content.querySelector('#btn-tour-next').addEventListener('click', () => renderStep(currentStepIdx + 1));
 
-    repositionActive();
-    setTimeout(repositionActive, 60);
-    setTimeout(repositionActive, 280);
-    window.addEventListener('resize', repositionActive);
-    window.addEventListener('scroll', repositionActive, true);
-
-    layerEl.querySelector('#btn-tour-skip').addEventListener('click', () => completeTour('keep_training'));
-    layerEl.querySelector('#btn-tour-prev').addEventListener('click', () => {
-      if (currentStepIdx > 0) renderStep(currentStepIdx - 1);
-    });
-    layerEl.querySelector('#btn-tour-next').addEventListener('click', () => renderStep(currentStepIdx + 1));
+    if (step.openDrawer) {
+      const panel = document.getElementById(step.openDrawer)?.querySelector('.drawer-panel');
+      const transitions = panel?.getAnimations()
+        .filter((animation) => animation.transitionProperty === 'transform') || [];
+      if (transitions.length) await Promise.allSettled(transitions.map((animation) => animation.finished));
+    }
+    if (!card.isConnected) return;
+    findVisibleTarget(step)?.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'nearest' });
+    repositionActive(true);
+    card.focus({ preventScroll: true });
   }
 
   document.addEventListener('DOMContentLoaded', () => {
@@ -363,22 +368,27 @@
       startBtn.addEventListener('click', () => renderStep(0));
     }
 
-    const saved = readState();
-    if (saved && saved.active && typeof saved.step === 'number') {
-      setTimeout(() => renderStep(saved.step), 250);
-      return;
-    }
-
     const dataEl = document.getElementById('dashboard-data');
-    if (dataEl) {
-      try {
-        const dash = JSON.parse(dataEl.textContent);
-        if (dash && dash.onboarding_tour_completed === false && Array.isArray(dash.products) && dash.products.length === 0) {
-          setTimeout(() => renderStep(0), 400);
-        }
-      } catch (_) {}
+    if (!dataEl) return;
+    try {
+      const dash = JSON.parse(dataEl.textContent);
+      tourScope = dash.tour_scope;
+      const saved = readState();
+      if (tourScope && saved?.scope === tourScope && saved.active && Number.isInteger(saved.step)) {
+        renderStep(saved.step);
+      } else if (dash.initial_section !== 'section-sales' && dash.onboarding_tour_completed === false && dash.products?.length === 0) {
+        renderStep(0);
+      }
+    } catch (error) {
+      console.error('No se pudo iniciar el recorrido:', error);
     }
   });
 
   window.startSpotlightTour = () => renderStep(0);
+  window.advanceSpotlightTour = (drawerId) => {
+    if (STEPS[currentStepIdx].openDrawer === drawerId) {
+      const next = STEPS.findIndex((step, index) => index > currentStepIdx && step.openDrawer !== drawerId);
+      if (next !== -1) renderStep(next);
+    }
+  };
 })();

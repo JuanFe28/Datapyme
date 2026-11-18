@@ -152,3 +152,35 @@ def test_compute_pure_profitability_pnl_losses_and_rankings():
     assert len(series["labels"]) == 4
     assert len(series["revenue"]) == 4
     assert sum(series["revenue"]) == 350000.0
+
+
+def test_sales_and_shrinkage_at_reporting_boundary_match_chart_totals():
+    now = datetime(2026, 11, 18, 18, tzinfo=UTC)
+    cutoff = now - timedelta(days=7)
+    result = compute_pure_profitability(
+        products=[],
+        sales=[
+            {"id": "first", "occurred_at": cutoff, "subtotal": "100", "cogs_total": "40"},
+            {"id": "last", "occurred_at": now, "subtotal": "200", "cogs_total": "80"},
+            {"id": "old", "occurred_at": cutoff - timedelta(seconds=1), "subtotal": "500"},
+        ],
+        sale_items=[],
+        shrinkage_movements=[
+            {
+                "movement_type": "adjustment_out",
+                "product_id": "test",
+                "quantity": "-1",
+                "unit_cost": "20",
+                "occurred_at": when,
+            }
+            for when in (cutoff, cutoff - timedelta(seconds=1))
+        ],
+        period_days=7,
+        now=now,
+    )
+
+    assert result["confirmed_sales_count"] == 2
+    assert result["pnl"]["net_revenue"] == "300.00"
+    assert result["pnl"]["shrinkage_loss_cop"] == "20.00"
+    assert result["series"]["revenue"] == [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 200.0]
+    assert sum(result["series"]["losses_and_costs"]) == 140
