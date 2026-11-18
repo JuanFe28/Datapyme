@@ -38,14 +38,15 @@ def test_seed_and_clear_contrast_demo_tenants_e2e(tmp_path):
             in fc_a["methodological_disclaimer"]
         )
 
-        # 3. Verificar Telemetría SuperAdmin con las 3 empresas demo activas (k = 3) y al menos 40 ventas
+        # 3. Verificar que las 3 empresas demo quedan estrictamente excluidas de la telemetría real /api/admin/impact
         impact = client.get(
             "/api/admin/impact",
             headers={"Authorization": f"Bearer {tok_admin}"},
         ).json()
-        assert impact["global"]["active_tenants"] == 3
-        assert impact["global"]["is_suppressed"] is False
-        assert impact["global"]["sales_count"] >= 40
+        assert impact["global"]["active_tenants"] == 0
+        assert impact["global"]["registered_real_tenants"] == 0
+        assert impact["global"]["sales_count"] == 0
+        assert impact["global"]["products_managed"] == 0
 
         # 4. Limpiar empresas demo y verificar que quedan 0 empresas demo activas
         with application.state.Session() as db:

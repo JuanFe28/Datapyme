@@ -85,7 +85,8 @@ def test_02_superadmin_login_shows_html_impact_view(page: Page):
     expect(page.locator("text=Tiempo Ahorrado Estimado")).to_be_visible()
 
     # 5. Tabla por subsector y tarjeta criptográfica
-    expect(page.locator("text=Cohortes Estadísticas por Subsector Comercial")).to_be_visible()
+    expect(page.locator("text=Resumen de Resultados por Tipo de Comercio (Subsector)")).to_be_visible()
+    expect(page.locator("text=Total Muestra Real Consolidada (Anónima Ley 1581)")).to_be_visible()
     expect(page.locator("text=Cadena Inmutable de Consentimientos")).to_be_visible()
 
     # 6. Si intenta navegar manualmente a /dashboard, debe redirigirlo a /admin/impacto

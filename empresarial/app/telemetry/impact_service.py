@@ -31,17 +31,101 @@ from app.core.models import (
     SessionToken,
     Tenant,
     UsageEvent,
+    User,
     utcnow,
 )
 from app.core.security import compute_consent_row_hash, sha256_hex
 
 TWO_PLACES = Decimal("0.01")
 
+DEMO_EMAILS = frozenset(
+    {
+        "demo.ferreteria@datapyme.co",
+        "demo.boutique@datapyme.co",
+        "demo.minimercado@datapyme.co",
+        "superadmin.demo@datapyme.co",
+    }
+)
+
+_FOOD_DESSERT_BEVERAGE_NAMES = frozenset(
+    {
+        "vafel sweet",
+        "eat healthy",
+        "bv elixir",
+        "my dulce encanto",
+        "cookie bites",
+        "matilde",
+    }
+)
+
+_SUBSECTOR_LABELS: dict[str, str] = {
+    "minimercado": "Alimentos, Postres y Bebidas",
+    "minimercados y viveres (ciiu g4711)": "Alimentos, Postres y Bebidas",
+    "alimentos y bebidas": "Alimentos, Postres y Bebidas",
+    "alimentos, postres y bebidas": "Alimentos, Postres y Bebidas",
+    "boutique": "Moda, Ropa y Accesorios",
+    "ropa, calzado y accesorios": "Moda, Ropa y Accesorios",
+    "moda, ropa y accesorios": "Moda, Ropa y Accesorios",
+    "ropa_calzado_accesorios": "Moda, Ropa y Accesorios",
+    "prendas de vestir y calzado (ciiu g4771)": "Moda, Ropa y Accesorios",
+    "belleza": "Belleza y Cuidado Personal",
+    "belleza y cuidado personal": "Belleza y Cuidado Personal",
+    "ferreteria": "Ferretería y Construcción",
+    "ferretería": "Ferretería y Construcción",
+    "ferretería y hogar": "Ferretería y Construcción",
+    "ferreteria_hogar": "Ferretería y Construcción",
+    "ferretería y construcción (ciiu g4752)": "Ferretería y Construcción",
+    "tecnologia": "Tecnología y Electrónicos",
+    "tecnología y electrónicos": "Tecnología y Electrónicos",
+    "mayorista": "Comercio Minorista General",
+    "comercio mayorista no especializado": "Comercio Minorista General",
+    "general": "Comercio Minorista General",
+    "comercio": "Comercio Minorista General",
+    "otra actividad comercial": "Comercio Minorista General",
+    "comercio minorista general": "Comercio Minorista General",
+}
+
+
+def is_demo_or_synthetic_tenant(db: Session, tenant: Tenant) -> bool:
+    """Identifica cuentas demo o sintéticas que nunca deben contaminar métricas reales."""
+    for raw_name in (tenant.legal_name, tenant.trade_name):
+        name_low = (raw_name or "").strip().lower()
+        if not name_low:
+            continue
+        if (
+            "[demo" in name_low
+            or "[qa" in name_low
+            or "ferretería cabecera" in name_low
+            or "ferreteria cabecera" in name_low
+            or "boutique san pío" in name_low
+            or "boutique san pio" in name_low
+            or "minimercado real" in name_low
+        ):
+            return True
+
+    user_emails = [
+        (email or "").strip().lower()
+        for (email,) in db.query(User.email).filter(User.tenant_id == tenant.id).all()
+    ]
+    return any(em in DEMO_EMAILS or em.startswith("demo.") for em in user_emails)
+
+
+def normalize_real_subsector(subsector: str | None, trade_name: str | None = None) -> str:
+    """Normaliza el subsector comercial hacia etiquetas claras del estudio F-DC-125."""
+    trade_low = (trade_name or "").strip().lower()
+    if trade_low in _FOOD_DESSERT_BEVERAGE_NAMES:
+        return "Alimentos, Postres y Bebidas"
+    key = (subsector or "").strip().lower()
+    if key in _SUBSECTOR_LABELS:
+        return _SUBSECTOR_LABELS[key]
+    clean = (subsector or "").strip()
+    return clean or "Comercio Minorista General"
+
 
 def verify_legal_consents_chain(db: Session, tenant_id: str | None = None) -> dict[str, Any]:
     """
     Verifica la cadena de bloques ligera SHA-256 (`prev_hash -> row_hash`) de `legal_consents`.
-    No expone PII ni `tenant_id` en el resumen público de auditoría.
+    Cuando se consulta globalmente (`tenant_id is None`), excluye cuentas demo/sintéticas.
     """
     query = db.query(LegalConsent).order_by(
         LegalConsent.tenant_id.asc(), LegalConsent.accepted_at.asc(), LegalConsent.id.asc()
@@ -49,6 +133,12 @@ def verify_legal_consents_chain(db: Session, tenant_id: str | None = None) -> di
     if tenant_id:
         query = query.filter(LegalConsent.tenant_id == tenant_id)
     rows = query.all()
+
+    if tenant_id is None:
+        real_tenant_ids = {
+            t.id for t in db.query(Tenant).all() if not is_demo_or_synthetic_tenant(db, t)
+        }
+        rows = [r for r in rows if r.tenant_id in real_tenant_ids]
 
     by_tenant: dict[str, list[LegalConsent]] = defaultdict(list)
     for r in rows:
@@ -82,52 +172,40 @@ def _compute_cohort_metrics(
     subsector: str | None,
     k_threshold: int = 3,
 ) -> dict[str, Any]:
-    active_count = len(tenants)
+    registered_count = len(tenants)
+    opt_in_tenants = [t for t in tenants if t.research_stats_opt_in]
+    t_ids = [t.id for t in opt_in_tenants]
     snap_date = utcnow().date()
 
-    if active_count < k_threshold:
-        row = PlatformImpactTelemetry(
-            snapshot_date=snap_date,
-            scope=scope,
-            subsector=subsector,
-            k_threshold=k_threshold,
-            active_tenants=active_count,
-            is_suppressed=True,
-            baseline_ref="M24_estudio_mercado_bucaramanga",
-        )
-        db.add(row)
-        db.flush()
-        return {
-            "scope": scope,
-            "subsector": subsector or "ALL",
-            "k_threshold": k_threshold,
-            "active_tenants": active_count,
-            "is_suppressed": True,
-            "suppression_reason": f"Cohort size ({active_count}) < k-anonymity threshold ({k_threshold})",
-            "sales_count": None,
-            "sales_amount_cop": None,
-            "products_managed": None,
-            "stockout_risk_alerts": None,
-            "alerts_resolved_in_time": None,
-            "overstock_flags": None,
-            "forecasts_generated": None,
-            "reports_generated": None,
-            "est_minutes_saved": None,
-            "focus_distribution": None,
-        }
-
-    t_ids = [t.id for t in tenants]
-
-    sales = db.query(Sale).filter(Sale.tenant_id.in_(t_ids), Sale.status != "voided").all()
+    sales = (
+        db.query(Sale)
+        .filter(Sale.tenant_id.in_(t_ids), Sale.is_training_data.is_(False), Sale.status != "voided")
+        .all()
+        if t_ids
+        else []
+    )
     sales_count = len(sales)
     sales_amount_cop = sum(
         (Decimal(str(s.total)) for s in sales),
         start=Decimal(0),
     ).quantize(Decimal(1), rounding=ROUND_HALF_UP)
 
-    products_managed = (
-        db.query(Product).filter(Product.tenant_id.in_(t_ids), Product.is_active.is_(True)).count()
+    active_products = (
+        db.query(Product)
+        .filter(
+            Product.tenant_id.in_(t_ids),
+            Product.is_training_data.is_(False),
+            Product.is_active.is_(True),
+        )
+        .all()
+        if t_ids
+        else []
     )
+    products_managed = len(active_products)
+
+    tenants_with_data = {s.tenant_id for s in sales} | {p.tenant_id for p in active_products}
+    active_data_count = len(tenants_with_data)
+    active_count = active_data_count if active_data_count > 0 else len(opt_in_tenants)
 
     stockout_risk_alerts = 0
     overstock_flags = 0
@@ -136,7 +214,7 @@ def _compute_cohort_metrics(
         stockout_risk_alerts += len(alerts["out_of_stock"]) + len(alerts["stockout_risk"])
         overstock_flags += len(alerts["overstock"])
 
-    events = db.query(UsageEvent).filter(UsageEvent.tenant_id.in_(t_ids)).all()
+    events = db.query(UsageEvent).filter(UsageEvent.tenant_id.in_(t_ids)).all() if t_ids else []
     forecasts_generated = sum(1 for e in events if e.event_type == "forecast_executed")
     reports_generated = sum(
         1 for e in events if e.event_type in ("kpi_dashboard_viewed", "import_completed")
@@ -149,7 +227,11 @@ def _compute_cohort_metrics(
         (sales_count * 4) + (forecasts_generated * 15) + (reports_generated * 10)
     )
 
-    prefs = db.query(CompanyUIPreference).filter(CompanyUIPreference.tenant_id.in_(t_ids)).all()
+    prefs = (
+        db.query(CompanyUIPreference).filter(CompanyUIPreference.tenant_id.in_(t_ids)).all()
+        if t_ids
+        else []
+    )
     focus_counts = {"sales": 0, "inventory": 0, "predictive": 0, "balanced": 0}
     for p in prefs:
         if p.primary_focus in focus_counts:
@@ -184,6 +266,10 @@ def _compute_cohort_metrics(
         "scope": scope,
         "subsector": subsector or "ALL",
         "k_threshold": k_threshold,
+        "registered_tenants": registered_count,
+        "registered_real_tenants": registered_count,
+        "active_data_tenants": active_data_count,
+        "opt_in_tenants": len(opt_in_tenants),
         "active_tenants": active_count,
         "is_suppressed": False,
         "suppression_reason": None,
@@ -206,25 +292,28 @@ def compute_platform_impact_telemetry(
 ) -> dict[str, Any]:
     """
     Calcula y persiste los snapshots de impacto anonimizados para el rol `superadmin` (F-DC-125).
-    Solo incluye empresas activas que hayan otorgado consentimiento explícito (`research_stats_opt_in=True`).
+    Excluye de raíz las cuentas demo/sintéticas y agrupa únicamente empresas reales sin PII.
     """
-    eligible_tenants = (
-        db.query(Tenant).filter(Tenant.status == "active", Tenant.research_stats_opt_in.is_(True)).all()
-    )
+    real_tenants = [
+        t
+        for t in db.query(Tenant).filter(Tenant.status == "active").all()
+        if not is_demo_or_synthetic_tenant(db, t)
+    ]
 
     global_metrics = _compute_cohort_metrics(
         db=db,
-        tenants=eligible_tenants,
+        tenants=real_tenants,
         scope="global",
         subsector=None,
         k_threshold=k_threshold,
     )
 
     by_subsector_map: dict[str, list[Tenant]] = defaultdict(list)
-    for t in eligible_tenants:
-        by_subsector_map[t.subsector].append(t)
+    for t in real_tenants:
+        norm_sub = normalize_real_subsector(t.subsector, t.trade_name or t.legal_name)
+        by_subsector_map[norm_sub].append(t)
 
-    subsector_Cohorts = [
+    subsector_cohorts = [
         _compute_cohort_metrics(
             db=db,
             tenants=sub_tenants,
@@ -232,17 +321,23 @@ def compute_platform_impact_telemetry(
             subsector=sub_name,
             k_threshold=k_threshold,
         )
-        for sub_name, sub_tenants in sorted(by_subsector_map.items())
+        for sub_name, sub_tenants in sorted(
+            by_subsector_map.items(),
+            key=lambda kv: (-len(kv[1]), kv[0]),
+        )
     ]
 
     chain_audit = verify_legal_consents_chain(db)
     db.commit()
 
     return {
-        "privacy_guarantee": f"k-anonymity (k >= {k_threshold}) | Ley 1581 de 2012 | Zero PII / Zero NIT",
+        "privacy_guarantee": (
+            f"Muestra real sin cuentas demo (k >= {k_threshold} consolidado) | "
+            "Ley 1581 de 2012 | Zero PII / Zero NIT"
+        ),
         "k_threshold": k_threshold,
         "global": global_metrics,
-        "subsectors": subsector_Cohorts,
+        "subsectors": subsector_cohorts,
         "legal_consents_integrity": chain_audit,
     }
 

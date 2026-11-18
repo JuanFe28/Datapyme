@@ -5,6 +5,7 @@ from datetime import timedelta
 
 from fastapi.testclient import TestClient
 
+from app.core.demo_seed import seed_contrast_demo_tenants
 from app.core.models import SessionToken, User, utcnow
 from app.core.security import generate_session_token, hash_password, sha256_hex
 from app.main import create_app
@@ -40,6 +41,7 @@ def test_k_anonymity_suppression_role_segregation_and_habeas_data(tmp_path):
     with TestClient(application) as client:
         # Crear usuario SuperAdmin en la base de datos
         with application.state.Session() as db:
+            seed_contrast_demo_tenants(db)
             admin = User(
                 tenant_id=None,
                 email="auditor.fdc125@uts.edu.co",
@@ -63,7 +65,15 @@ def test_k_anonymity_suppression_role_segregation_and_habeas_data(tmp_path):
 
         admin_headers = {"Authorization": f"Bearer {admin_tok}"}
 
-        # Registrar 2 empresas (k = 2 < 3)
+        # 0. Antes de registrar empresas reales, las cuentas demo NO deben inflar /api/admin/impact
+        empty_impact = client.get("/api/admin/impact", headers=admin_headers).json()
+        assert empty_impact["global"]["active_tenants"] == 0
+        assert empty_impact["global"]["registered_real_tenants"] == 0
+        assert empty_impact["global"]["sales_count"] == 0
+        assert empty_impact["global"]["products_managed"] == 0
+        assert empty_impact["subsectors"] == []
+
+        # Registrar 2 empresas reales
         t1 = _register_opt_in_tenant(client, 1, subsector="Ferretería")
         t2 = _register_opt_in_tenant(client, 2, subsector="Ferretería")
         headers_t1 = {"Authorization": f"Bearer {t1['access_token']}"}
@@ -72,29 +82,36 @@ def test_k_anonymity_suppression_role_segregation_and_habeas_data(tmp_path):
         assert client.get("/api/admin/impact", headers=headers_t1).status_code == 403
         assert client.get("/api/products", headers=admin_headers).status_code == 403
 
-        # 2. Con k = 2 (< 3), la telemetría global DEBE estar suprimida por k-anonimato
-        impact_k2 = client.get("/api/admin/impact", headers=admin_headers).json()
-        assert impact_k2["global"]["active_tenants"] == 2
-        assert impact_k2["global"]["is_suppressed"] is True
-        assert impact_k2["global"]["sales_amount_cop"] is None
-        assert impact_k2["legal_consents_integrity"]["chain_intact"] is True
+        # 2. Solo cuentan las 2 empresas reales registradas sin contaminación demo ni supresión al admin
+        impact_real_2 = client.get("/api/admin/impact", headers=admin_headers).json()
+        assert impact_real_2["global"]["active_tenants"] == 2
+        assert impact_real_2["global"]["registered_real_tenants"] == 2
+        assert impact_real_2["global"]["is_suppressed"] is False
+        assert impact_real_2["global"]["sales_count"] == 0
+        assert impact_real_2["global"]["sales_amount_cop"] == "0"
+        assert impact_real_2["legal_consents_integrity"]["chain_intact"] is True
 
-        # 3. Al registrar la 3ra empresa (k = 3), se desbloquea el agregado global SIN exponer PII ni tenant_id
+        # 3. Al registrar la 3ra empresa real (Minimercado -> Alimentos, Postres y Bebidas),
+        # los subsectores muestran cifras reales exactas SIN [Suprimido] y SIN PII
         _register_opt_in_tenant(client, 3, subsector="Minimercado")
         impact_k3 = client.get("/api/admin/impact", headers=admin_headers).json()
         assert impact_k3["global"]["active_tenants"] == 3
+        assert impact_k3["global"]["registered_real_tenants"] == 3
         assert impact_k3["global"]["is_suppressed"] is False
         assert impact_k3["global"]["sales_amount_cop"] == "0"
 
-        # Verificar que los subsectores con k < 3 (Ferretería tiene 2, Minimercado tiene 1) siguen suprimidos
+        by_sub = {s["subsector"]: s for s in impact_k3["subsectors"]}
+        assert by_sub["Ferretería y Construcción"]["registered_tenants"] == 2
+        assert by_sub["Alimentos, Postres y Bebidas"]["registered_tenants"] == 1
         for sub in impact_k3["subsectors"]:
-            assert sub["is_suppressed"] is True
-            assert sub["sales_amount_cop"] is None
+            assert sub["is_suppressed"] is False
+            assert sub["sales_amount_cop"] == "0"
 
         # Verificar ausencia total de PII / nombres / correos / tenant_id en todo el JSON de telemetría
         raw_json = json.dumps(impact_k3)
         assert "Comercializadora Privada" not in raw_json
         assert "gerencia1@privada.co" not in raw_json
+        assert "Ferretería Cabecera" not in raw_json
         assert t1["tenant_id"] not in raw_json
         assert t2["tenant_id"] not in raw_json
 
@@ -118,9 +135,9 @@ def test_k_anonymity_suppression_role_segregation_and_habeas_data(tmp_path):
         # El token de t1 ya no puede operar porque la sesión fue revocada y el tenant pasó a pending_deletion
         assert client.get("/api/products", headers=headers_t1).status_code == 401
 
-        # Y al bajar a 2 empresas activas nuevamente, la telemetría global vuelve a suprimirse automáticamente
+        # Al pasar a pending_deletion baja a 2 empresas reales activas y la cadena SHA-256 sigue intacta
         impact_after_del = client.get("/api/admin/impact", headers=admin_headers).json()
         assert impact_after_del["global"]["active_tenants"] == 2
-        assert impact_after_del["global"]["is_suppressed"] is True
+        assert impact_after_del["global"]["registered_real_tenants"] == 2
         assert impact_after_del["legal_consents_integrity"]["chain_intact"] is True
         assert impact_after_del["legal_consents_integrity"]["total_consent_nodes"] == 10

@@ -17,16 +17,17 @@ from sqlalchemy.orm import Session
 from app.core.models import CompanyUIPreference, Tenant, User, UserViewSetting
 from app.core.provisioning_service import DENSITY_LABELS, FOCUS_LABELS
 from app.core.security import hash_password
+from app.telemetry.impact_service import is_demo_or_synthetic_tenant, normalize_real_subsector
 from app.ui.ui_personalization_service import DiagnosisInput, compute_priority_weights
 
 SUBSECTOR_MAP: dict[str, str] = {
-    "Alimentos y bebidas": "minimercado",
-    "Ropa, calzado y accesorios": "boutique",
-    "Belleza y cuidado personal": "belleza",
-    "Tecnología y electrónicos": "tecnologia",
-    "Ferretería y hogar": "ferreteria",
-    "Comercio mayorista no especializado": "mayorista",
-    "Otra actividad comercial": "general",
+    "Alimentos y bebidas": "Alimentos, Postres y Bebidas",
+    "Ropa, calzado y accesorios": "Moda, Ropa y Accesorios",
+    "Belleza y cuidado personal": "Belleza y Cuidado Personal",
+    "Tecnología y electrónicos": "Tecnología y Electrónicos",
+    "Ferretería y hogar": "Ferretería y Construcción",
+    "Comercio mayorista no especializado": "Comercio Minorista General",
+    "Otra actividad comercial": "Comercio Minorista General",
 }
 
 SIZE_MAP: dict[str, str] = {
@@ -169,7 +170,7 @@ def sync_research_companies(
         ans = item.get("answers") or {}
 
         raw_sub = str(ans.get("M05") or "Otra actividad comercial")
-        subsector = SUBSECTOR_MAP.get(raw_sub, "general")
+        subsector = normalize_real_subsector(SUBSECTOR_MAP.get(raw_sub, raw_sub), trade_name)
         size_code = SIZE_MAP.get(str(item.get("size") or "Pequeña"), "pequena")
         municipality = str(item.get("city") or "Bucaramanga").strip()
 
@@ -206,8 +207,7 @@ def sync_research_companies(
             db.flush()
         else:
             tenant.research_company_id = cid
-            if not tenant.subsector:
-                tenant.subsector = subsector
+            tenant.subsector = subsector
 
         user = db.query(User).filter_by(tenant_id=tenant.id, role="owner").first()
         base_username = normalize_username(trade_name)
@@ -321,12 +321,13 @@ def list_real_client_credentials(
     access_url: str = "",
 ) -> list[dict[str, Any]]:
     """Lista todas las empresas reales (no demos) para gestión de entrega y soporte MFA."""
-    tenants = (
-        db.query(Tenant)
-        .filter(~Tenant.legal_name.like("[DEMO-FDC125]%"))
+    tenants = [
+        t
+        for t in db.query(Tenant)
         .order_by(Tenant.research_company_id.asc().nullslast(), Tenant.created_at.asc())
         .all()
-    )
+        if not is_demo_or_synthetic_tenant(db, t)
+    ]
     rows: list[dict[str, Any]] = []
     for tenant in tenants:
         user = db.query(User).filter_by(tenant_id=tenant.id, role="owner").first()

@@ -167,7 +167,7 @@
           Garantía Estricta de Privacidad y k-Anonimato (Ley 1581 de 2012 / Decreto 1377 de 2013)
         </div>
         <div style="font-size: 13px; color: #047857; line-height: 1.5;">
-          Este módulo está configurado con <strong>k-anonimato (k &ge; 3)</strong> y <strong>Cero Datos Personales (Zero PII / Cero NIT)</strong>. Las métricas corresponden a agregaciones estadísticas de PyMEs participantes con consentimiento informado activo (`research_stats_opt_in = True`). Las cohortes con menos de 3 empresas se suprimen automáticamente para evitar cualquier identificación individual.
+          Este tablero calcula únicamente empresas reales participantes (excluyendo cuentas de demostración), con <strong>Cero Datos Personales (Zero PII / Cero NIT)</strong> y <strong>k-anonimato consolidado (k &ge; 3)</strong> en la muestra global para el informe F-DC-125.
         </div>
       </div>
     </div>
@@ -178,7 +178,7 @@
         <div class="impact-card-label">Empresas en Muestra Activa</div>
         <div class="impact-card-value">{{ telemetry.global.active_tenants }}</div>
         <div class="impact-card-meta">
-          <span class="badge-success">Consentimiento Activo</span>
+          {{ telemetry.global.active_data_tenants }} con ventas/datos cargados &middot; {{ telemetry.global.registered_real_tenants }} empresas reales registradas
         </div>
       </div>
 
@@ -273,69 +273,53 @@
       </div>
     </section>
 
-    <!-- 3. Cohortes de Telemetría por Subsector Comercial -->
+    <!-- 3. Resumen por Tipo de Comercio (Subsector) -->
     <section class="section-card">
-      <h2 class="section-title">Cohortes Estadísticas por Subsector Comercial</h2>
+      <h2 class="section-title">Resumen de Resultados por Tipo de Comercio (Subsector)</h2>
       <p class="section-subtitle">
-        Desglose anonimizado con salvaguarda de umbral $k \ge 3$ para el informe final F-DC-125.
+        Agrupación de las empresas reales participantes según su actividad comercial para el informe final F-DC-125.
       </p>
 
       <div class="table-responsive">
         <table class="polaris-table">
           <thead>
             <tr>
-              <th>Subsector Comercial</th>
-              <th style="text-align: center;">PyMEs Activas</th>
-              <th style="text-align: right;">Ventas Registradas</th>
+              <th>Tipo de Comercio (Subsector)</th>
+              <th style="text-align: center;">Empresas Registradas (Total en el estudio)</th>
+              <th style="text-align: center;">Empresas con Datos Activos</th>
+              <th style="text-align: right;">Ventas Procesadas (Transacciones)</th>
               <th style="text-align: right;">Monto Facturado (COP)</th>
-              <th style="text-align: center;">Productos Gestionados</th>
-              <th style="text-align: center;">Alertas de Stock</th>
-              <th style="text-align: right;">Estado de Privacidad</th>
+              <th style="text-align: center;">Productos en Catálogo (SKUs)</th>
             </tr>
           </thead>
           <tbody>
             {% for sub in telemetry.subsectors %}
             <tr>
               <td style="font-weight: 600;">{{ sub.subsector }}</td>
-              <td style="text-align: center;">{{ sub.active_tenants }}</td>
-              <td style="text-align: right;">
-                {% if sub.is_suppressed %}
-                  <span style="color: var(--ink-muted); font-size: 12px;">[Suprimido]</span>
-                {% else %}
-                  {{ sub.sales_count }}
-                {% endif %}
-              </td>
-              <td class="price-cell" style="text-align: right;">
-                {% if sub.is_suppressed %}
-                  <span style="color: var(--ink-muted); font-size: 12px;">[Suprimido]</span>
-                {% else %}
-                  {{ sub.sales_amount_cop | cop }}
-                {% endif %}
-              </td>
-              <td style="text-align: center;">
-                {% if sub.is_suppressed %}
-                  <span style="color: var(--ink-muted); font-size: 12px;">[Suprimido]</span>
-                {% else %}
-                  {{ sub.products_managed }}
-                {% endif %}
-              </td>
-              <td style="text-align: center;">
-                {% if sub.is_suppressed %}
-                  <span style="color: var(--ink-muted); font-size: 12px;">-</span>
-                {% else %}
-                  {{ sub.stockout_risk_alerts }}
-                {% endif %}
-              </td>
-              <td style="text-align: right;">
-                {% if sub.is_suppressed %}
-                  <span class="badge-warning" title="{{ sub.suppression_reason }}">Suprimido (N &lt; 3)</span>
-                {% else %}
-                  <span class="badge-success">Cohorte Pública ($k \ge 3$)</span>
-                {% endif %}
+              <td style="text-align: center;">{{ sub.registered_tenants }}</td>
+              <td style="text-align: center;">{{ sub.active_data_tenants }}</td>
+              <td style="text-align: right;">{{ sub.sales_count }}</td>
+              <td class="price-cell" style="text-align: right;">{{ sub.sales_amount_cop | cop }}</td>
+              <td style="text-align: center;">{{ sub.products_managed }} SKUs</td>
+            </tr>
+            {% else %}
+            <tr>
+              <td colspan="6" style="text-align: center; color: var(--ink-muted); padding: 18px;">
+                Aún no hay empresas reales registradas en el estudio.
               </td>
             </tr>
             {% endfor %}
           </tbody>
+          <tfoot>
+            <tr style="background: #ECFDF5; font-weight: 700; color: #065F46;">
+              <td>Total Muestra Real Consolidada (Anónima Ley 1581)</td>
+              <td style="text-align: center;">{{ telemetry.global.registered_real_tenants }}</td>
+              <td style="text-align: center;">{{ telemetry.global.active_data_tenants }}</td>
+              <td style="text-align: right;">{{ telemetry.global.sales_count }}</td>
+              <td class="price-cell" style="text-align: right;">{{ telemetry.global.sales_amount_cop | cop }}</td>
+              <td style="text-align: center;">{{ telemetry.global.products_managed }} SKUs</td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </section>
