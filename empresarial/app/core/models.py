@@ -133,6 +133,7 @@ class SessionToken(Base):
     csrf_secret = Column(String(64), nullable=False)
     expires_at = Column(DateTime(timezone=True), nullable=False)
     revoked_at = Column(DateTime(timezone=True), nullable=True)
+    last_activity_at = Column(DateTime(timezone=True), nullable=True, default=utcnow)
     ip_hash = Column(String(64), nullable=False)
     created_at = Column(DateTime(timezone=True), nullable=False, default=utcnow)
 

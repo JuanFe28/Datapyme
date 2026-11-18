@@ -70,7 +70,7 @@ def test_smart_excel_mapper_drawer_interaction(page: Page, tmp_path: Path):
     expect(page.locator("#drawer-import")).to_be_visible()
 
     # Verificar botones de plantilla con flex-wrap sin desbordamiento dentro del desplegable opcional
-    page.locator("#drawer-import details summary").click()
+    page.locator("#import-templates-accordion summary").click()
     links_box = page.locator("#import-template-links")
     expect(links_box).to_be_visible()
     wrap_info = links_box.evaluate(
@@ -88,10 +88,16 @@ def test_smart_excel_mapper_drawer_interaction(page: Page, tmp_path: Path):
     expect(page.locator("#unified-analysis-banner")).to_contain_text(
         "Se encontraron 3 productos y 2 ventas registradas"
     )
+    expect(page.locator("#unified-analysis-banner")).to_contain_text("Encontramos 3 productos únicos")
     expect(page.locator("#unified-products-preview-table")).to_be_visible()
     expect(page.locator("#unified-sales-preview-table")).to_be_visible()
 
-    # Esperar a que el panel de mapeo inteligente también aparezca
+    # El acordeón avanzado inicia cerrado y al expandirse permite ajustar columnas con vista previa en vivo
+    mapper_accordion = page.locator("#advanced-mapper-accordion")
+    expect(mapper_accordion).to_be_visible(timeout=5000)
+    expect(mapper_accordion).not_to_have_attribute("open", "")
+    mapper_accordion.locator("summary").click()
+
     mapper_panel = page.locator("#smart-mapper-panel")
     expect(mapper_panel).to_be_visible(timeout=5000)
 
@@ -99,9 +105,14 @@ def test_smart_excel_mapper_drawer_interaction(page: Page, tmp_path: Path):
     expect(page.locator("#map-col-name")).to_be_visible()
     expect(page.locator("#map-col-sale_price")).to_be_visible()
 
-    # Verificar tabla de previsualización
+    # Verificar actualización en vivo de la tabla de previsualización al cambiar un select
     preview_table = page.locator("#mapper-preview-table")
     expect(preview_table).to_be_visible()
+    page.select_option("#map-col-name", "Línea")
+    expect(page.locator("#mapper-preview-thead")).to_contain_text("Producto (Línea)")
+    expect(page.locator("#mapper-preview-tbody")).to_contain_text("Herramientas")
+    page.select_option("#map-col-name", "Descripción")
+    expect(page.locator("#mapper-preview-thead")).to_contain_text("Producto (Descripción)")
 
     # Capturar screenshot del mapeador interactivo
     screenshot_path = ARTIFACTS_DIR / "e2e_smart_excel_mapper_verified.png"

@@ -88,3 +88,66 @@ def test_lockout_after_repeated_failures_and_session_expiry(tmp_path):
             sess.expires_at = utcnow() - timedelta(minutes=1)
             db.commit()
         assert client.get("/api/kpis", headers=headers).status_code == 401
+
+
+def test_inactivity_timeout_cache_headers_and_back_guard(tmp_path):
+    db_url = f"sqlite:///{(tmp_path / 'inact_sec.db').as_posix()}"
+    application = create_app(db_url, testing=True)
+    with TestClient(application) as client:
+        reg = client.post(
+            "/api/auth/register",
+            json={
+                "legal_name": "Comercio Sesion Segura",
+                "subsector": "general",
+                "email": "sesion.segura@pyme.co",
+                "full_name": "Gerente Seguridad",
+                "password": PASSWORD,
+                "accept_data_policy": True,
+                "accept_terms_mvp": True,
+                "diagnosis": {"M10": ["ventas"], "M12": ["margen"], "M17": "ventas"},
+            },
+        ).json()
+        bearer = {"Authorization": f"Bearer {reg['access_token']}"}
+
+        # Login web via cookie para validar cabeceras anti-bfcache en /dashboard
+        r_form = client.post(
+            "/login",
+            data={"email": "sesion.segura@pyme.co", "password": PASSWORD},
+            follow_redirects=False,
+        )
+        assert r_form.status_code == 303
+
+        dash_resp = client.get("/dashboard", headers={"Accept": "text/html"})
+        assert dash_resp.status_code == 200
+        cc = dash_resp.headers.get("cache-control", "").lower()
+        assert "no-store" in cc and "no-cache" in cc and "must-revalidate" in cc
+        assert dash_resp.headers.get("pragma", "").lower() == "no-cache"
+        assert dash_resp.headers.get("expires") == "0"
+        assert client.get("/api/auth/session-check").status_code == 200
+
+        # Simular >10 minutos de inactividad en todas las sesiones activas
+        stale = utcnow() - timedelta(minutes=11)
+        with application.state.Session() as db:
+            for s in db.query(SessionToken).all():
+                s.last_activity_at = stale
+            db.commit()
+
+        # API Bearer expira con 401 y marca la sesion como revocada
+        assert client.get("/api/kpis", headers=bearer).status_code == 401
+        assert client.get("/api/auth/session-check").status_code == 401
+
+        # Peticion HTML con cookie expirada por inactividad redirige a /login?motivo=inactividad
+        html_expired = client.get(
+            "/dashboard",
+            headers={"Accept": "text/html"},
+            follow_redirects=False,
+        )
+        assert html_expired.status_code == 303
+        assert html_expired.headers["location"].endswith("/login?motivo=inactividad")
+
+        notice_page = client.get("/login?motivo=inactividad")
+        assert notice_page.status_code == 200
+        assert (
+            "Tu sesión se cerró automáticamente por seguridad tras 10 minutos de inactividad."
+            in notice_page.text
+        )

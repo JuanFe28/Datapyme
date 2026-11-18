@@ -12,6 +12,7 @@ from app.core.security import generate_session_token, sha256_hex, verify_passwor
 
 SESSION_COOKIE = "dp_session"
 SESSION_HOURS = 12
+INACTIVITY_TIMEOUT_SECONDS = 600
 MAX_FAILED_LOGINS = 5
 LOCKOUT_MINUTES = 15
 
@@ -21,6 +22,36 @@ def _as_aware(value: datetime | None) -> datetime | None:
     if value is not None and value.tzinfo is None:
         return value.replace(tzinfo=UTC)
     return value
+
+
+def check_and_touch_session(
+    db: Session,
+    sess: SessionToken | None,
+    request: Request | None = None,
+) -> bool:
+    """Valida expiración absoluta y por inactividad (10 min); actualiza last_activity_at."""
+    if not sess:
+        return False
+    now = utcnow()
+    if sess.revoked_at is not None:
+        rev_at = _as_aware(sess.revoked_at) or now
+        last_touch = _as_aware(sess.last_activity_at) or _as_aware(sess.created_at) or rev_at
+        if request is not None and (rev_at - last_touch).total_seconds() > INACTIVITY_TIMEOUT_SECONDS:
+            request.state.session_expired_inactivity = True
+        return False
+    expires_at = _as_aware(sess.expires_at)
+    if not expires_at or expires_at <= now:
+        return False
+    last_touch = _as_aware(sess.last_activity_at) or _as_aware(sess.created_at) or now
+    if (now - last_touch).total_seconds() > INACTIVITY_TIMEOUT_SECONDS:
+        sess.revoked_at = now
+        db.commit()
+        if request is not None:
+            request.state.session_expired_inactivity = True
+        return False
+    sess.last_activity_at = now
+    db.commit()
+    return True
 
 
 def _extract_token(request: Request, authorization: str | None) -> str:
@@ -75,7 +106,7 @@ def get_session_user_from_request(
     if not raw_token:
         return None
     sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
-    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+    if not check_and_touch_session(db, sess, request):
         return None
     user = db.get(User, sess.user_id)
     if not user or not user.is_active:
@@ -93,7 +124,7 @@ def get_current_context(
     raw_token = _extract_token(request, authorization)
     tok_hash = sha256_hex(raw_token)
     sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
-    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+    if not check_and_touch_session(db, sess, request):
         raise HTTPException(status_code=401, detail="Sesión inválida, expirada o revocada.")
     user = db.get(User, sess.user_id)
     if not user or not user.is_active or not user.tenant_id or user.role == "superadmin":
@@ -119,7 +150,7 @@ def get_superadmin_user(
     raw_token = _extract_token(request, authorization)
     tok_hash = sha256_hex(raw_token)
     sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
-    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+    if not check_and_touch_session(db, sess, request):
         raise HTTPException(status_code=401, detail="Sesión inválida, expirada o revocada.")
     user = db.get(User, sess.user_id)
     if not user or not user.is_active or user.role != "superadmin" or user.tenant_id is not None:
@@ -203,6 +234,7 @@ def authenticate_user(
             token_hash=tok_hash,
             csrf_secret=sha256_hex(raw_token + "|csrf"),
             expires_at=now + timedelta(hours=SESSION_HOURS),
+            last_activity_at=now,
             ip_hash=sha256_hex(ip_raw),
         )
     )

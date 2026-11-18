@@ -1439,17 +1439,18 @@
           </div>
 
           <div id="unified-products-preview-wrap" style="margin-bottom: 12px; display: none;">
-            <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">Productos detectados</div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">
+              Productos detectados (puedes ajustar el costo unitario y el stock actual antes de guardar)
+            </div>
             <div class="preview-table-container">
               <table id="unified-products-preview-table" class="preview-table">
                 <thead>
                   <tr>
-                    <th>SKU</th>
                     <th>Producto</th>
-                    <th>Categoría</th>
-                    <th>Costo</th>
-                    <th>Precio</th>
-                    <th>Stock</th>
+                    <th>Unid. Vendidas</th>
+                    <th>Precio Venta Sugerido</th>
+                    <th>Costo Unitario Estimado (COP)</th>
+                    <th>Stock Actual</th>
                   </tr>
                 </thead>
                 <tbody id="unified-products-tbody"></tbody>
@@ -1458,16 +1459,15 @@
           </div>
 
           <div id="unified-sales-preview-wrap" style="display: none;">
-            <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">Ventas registradas detectadas</div>
+            <div style="font-size: 12px; font-weight: 600; color: var(--ink-primary); margin-bottom: 6px;">Ventas detectadas</div>
             <div class="preview-table-container">
               <table id="unified-sales-preview-table" class="preview-table">
                 <thead>
                   <tr>
-                    <th>Ref.</th>
                     <th>Fecha</th>
-                    <th>Producto</th>
-                    <th>Cant.</th>
-                    <th>Total</th>
+                    <th>Productos Desglosados</th>
+                    <th>Método de Pago</th>
+                    <th>Total (COP)</th>
                   </tr>
                 </thead>
                 <tbody id="unified-sales-tbody"></tbody>
@@ -1477,7 +1477,7 @@
         </div>
 
         <!-- Enlace secundario opcional de plantillas (no obligatorio, sin desbordar) -->
-        <details style="margin-bottom: 16px; padding: 12px 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.06);">
+        <details id="import-templates-accordion" style="margin-bottom: 16px; padding: 12px 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.06);">
           <summary style="font-size: 12px; font-weight: 600; color: var(--ink-secondary); cursor: pointer;">
             ¿No tienes un archivo aún? Descarga una plantilla vacía opcional (No es obligatorio usar plantilla)
           </summary>
@@ -1500,70 +1500,94 @@
           </div>
         </details>
 
-        <!-- Panel de Mapeo Avanzado (aparece al seleccionar archivo para inspección o ajuste fino) -->
-        <div id="smart-mapper-panel" class="excel-mapper-box" style="display: none;">
-          <div class="excel-mapper-header">
-            <span class="excel-mapper-title">
-              <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
-              Detalle de Columnas Detectadas
-            </span>
-            <span id="mapper-sheet-badge" class="badge-neutral" style="font-size: 11px;">Hoja 1</span>
-          </div>
+        <!-- Panel de Mapeo Avanzado dentro de acordeón cerrado por defecto -->
+        <details id="advanced-mapper-accordion" style="display: none; margin-bottom: 16px; padding: 12px 14px; background: var(--surface-subtle); border-radius: var(--radius-control); border: 1px solid rgba(15, 23, 42, 0.08);">
+          <summary style="font-size: 12px; font-weight: 600; color: var(--ink-secondary); cursor: pointer;">
+            ¿Tu archivo tiene columnas especiales? Ajustar columnas manualmente
+          </summary>
+          <div id="smart-mapper-panel" class="excel-mapper-box" style="display: none; margin-top: 12px;">
+            <div class="excel-mapper-header">
+              <span class="excel-mapper-title">
+                <i data-lucide="sparkles" style="width: 14px; height: 14px; color: var(--accent-primary);"></i>
+                Detalle de Columnas Detectadas
+              </span>
+              <span id="mapper-sheet-badge" class="badge-neutral" style="font-size: 11px;">Hoja 1</span>
+            </div>
 
-          <div id="sheet-selector-group" class="form-group" style="display: none; margin-bottom: 12px;">
-            <label class="mapping-label" for="import-sheet-select">Hoja de cálculo a inspeccionar:</label>
-            <select id="import-sheet-select" class="mapping-select"></select>
-          </div>
+            <div id="sheet-selector-group" class="form-group" style="display: none; margin-bottom: 12px;">
+              <label class="mapping-label" for="import-sheet-select">Hoja de cálculo a inspeccionar:</label>
+              <select id="import-sheet-select" class="mapping-select"></select>
+            </div>
 
-          <div class="mapping-grid">
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-sku">SKU / Código:</label>
-              <select id="map-col-sku" class="mapping-select" data-field="sku"></select>
+            <div id="sales-mapper-grid" class="mapping-grid" style="display: none;">
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-sales-occurred_at">Fecha:</label>
+                <select id="map-sales-occurred_at" class="mapping-select sales-mapping-select" data-sales-field="occurred_at" data-label="Fecha"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-sales-product">Producto *:</label>
+                <select id="map-sales-product" class="mapping-select sales-mapping-select" data-sales-field="product" data-label="Producto"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-sales-payment_method">Método de Pago:</label>
+                <select id="map-sales-payment_method" class="mapping-select sales-mapping-select" data-sales-field="payment_method" data-label="Método de Pago"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-sales-total">Total Venta (COP) *:</label>
+                <select id="map-sales-total" class="mapping-select sales-mapping-select" data-sales-field="total" data-label="Total Venta"></select>
+              </div>
             </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-name">Nombre del Producto *:</label>
-              <select id="map-col-name" class="mapping-select" data-field="name"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-category">Categoría:</label>
-              <select id="map-col-category" class="mapping-select" data-field="category"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-cost_price">Costo de Compra:</label>
-              <select id="map-col-cost_price" class="mapping-select" data-field="cost_price"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-sale_price">Precio de Venta *:</label>
-              <select id="map-col-sale_price" class="mapping-select" data-field="sale_price"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-initial_stock">Stock / Existencias:</label>
-              <select id="map-col-initial_stock" class="mapping-select" data-field="initial_stock"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-unit">Unidad de Medida:</label>
-              <select id="map-col-unit" class="mapping-select" data-field="unit"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-min_stock">Stock Mínimo:</label>
-              <select id="map-col-min_stock" class="mapping-select" data-field="min_stock"></select>
-            </div>
-            <div class="mapping-item">
-              <label class="mapping-label" for="map-col-vat_rate">IVA (%):</label>
-              <select id="map-col-vat_rate" class="mapping-select" data-field="vat_rate"></select>
-            </div>
-          </div>
 
-          <div style="margin-top: 12px;">
-            <span class="mapping-label" style="display: block; margin-bottom: 6px;">Muestra de filas leídas:</span>
-            <div class="preview-table-container">
-              <table id="mapper-preview-table" class="preview-table">
-                <thead id="mapper-preview-thead"></thead>
-                <tbody id="mapper-preview-tbody"></tbody>
-              </table>
+            <div id="product-mapper-grid" class="mapping-grid">
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-sku">SKU / Código:</label>
+                <select id="map-col-sku" class="mapping-select product-mapping-select" data-field="sku" data-label="SKU"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-name">Nombre del Producto *:</label>
+                <select id="map-col-name" class="mapping-select product-mapping-select" data-field="name" data-label="Producto"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-category">Categoría:</label>
+                <select id="map-col-category" class="mapping-select product-mapping-select" data-field="category" data-label="Categoría"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-cost_price">Costo de Compra:</label>
+                <select id="map-col-cost_price" class="mapping-select product-mapping-select" data-field="cost_price" data-label="Costo"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-sale_price">Precio de Venta *:</label>
+                <select id="map-col-sale_price" class="mapping-select product-mapping-select" data-field="sale_price" data-label="Precio Venta"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-initial_stock">Stock / Existencias:</label>
+                <select id="map-col-initial_stock" class="mapping-select product-mapping-select" data-field="initial_stock" data-label="Stock"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-unit">Unidad de Medida:</label>
+                <select id="map-col-unit" class="mapping-select product-mapping-select" data-field="unit" data-label="Unidad"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-min_stock">Stock Mínimo:</label>
+                <select id="map-col-min_stock" class="mapping-select product-mapping-select" data-field="min_stock" data-label="Stock Mínimo"></select>
+              </div>
+              <div class="mapping-item">
+                <label class="mapping-label" for="map-col-vat_rate">IVA (%):</label>
+                <select id="map-col-vat_rate" class="mapping-select product-mapping-select" data-field="vat_rate" data-label="IVA (%)"></select>
+              </div>
+            </div>
+
+            <div style="margin-top: 12px;">
+              <span class="mapping-label" style="display: block; margin-bottom: 6px;">Muestra de filas mapeadas:</span>
+              <div class="preview-table-container">
+                <table id="mapper-preview-table" class="preview-table">
+                  <thead id="mapper-preview-thead"></thead>
+                  <tbody id="mapper-preview-tbody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
+        </details>
 
         <div id="import-results" style="display: none; margin-top: 16px; padding: 12px; border-radius: var(--radius-control); background: var(--surface-subtle); font-size: 12px;"></div>
       </div>

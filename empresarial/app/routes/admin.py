@@ -11,7 +11,7 @@ from sqlalchemy.orm import Session
 from app.core.config import ROOT
 from app.core.dependencies import (
     SESSION_COOKIE,
-    _as_aware,
+    check_and_touch_session,
     ensure_production_account,
     get_current_context,
     get_db,
@@ -51,7 +51,11 @@ def render_superadmin_impact(
         return RedirectResponse(f"{root_path}/login", status_code=303)
     tok_hash = sha256_hex(raw_token)
     sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
-    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+    if not check_and_touch_session(db, sess, request):
+        if getattr(request.state, "session_expired_inactivity", False):
+            redirect = RedirectResponse(f"{root_path}/login?motivo=inactividad", status_code=303)
+            redirect.delete_cookie(SESSION_COOKIE, path="/")
+            return redirect
         return RedirectResponse(f"{root_path}/login", status_code=303)
     user = db.get(User, sess.user_id)
     if not user or not user.is_active:

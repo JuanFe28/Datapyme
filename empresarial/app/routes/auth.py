@@ -15,6 +15,7 @@ from app.core.dependencies import (
     _as_aware,
     _extract_token,
     authenticate_user,
+    check_and_touch_session,
     get_db,
     get_session_user_from_request,
 )
@@ -68,6 +69,7 @@ def _is_https_request(request: Request) -> bool:
 
 
 def _issue_user_session(db: Session, request: Request, user: User) -> str:
+    now = utcnow()
     user.failed_logins = 0
     user.locked_until = None
     raw_token, tok_hash = generate_session_token()
@@ -77,7 +79,8 @@ def _issue_user_session(db: Session, request: Request, user: User) -> str:
             user_id=user.id,
             token_hash=tok_hash,
             csrf_secret=sha256_hex(raw_token + "|csrf"),
-            expires_at=utcnow() + timedelta(hours=SESSION_HOURS),
+            expires_at=now + timedelta(hours=SESSION_HOURS),
+            last_activity_at=now,
             ip_hash=sha256_hex(ip_raw),
         )
     )
@@ -146,25 +149,47 @@ def root_redirect(request: Request, db: Session = Depends(get_db)):
     if raw_token:
         tok_hash = sha256_hex(raw_token)
         sess = db.query(SessionToken).filter_by(token_hash=tok_hash).first()
-        if sess and sess.revoked_at is None and _as_aware(sess.expires_at) > utcnow():
+        if check_and_touch_session(db, sess, request):
             user = db.get(User, sess.user_id)
             if user and user.is_active:
                 if user.role == "superadmin":
                     return RedirectResponse(f"{root_path}/admin/impacto", status_code=303)
                 if user.must_change_password:
                     return RedirectResponse(f"{root_path}/auth/activar-cuenta", status_code=303)
+        elif getattr(request.state, "session_expired_inactivity", False):
+            redirect = RedirectResponse(f"{root_path}/login?motivo=inactividad", status_code=303)
+            redirect.delete_cookie(SESSION_COOKIE, path="/")
+            return redirect
     return RedirectResponse(f"{root_path}/dashboard", status_code=303)
 
 
+@router.get("/api/auth/session-check")
+def check_active_session(
+    request: Request,
+    authorization: str | None = Header(default=None),
+    db: Session = Depends(get_db),
+):
+    user = get_session_user_from_request(request, db, authorization)
+    if not user:
+        raise HTTPException(status_code=401, detail="Sesión expirada o no autenticada.")
+    return {"authenticated": True}
+
+
 @router.get("/login", response_class=HTMLResponse, include_in_schema=False)
-def login_page(request: Request, modo: str | None = None):
+def login_page(request: Request, modo: str | None = None, motivo: str | None = None):
     templates = request.app.state.templates
     root_path = request.scope.get("root_path", "").rstrip("/")
+    inactivity_notice = (
+        "Tu sesión se cerró automáticamente por seguridad tras 10 minutos de inactividad."
+        if motivo == "inactividad"
+        else None
+    )
     return templates.TemplateResponse(
         request=request,
         name="login.html",
         context={
             "error": None,
+            "inactivity_notice": inactivity_notice,
             "root_path": root_path,
             "audit_mode": (modo == "auditor"),
         },
@@ -289,7 +314,7 @@ def mfa_setup(
 ):
     raw_token = _extract_token(request, authorization)
     sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
-    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+    if not check_and_touch_session(db, sess, request):
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada.")
     user = db.get(User, sess.user_id)
     if not user or not user.is_active:
@@ -328,7 +353,7 @@ def mfa_confirm(
 ):
     raw_token = _extract_token(request, authorization)
     sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
-    if not sess or sess.revoked_at is not None or _as_aware(sess.expires_at) <= utcnow():
+    if not check_and_touch_session(db, sess, request):
         raise HTTPException(status_code=401, detail="Sesión inválida o expirada.")
     user = db.get(User, sess.user_id)
     if not user or not user.is_active or not user.mfa_secret:
@@ -350,7 +375,9 @@ def logout(request: Request, db: Session = Depends(get_db)):
     if raw_token:
         sess = db.query(SessionToken).filter_by(token_hash=sha256_hex(raw_token)).first()
         if sess and sess.revoked_at is None:
-            sess.revoked_at = utcnow()
+            now = utcnow()
+            sess.last_activity_at = now
+            sess.revoked_at = now
             db.commit()
     root_path = request.scope.get("root_path", "").rstrip("/")
     redirect = RedirectResponse(f"{root_path}/login", status_code=303)
@@ -451,12 +478,14 @@ def register_tenant(payload: RegisterRequest, request: Request, db: Session = De
     )
     db.add(view_setting)
 
+    now = utcnow()
     raw_token, tok_hash = generate_session_token()
     sess = SessionToken(
         user_id=user.id,
         token_hash=tok_hash,
         csrf_secret=sha256_hex(raw_token + "|csrf"),
-        expires_at=utcnow() + timedelta(hours=12),
+        expires_at=now + timedelta(hours=12),
+        last_activity_at=now,
         ip_hash=ip_h,
     )
     db.add(sess)

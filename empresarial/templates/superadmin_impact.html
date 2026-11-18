@@ -717,6 +717,42 @@
           if (resp.ok) window.location.reload();
         });
       });
+      window.addEventListener('pageshow', function (event) {
+        var navEntries = window.performance && window.performance.getEntriesByType
+          ? window.performance.getEntriesByType('navigation')
+          : [];
+        var isBackForward = navEntries.length > 0 && navEntries[0].type === 'back_forward';
+        if (event.persisted) {
+          window.location.reload();
+          return;
+        }
+        if (isBackForward) {
+          fetch(`${rootPath}/api/auth/session-check`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store'
+          }).then(function (resp) {
+            if (!resp.ok) window.location.replace(`${rootPath}/login`);
+          }).catch(function () {
+            window.location.reload();
+          });
+        }
+      });
+
+      var saIdleTimer = null;
+      function scheduleSuperadminIdleLogout() {
+        clearTimeout(saIdleTimer);
+        saIdleTimer = setTimeout(async function () {
+          try {
+            await fetch(`${rootPath}/logout`, { method: 'POST', credentials: 'same-origin' });
+          } catch (_) {}
+          window.location.replace(`${rootPath}/login?motivo=inactividad`);
+        }, 600000);
+      }
+      ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(function (evName) {
+        document.addEventListener(evName, scheduleSuperadminIdleLogout, { passive: true });
+      });
+      scheduleSuperadminIdleLogout();
     })();
   </script>
 </body>

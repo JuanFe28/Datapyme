@@ -95,10 +95,67 @@ function formatQtyValue(val) {
   return Number.isInteger(num) ? String(num) : num.toFixed(2);
 }
 
-// 4. Estado del Carrito Multi-Producto
+// 4. Estado del Carrito Multi-Producto y Seguridad de Sesión por Inactividad
 let cartLines = [];
 
+const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
+let inactivityTimerId = null;
+let lastActivityResetMs = 0;
+
+async function handleInactivityExpiration() {
+  try {
+    await fetch(`${ROOT_PATH}/logout`, {
+      method: 'POST',
+      credentials: 'same-origin',
+    });
+  } catch (_) {
+    // Continuar con redirección segura ante cualquier fallo de red
+  }
+  window.location.replace(`${ROOT_PATH}/login?motivo=inactividad`);
+}
+
+function resetInactivityTimer(force = false) {
+  const now = Date.now();
+  if (!force && now - lastActivityResetMs < 1000) return;
+  lastActivityResetMs = now;
+  if (inactivityTimerId) clearTimeout(inactivityTimerId);
+  inactivityTimerId = setTimeout(handleInactivityExpiration, INACTIVITY_TIMEOUT_MS);
+}
+
+if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+  window.addEventListener('pageshow', (event) => {
+    const navEntries =
+      window.performance && window.performance.getEntriesByType
+        ? window.performance.getEntriesByType('navigation')
+        : [];
+    const isBackForward = navEntries.length > 0 && navEntries[0].type === 'back_forward';
+    if (event.persisted) {
+      window.location.reload();
+      return;
+    }
+    if (isBackForward) {
+      fetch(`${ROOT_PATH}/api/auth/session-check`, {
+        method: 'GET',
+        credentials: 'same-origin',
+        cache: 'no-store',
+      })
+        .then((resp) => {
+          if (!resp.ok) {
+            window.location.replace(`${ROOT_PATH}/login`);
+          }
+        })
+        .catch(() => {
+          window.location.reload();
+        });
+    }
+  });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach((evName) => {
+    document.addEventListener(evName, () => resetInactivityTimer(false), { passive: true });
+  });
+  resetInactivityTimer(true);
   // Inicializar Iconos Lucide
   if (window.lucide) {
     lucide.createIcons();
@@ -343,6 +400,10 @@ document.addEventListener('DOMContentLoaded', () => {
       handleImportFileInspection(null, importSheetSelect.value)
     );
   }
+
+  document.querySelectorAll('#product-mapper-grid .mapping-select, #sales-mapper-grid .mapping-select').forEach((sel) => {
+    sel.addEventListener('change', () => renderActiveMapperPreview());
+  });
 
   // Conectar botones de edición de producto (Editar)
   document.querySelectorAll('.btn-edit-product').forEach((btn) => {
@@ -1354,23 +1415,36 @@ function renderUnifiedSummaryPanel(data) {
   panel.style.display = 'block';
   const prods = Array.isArray(data.products) ? data.products : [];
   const sales = Array.isArray(data.sales) ? data.sales : [];
-  banner.textContent =
+  const totalSalesCop = Number(data.total_sales_cop || 0);
+  const baseSummary =
     data.summary_text ||
     `Análisis de tu archivo completado: Se encontraron ${prods.length} productos y ${sales.length} ventas registradas`;
+  banner.innerHTML = `
+    <div>Encontramos <strong>${prods.length} productos únicos</strong> y <strong>${sales.length} ventas registradas</strong> (Total: <strong>${formatCOP(totalSalesCop)} COP</strong>)</div>
+    <div style="font-size: 11px; font-weight: 500; color: #047857; margin-top: 2px;">${escapeHtmlText(baseSummary)}</div>
+  `;
 
   if (prodWrap && prodTbody) {
     prodTbody.innerHTML = '';
     if (prods.length) {
       prodWrap.style.display = 'block';
-      prods.slice(0, 8).forEach((p) => {
+      prods.slice(0, 60).forEach((p) => {
         const tr = document.createElement('tr');
+        const costVal = Number(p.cost_price || 0);
+        const stockVal = Number(p.initial_stock || 0);
         tr.innerHTML = `
-          <td style="font-family: var(--font-mono);">${escapeHtmlText(p.sku)}</td>
-          <td>${escapeHtmlText(p.name)}</td>
-          <td>${escapeHtmlText(p.category)}</td>
-          <td class="price-cell">${formatCOP(Number(p.cost_price || 0))}</td>
+          <td>
+            <div style="font-weight: 600; color: var(--ink-primary);">${escapeHtmlText(p.name)}</div>
+            <div style="font-size: 10px; color: var(--ink-muted); font-family: var(--font-mono);">${escapeHtmlText(p.sku)}</div>
+          </td>
+          <td class="price-cell">${formatQtyValue(p.units_sold || 0)}</td>
           <td class="price-cell">${formatCOP(Number(p.sale_price || 0))}</td>
-          <td class="price-cell">${formatQtyValue(p.initial_stock)}</td>
+          <td>
+            <input type="number" min="0" step="100" class="form-input unified-cost-input" data-sku="${escapeHtmlText(p.sku)}" value="${escapeHtmlText(String(costVal))}" aria-label="Costo unitario de ${escapeHtmlText(p.name)}" style="width: 110px; padding: 4px 8px; font-size: 12px;">
+          </td>
+          <td>
+            <input type="number" min="0" step="1" class="form-input unified-stock-input" data-sku="${escapeHtmlText(p.sku)}" data-orig-stock="${escapeHtmlText(String(stockVal))}" value="${escapeHtmlText(String(stockVal))}" aria-label="Stock actual de ${escapeHtmlText(p.name)}" style="width: 86px; padding: 4px 8px; font-size: 12px;">
+          </td>
         `;
         prodTbody.appendChild(tr);
       });
@@ -1379,32 +1453,89 @@ function renderUnifiedSummaryPanel(data) {
     }
   }
 
+  const payLabels = {
+    cash: 'Efectivo',
+    transfer: 'Transferencia',
+    card: 'Tarjeta',
+    credit: 'Crédito',
+    other: 'Otro',
+  };
+
   if (saleWrap && saleTbody) {
     saleTbody.innerHTML = '';
     if (sales.length) {
       saleWrap.style.display = 'block';
-      sales.slice(0, 8).forEach((s) => {
+      sales.slice(0, 12).forEach((s) => {
         const tr = document.createElement('tr');
+        const payLabel = payLabels[s.payment_method] || s.payment_method || 'Efectivo';
         tr.innerHTML = `
-          <td style="font-family: var(--font-mono);">${escapeHtmlText(s.sale_reference)}</td>
           <td>${escapeHtmlText(s.occurred_at || 'Actual')}</td>
-          <td>${escapeHtmlText(s.product_name)}</td>
-          <td class="price-cell">${formatQtyValue(s.quantity)}</td>
+          <td>${escapeHtmlText(s.products_summary || s.product_name)}</td>
+          <td>${escapeHtmlText(payLabel)}</td>
           <td class="price-cell">${formatCOP(Number(s.line_total || 0))}</td>
         `;
         saleTbody.appendChild(tr);
       });
+      if (sales.length > 12) {
+        const extraTr = document.createElement('tr');
+        extraTr.innerHTML = `<td colspan="4" style="text-align: center; font-size: 11px; color: var(--ink-muted); padding: 8px;">Mostrando las primeras 12 de ${sales.length} ventas válidas detectadas.</td>`;
+        saleTbody.appendChild(extraTr);
+      }
     } else {
       saleWrap.style.display = 'none';
     }
   }
 }
 
+function populateSelectWithColumnOptions(sel, columns, selectedCol) {
+  if (!sel) return;
+  sel.innerHTML = '<option value="">(Omitir / No aplica)</option>';
+  columns.forEach((c) => {
+    const opt = document.createElement('option');
+    opt.value = c;
+    opt.textContent = c;
+    if (selectedCol === c) {
+      opt.selected = true;
+    }
+    sel.appendChild(opt);
+  });
+}
+
+function renderActiveMapperPreview() {
+  if (!currentImportInspection) {
+    renderMapperPreviewTable([], []);
+    return;
+  }
+  const sampleRows = currentImportInspection.sample_rows || [];
+  const rawColumns = currentImportInspection.columns || [];
+  const isSalesSheet = currentImportInspection.sheet_kind === 'sales';
+  const selectorCss = isSalesSheet
+    ? '#sales-mapper-grid .sales-mapping-select'
+    : '#product-mapper-grid .product-mapping-select';
+  const activeMappings = [];
+  document.querySelectorAll(selectorCss).forEach((sel) => {
+    if (sel.value) {
+      activeMappings.push({
+        label: `${sel.getAttribute('data-label') || 'Campo'} (${sel.value})`,
+        sourceCol: sel.value,
+      });
+    }
+  });
+
+  if (!activeMappings.length) {
+    renderMapperPreviewTable(sampleRows, rawColumns.map((col) => ({ label: col, sourceCol: col })));
+    return;
+  }
+  renderMapperPreviewTable(sampleRows, activeMappings);
+}
+
 async function handleImportFileInspection(e, targetSheet = null) {
   const fileInput = document.getElementById('import-file');
+  const mapperAccordion = document.getElementById('advanced-mapper-accordion');
   const mapperPanel = document.getElementById('smart-mapper-panel');
   const unifiedPanel = document.getElementById('unified-import-summary-panel');
   if (!fileInput || !fileInput.files.length) {
+    if (mapperAccordion) mapperAccordion.style.display = 'none';
     if (mapperPanel) mapperPanel.style.display = 'none';
     if (unifiedPanel) unifiedPanel.style.display = 'none';
     return;
@@ -1438,6 +1569,7 @@ async function handleImportFileInspection(e, targetSheet = null) {
   }
 
   if (type !== 'products' && type !== 'unified') {
+    if (mapperAccordion) mapperAccordion.style.display = 'none';
     if (mapperPanel) mapperPanel.style.display = 'none';
     return;
   }
@@ -1455,6 +1587,7 @@ async function handleImportFileInspection(e, targetSheet = null) {
     if (!resp.ok) {
       const err = await resp.json();
       showToast(err.detail || 'No fue posible inspeccionar el archivo', 'error');
+      if (mapperAccordion) mapperAccordion.style.display = 'none';
       if (mapperPanel) mapperPanel.style.display = 'none';
       return;
     }
@@ -1462,6 +1595,10 @@ async function handleImportFileInspection(e, targetSheet = null) {
     const data = await resp.json();
     currentImportInspection = data;
 
+    if (mapperAccordion) {
+      mapperAccordion.style.display = 'block';
+      mapperAccordion.open = Boolean(targetSheet);
+    }
     if (mapperPanel) mapperPanel.style.display = 'block';
 
     // Badge de hoja
@@ -1485,28 +1622,36 @@ async function handleImportFileInspection(e, targetSheet = null) {
       sheetGroup.style.display = 'none';
     }
 
-    // Llenar los selects de mapeo
+    // Mostrar solo el conjunto de campos correspondiente al tipo de hoja detectado
     const columns = data.columns || [];
     const suggested = data.suggested_mapping || {};
+    const salesSuggested = data.sales_mapping || {};
+    const isSalesSheet = data.sheet_kind === 'sales';
+
+    const salesGrid = document.getElementById('sales-mapper-grid');
+    const productGrid = document.getElementById('product-mapper-grid');
+    if (salesGrid) salesGrid.style.display = isSalesSheet ? 'grid' : 'none';
+    if (productGrid) productGrid.style.display = isSalesSheet ? 'none' : 'grid';
+
+    ['occurred_at', 'product', 'payment_method', 'total'].forEach((sf) => {
+      populateSelectWithColumnOptions(
+        document.getElementById(`map-sales-${sf}`),
+        columns,
+        salesSuggested[sf]
+      );
+    });
 
     const mappingFields = ['sku', 'name', 'category', 'cost_price', 'sale_price', 'initial_stock', 'unit', 'min_stock', 'vat_rate'];
     mappingFields.forEach((f) => {
-      const sel = document.getElementById(`map-col-${f}`);
-      if (!sel) return;
-      sel.innerHTML = '<option value="">(Omitir / No aplica)</option>';
-      columns.forEach((c) => {
-        const opt = document.createElement('option');
-        opt.value = c;
-        opt.textContent = c;
-        if (suggested[f] === c) {
-          opt.selected = true;
-        }
-        sel.appendChild(opt);
-      });
+      populateSelectWithColumnOptions(
+        document.getElementById(`map-col-${f}`),
+        columns,
+        suggested[f]
+      );
     });
 
-    // Renderizar previsualización
-    renderMapperPreviewTable(data.sample_rows || [], columns);
+    // Renderizar previsualización refleja columnas mapeadas en vivo
+    renderActiveMapperPreview();
 
     showToast(`Análisis completado (encabezados en fila ${data.header_row_index})`, 'success');
   } catch (err) {
@@ -1514,7 +1659,7 @@ async function handleImportFileInspection(e, targetSheet = null) {
   }
 }
 
-function renderMapperPreviewTable(sampleRows, columns) {
+function renderMapperPreviewTable(sampleRows, columnsSpec) {
   const thead = document.getElementById('mapper-preview-thead');
   const tbody = document.getElementById('mapper-preview-tbody');
   if (!thead || !tbody) return;
@@ -1522,24 +1667,29 @@ function renderMapperPreviewTable(sampleRows, columns) {
   thead.innerHTML = '';
   tbody.innerHTML = '';
 
-  if (!sampleRows.length) {
+  const normalizedCols = (columnsSpec || []).map((c) =>
+    typeof c === 'string' ? { label: c, sourceCol: c } : c
+  );
+
+  if (!sampleRows.length || !normalizedCols.length) {
     tbody.innerHTML = '<tr><td style="color: var(--ink-muted); text-align: center; padding: 12px;">Sin filas de datos para mostrar</td></tr>';
     return;
   }
 
   const trHead = document.createElement('tr');
-  columns.forEach((col) => {
+  normalizedCols.forEach((colObj) => {
     const th = document.createElement('th');
-    th.textContent = col;
+    th.textContent = colObj.label;
     trHead.appendChild(th);
   });
   thead.appendChild(trHead);
 
   sampleRows.forEach((row) => {
     const tr = document.createElement('tr');
-    columns.forEach((col) => {
+    normalizedCols.forEach((colObj) => {
       const td = document.createElement('td');
-      td.textContent = row[col] || '-';
+      const val = row[colObj.sourceCol];
+      td.textContent = val !== undefined && val !== '' ? val : '-';
       tr.appendChild(td);
     });
     tbody.appendChild(tr);
@@ -1610,6 +1760,27 @@ async function handleImportSubmit(e) {
 
   const formData = new FormData();
   formData.append('file', fileInput.files[0]);
+
+  if (type === 'unified') {
+    const productOverrides = {};
+    document.querySelectorAll('#unified-products-tbody .unified-cost-input').forEach((costInput) => {
+      const sku = costInput.getAttribute('data-sku');
+      if (!sku) return;
+      productOverrides[sku] = { cost_price: costInput.value || '0' };
+    });
+    document.querySelectorAll('#unified-products-tbody .unified-stock-input').forEach((stockInput) => {
+      const sku = stockInput.getAttribute('data-sku');
+      if (!sku) return;
+      const origStock = stockInput.getAttribute('data-orig-stock') ?? '';
+      if (stockInput.value !== origStock) {
+        if (!productOverrides[sku]) productOverrides[sku] = {};
+        productOverrides[sku].current_stock = stockInput.value || '0';
+      }
+    });
+    if (Object.keys(productOverrides).length) {
+      formData.append('product_overrides', JSON.stringify(productOverrides));
+    }
+  }
 
   if (type === 'products' && currentImportInspection) {
     const mapping = {

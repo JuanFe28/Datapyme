@@ -151,6 +151,11 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
                                 "ALTER TABLE sales ADD COLUMN is_training_data BOOLEAN NOT NULL DEFAULT 0"
                             )
                         )
+                    sess_cols = {
+                        r[1] for r in conn.execute(text("PRAGMA table_info(sessions)")).fetchall()
+                    }
+                    if sess_cols and "last_activity_at" not in sess_cols:
+                        conn.execute(text("ALTER TABLE sessions ADD COLUMN last_activity_at TIMESTAMP"))
                     conn.commit()
                 elif engine.dialect.name == "postgresql":
                     stmts = [
@@ -169,6 +174,7 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
                         "ALTER TABLE products ADD COLUMN IF NOT EXISTS is_training_data BOOLEAN NOT NULL DEFAULT FALSE",
                         "ALTER TABLE inventory_movements ADD COLUMN IF NOT EXISTS is_training_data BOOLEAN NOT NULL DEFAULT FALSE",
                         "ALTER TABLE sales ADD COLUMN IF NOT EXISTS is_training_data BOOLEAN NOT NULL DEFAULT FALSE",
+                        "ALTER TABLE sessions ADD COLUMN IF NOT EXISTS last_activity_at TIMESTAMPTZ",
                     ]
                     for s in stmts:
                         conn.execute(text(s))
@@ -214,9 +220,11 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
     @application.middleware("http")
     async def security_headers_middleware(request: Request, call_next):
         response = await call_next(request)
-        response.headers["Cache-Control"] = "no-store"
         response.headers.update(
             {
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Pragma": "no-cache",
+                "Expires": "0",
                 "X-Content-Type-Options": "nosniff",
                 "X-Frame-Options": "DENY",
                 "Referrer-Policy": "same-origin",
@@ -261,6 +269,10 @@ def create_app(database_url: str | None = None, testing: bool = False) -> FastAP
         root_path = request.scope.get("root_path", "").rstrip("/")
         if wants_html and not request.url.path.startswith("/api"):
             if exc.status_code == 401:
+                if getattr(request.state, "session_expired_inactivity", False):
+                    redirect = RedirectResponse(f"{root_path}/login?motivo=inactividad", status_code=303)
+                    redirect.delete_cookie(SESSION_COOKIE, path="/")
+                    return redirect
                 return RedirectResponse(f"{root_path}/login", status_code=303)
             if exc.status_code == 403:
                 raw_token = request.cookies.get(SESSION_COOKIE)

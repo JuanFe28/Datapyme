@@ -2,9 +2,9 @@
 
 import json
 from datetime import UTC, datetime
-from decimal import Decimal
+from decimal import ROUND_CEILING, ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
-from typing import Literal
+from typing import Any, Literal
 
 from fastapi import (
     APIRouter,
@@ -26,7 +26,7 @@ from app.core.commercial_service import (
     record_inventory_movement,
     sanitize_cell_text,
 )
-from app.core.company_tax import tax_profile
+from app.core.company_tax import effective_vat_rate, sale_tax_policy, tax_profile
 from app.core.dependencies import get_current_context, get_db
 from app.core.models import CompanyTaxChange, ImportJob, Product, Tenant, UsageEvent, User, utcnow
 from app.core.security import sha256_hex
@@ -59,6 +59,7 @@ async def import_unified_endpoint(
     response: Response,
     mode: Literal["preview", "commit"] = Query(default="preview"),
     file: UploadFile = File(...),
+    product_overrides: str | None = Form(default=None),
     ctx: tuple[User, Tenant] = Depends(get_current_context),
     db: Session = Depends(get_db),
 ):
@@ -75,10 +76,24 @@ async def import_unified_endpoint(
             detail="No se detectaron productos ni ventas válidas en el archivo subido.",
         )
 
+    overrides_map: dict[str, dict[str, Any]] = {}
+    if product_overrides:
+        try:
+            parsed_overrides = json.loads(product_overrides)
+            if isinstance(parsed_overrides, dict):
+                overrides_map = {
+                    str(k).strip().upper(): v for k, v in parsed_overrides.items() if isinstance(v, dict)
+                }
+        except json.JSONDecodeError as exc:
+            raise HTTPException(
+                status_code=422, detail="Formato inválido en ajustes de productos."
+            ) from exc
+
     db.query(Tenant).filter_by(id=tenant.id).with_for_update().one()
-    existing_by_sku = {
-        p.sku.upper(): p
-        for p in db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=False).all()
+    existing_products = db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=False).all()
+    existing_by_sku = {p.sku.upper(): p for p in existing_products}
+    existing_by_name = {
+        sanitize_cell_text(p.name, 180).casefold(): p for p in existing_products if p.is_active
     }
 
     job = ImportJob(
@@ -96,11 +111,67 @@ async def import_unified_endpoint(
     db.add(job)
     db.flush()
 
+    def _safe_dec(raw: Any, q: Decimal, default: Decimal) -> Decimal:
+        if raw is None or str(raw).strip() == "":
+            return default
+        try:
+            val = Decimal(str(raw).replace(",", ".").strip())
+            if not val.is_finite() or val < 0:
+                return default
+            return val.quantize(q)
+        except (InvalidOperation, ValueError):
+            return default
+
     products_created = 0
+    sku_alias_map: dict[str, Product] = {}
+    desired_final_stock_by_prod_id: dict[str, Decimal] = {}
+
     for item in analysis["products"]:
         sku_key = item["sku"].upper()
-        if sku_key in existing_by_sku:
+        name_cf = sanitize_cell_text(item["name"], 180).casefold()
+        ov = overrides_map.get(sku_key) or overrides_map.get(item["name"].upper()) or {}
+
+        cost_val = _safe_dec(
+            ov.get("cost_price"), TWO_PLACES, Decimal(item["cost_price"]).quantize(TWO_PLACES)
+        )
+        init_stock_val = _safe_dec(
+            ov.get("initial_stock"),
+            THREE_PLACES,
+            Decimal(item["initial_stock"]).quantize(THREE_PLACES),
+        )
+        if "current_stock" in ov and str(ov["current_stock"]).strip() != "":
+            target_final_stock = _safe_dec(ov.get("current_stock"), THREE_PLACES, Decimal("0.000"))
+        else:
+            target_final_stock = None
+
+        matched_prod = existing_by_sku.get(sku_key)
+        if not matched_prod and sku_key.startswith("AUTO-") and name_cf in existing_by_name:
+            matched_prod = existing_by_name[name_cf]
+
+        if matched_prod:
+            sku_alias_map[sku_key] = matched_prod
+            if "cost_price" in ov:
+                matched_prod.cost_price = cost_val
+            if "sale_price" in ov and _safe_dec(ov.get("sale_price"), TWO_PLACES, Decimal(0)) > 0:
+                matched_prod.sale_price = _safe_dec(ov.get("sale_price"), TWO_PLACES, Decimal(0))
+            if "initial_stock" in ov and matched_prod.is_active:
+                cur_s = Decimal(str(matched_prod.stock_qty)).quantize(THREE_PLACES)
+                if init_stock_val != cur_s:
+                    diff = (init_stock_val - cur_s).quantize(THREE_PLACES)
+                    record_inventory_movement(
+                        db=db,
+                        tenant_id=tenant.id,
+                        user_id=user.id,
+                        product_id=matched_prod.id,
+                        movement_type="adjustment_in" if diff > 0 else "adjustment_out",
+                        quantity=abs(diff),
+                        reason="Ajuste de stock inicial al importar Excel unificado",
+                        unit_cost=matched_prod.cost_price,
+                    )
+            if target_final_stock is not None:
+                desired_final_stock_by_prod_id[matched_prod.id] = target_final_stock
             continue
+
         prod = create_product_with_initial_stock(
             db=db,
             tenant_id=tenant.id,
@@ -109,15 +180,19 @@ async def import_unified_endpoint(
             name=item["name"],
             category=item["category"],
             unit=item["unit"],
-            cost_price=Decimal(item["cost_price"]).quantize(TWO_PLACES),
+            cost_price=cost_val,
             sale_price=Decimal(item["sale_price"]).quantize(TWO_PLACES),
             vat_rate=Decimal(item["vat_rate"]).quantize(TWO_PLACES),
-            initial_stock=Decimal(item["initial_stock"]).quantize(THREE_PLACES),
+            initial_stock=init_stock_val,
             min_stock=Decimal(item["min_stock"]).quantize(THREE_PLACES),
             import_job_id=job.id,
         )
         db.flush()
         existing_by_sku[sku_key] = prod
+        existing_by_name[name_cf] = prod
+        sku_alias_map[sku_key] = prod
+        if target_final_stock is not None:
+            desired_final_stock_by_prod_id[prod.id] = target_final_stock
         products_created += 1
 
     sales_created = 0
@@ -134,40 +209,80 @@ async def import_unified_endpoint(
             )
             db.flush()
 
+        policy = sale_tax_policy(db, tenant.id, None)
+
         for s_item in analysis["sales"]:
-            sku_key = s_item["sku"].upper()
-            prod = existing_by_sku.get(sku_key)
-            if not prod or not prod.is_active:
-                continue
-            qty = Decimal(s_item["quantity"]).quantize(THREE_PLACES)
-            if qty <= 0:
-                continue
-            current_stock = Decimal(str(prod.stock_qty)).quantize(THREE_PLACES)
-            if current_stock < qty:
-                record_inventory_movement(
-                    db=db,
-                    tenant_id=tenant.id,
-                    user_id=user.id,
-                    product_id=prod.id,
-                    movement_type="purchase_in",
-                    quantity=(qty - current_stock).quantize(THREE_PLACES),
-                    reason="Reposición automática inferida al importar archivo unificado",
-                    unit_cost=prod.cost_price,
+            sub_items = s_item.get("items") or [
+                {
+                    "sku": s_item["sku"],
+                    "quantity": s_item["quantity"],
+                    "unit_price": s_item["unit_price"],
+                    "line_total": s_item["line_total"],
+                }
+            ]
+            resolved_sub_items: list[tuple[Product, Decimal, Decimal]] = []
+            needed_by_prod: dict[str, tuple[Product, Decimal]] = {}
+
+            for sub in sub_items:
+                sub_sku = str(sub.get("sku") or "").upper()
+                prod = sku_alias_map.get(sub_sku) or existing_by_sku.get(sub_sku)
+                if not prod or not prod.is_active:
+                    continue
+                qty = Decimal(str(sub["quantity"])).quantize(THREE_PLACES)
+                if qty <= 0:
+                    continue
+                target_line = Decimal(str(sub.get("line_total", s_item["line_total"]))).quantize(
+                    TWO_PLACES
                 )
+                resolved_sub_items.append((prod, qty, target_line))
+                prev_qty = needed_by_prod[prod.id][1] if prod.id in needed_by_prod else Decimal(0)
+                needed_by_prod[prod.id] = (prod, prev_qty + qty)
+
+            if not resolved_sub_items:
+                continue
+
+            for prod, req_qty in needed_by_prod.values():
+                current_stock = Decimal(str(prod.stock_qty)).quantize(THREE_PLACES)
+                if current_stock < req_qty:
+                    record_inventory_movement(
+                        db=db,
+                        tenant_id=tenant.id,
+                        user_id=user.id,
+                        product_id=prod.id,
+                        movement_type="purchase_in",
+                        quantity=(req_qty - current_stock).quantize(THREE_PLACES),
+                        reason="Reposición automática inferida al importar archivo unificado",
+                        unit_cost=prod.cost_price,
+                    )
+
+            sale_items_input: list[dict[str, Any]] = []
+            for prod, qty, target_line in resolved_sub_items:
+                vat_r = effective_vat_rate(policy, Decimal(str(prod.vat_rate)).quantize(TWO_PLACES))
+                if vat_r > 0:
+                    target_base = (target_line / (Decimal(1) + vat_r / Decimal(100))).quantize(
+                        TWO_PLACES, rounding=ROUND_HALF_UP
+                    )
+                else:
+                    target_base = target_line
+                unit_p = (target_base / qty).quantize(TWO_PLACES, rounding=ROUND_CEILING)
+                gross = (qty * unit_p).quantize(TWO_PLACES, rounding=ROUND_HALF_UP)
+                line_disc = max(Decimal("0.00"), (gross - target_base).quantize(TWO_PLACES))
+                sale_items_input.append(
+                    {
+                        "product_id": prod.id,
+                        "quantity": qty,
+                        "unit_price": unit_p,
+                        "discount": line_disc,
+                    }
+                )
+
             sale = create_sale_atomic(
                 db=db,
                 tenant_id=tenant.id,
                 user_id=user.id,
                 customer_label=s_item["customer_label"],
                 payment_method=s_item["payment_method"],
-                items_input=[
-                    {
-                        "product_id": prod.id,
-                        "quantity": qty,
-                        "unit_price": Decimal(s_item["unit_price"]).quantize(TWO_PLACES),
-                        "discount": Decimal(s_item["discount"]).quantize(TWO_PLACES),
-                    }
-                ],
+                items_input=sale_items_input,
                 source="import",
                 import_job_id=job.id,
             )
@@ -181,6 +296,26 @@ async def import_unified_endpoint(
                 except ValueError:
                     pass
             sales_created += 1
+
+    # Aplicar stock final editado manualmente en la vista previa (Stock Actual) tras procesar históricos
+    if desired_final_stock_by_prod_id:
+        for prod_id, target_stock in desired_final_stock_by_prod_id.items():
+            prod = db.query(Product).filter_by(tenant_id=tenant.id, id=prod_id).first()
+            if not prod or not prod.is_active:
+                continue
+            cur_s = Decimal(str(prod.stock_qty)).quantize(THREE_PLACES)
+            if cur_s != target_stock:
+                diff = (target_stock - cur_s).quantize(THREE_PLACES)
+                record_inventory_movement(
+                    db=db,
+                    tenant_id=tenant.id,
+                    user_id=user.id,
+                    product_id=prod.id,
+                    movement_type="adjustment_in" if diff > 0 else "adjustment_out",
+                    quantity=abs(diff),
+                    reason="Stock actual definido manualmente al importar archivo unificado",
+                    unit_cost=prod.cost_price,
+                )
 
     job.rows_ok = products_created + sales_created
     db.add(UsageEvent(tenant_id=tenant.id, event_type="import_completed"))

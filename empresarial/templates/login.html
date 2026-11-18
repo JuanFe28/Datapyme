@@ -263,6 +263,16 @@
         Gestión comercial, inventarios y rentabilidad para PyMEs
       </p>
 
+      {% if inactivity_notice %}
+      <div
+        role="status"
+        data-testid="inactivity-notice"
+        style="background: #FEF3C7; color: #92400E; border: 1px solid #FDE68A; padding: 11px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 18px; line-height: 1.45;"
+      >
+        {{ inactivity_notice }}
+      </div>
+      {% endif %}
+
       {% if error %}
       <div class="form-error" role="alert" data-testid="login-error">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0;">

@@ -395,6 +395,42 @@
           }
         });
       }
+      window.addEventListener('pageshow', function (event) {
+        var navEntries = window.performance && window.performance.getEntriesByType
+          ? window.performance.getEntriesByType('navigation')
+          : [];
+        var isBackForward = navEntries.length > 0 && navEntries[0].type === 'back_forward';
+        if (event.persisted) {
+          window.location.reload();
+          return;
+        }
+        if (isBackForward) {
+          fetch(`${rootPath}/api/auth/session-check`, {
+            method: 'GET',
+            credentials: 'same-origin',
+            cache: 'no-store'
+          }).then(function (resp) {
+            if (!resp.ok) window.location.replace(`${rootPath}/login`);
+          }).catch(function () {
+            window.location.reload();
+          });
+        }
+      });
+
+      var idleTimer = null;
+      function scheduleIdleLogout() {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(async function () {
+          try {
+            await fetch(`${rootPath}/logout`, { method: 'POST', credentials: 'same-origin' });
+          } catch (_) {}
+          window.location.replace(`${rootPath}/login?motivo=inactividad`);
+        }, 600000);
+      }
+      ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'].forEach(function (evName) {
+        document.addEventListener(evName, scheduleIdleLogout, { passive: true });
+      });
+      scheduleIdleLogout();
     })();
   </script>
 </body>

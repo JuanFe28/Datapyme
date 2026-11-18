@@ -5,10 +5,12 @@ Servicio de Mapeo Inteligente de Excel Multi-Hoja y Diccionario de Sinónimos Co
 
 import io
 import re
+import statistics
 import unicodedata
 import zipfile
+from collections import Counter, defaultdict
 from datetime import date, datetime
-from decimal import Decimal, InvalidOperation
+from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
@@ -169,6 +171,219 @@ def clean_currency_or_number_string(val: Any) -> str:
     return cleaned or "0"
 
 
+IGNORED_SHEET_KEYWORDS = (
+    "dashboard",
+    "resumen",
+    "estado_financiero",
+    "inversion",
+    "inversiones",
+    "gasto",
+    "gastos",
+    "egreso",
+    "egresos",
+    "nomina",
+    "balance",
+)
+
+IGNORED_TITLE_KEYWORDS = (
+    "estado_financiero",
+    "inversion_inicial",
+    "gastos_sacados",
+    "resumen_gastos",
+    "gastos_del_flujo",
+)
+
+IGNORED_ROW_TERMS = {
+    "total",
+    "subtotal",
+    "resumen",
+    "resumen_flujo",
+    "utilidad",
+    "utilidad_neta",
+    "inversion",
+    "total_inversion",
+    "total_ingresos",
+    "total_gastos",
+    "pago_vale",
+    "pago_juan",
+    "pasaje",
+    "aporte",
+    "efectivo",
+    "transferencia",
+}
+
+CANONICAL_PRODUCT_ALIASES: dict[str, str] = {
+    "clasico": "Clásico",
+    "supreme": "Supreme",
+    "supremo": "Supreme",
+    "bite": "Bite",
+    "bites": "Bite",
+    "mini": "Mini",
+    "minis": "Mini",
+    "adicional": "Adicional",
+    "adicionales": "Adicional",
+}
+
+
+def _is_ignored_sheet(sheet_name: str, matrix: list[list[Any]]) -> bool:
+    norm_s = normalize_text(sheet_name)
+    if any(kw in norm_s for kw in IGNORED_SHEET_KEYWORDS):
+        return True
+    top_cells = [
+        normalize_text(str(c)) for row in matrix[:4] for c in row if c is not None and str(c).strip()
+    ]
+    joined = " ".join(top_cells)
+    return any(kw in joined for kw in IGNORED_TITLE_KEYWORDS)
+
+
+def _extract_contiguous_header_block(row: list[Any]) -> tuple[int, list[str]]:
+    """Extrae el bloque contiguo principal de encabezados ignorando márgenes y cuadros laterales."""
+    start = 0
+    while start < len(row) and (row[start] is None or not str(row[start]).strip()):
+        start += 1
+    if start >= len(row):
+        return 0, []
+    headers: list[str] = []
+    idx = start
+    while idx < len(row):
+        val = str(row[idx] or "").strip()
+        if not val:
+            break
+        headers.append(val)
+        idx += 1
+    return start, headers
+
+
+def canonicalize_product_name(raw_name: str, seen_canonical: dict[str, str] | None = None) -> str:
+    """Normaliza variantes ortográficas, tildes y mayúsculas de un producto."""
+    cleaned = re.sub(r"\s+", " ", _clean_unified_text(raw_name, 180)).strip()
+    if not cleaned:
+        return ""
+    key = normalize_text(cleaned)
+    if key in CANONICAL_PRODUCT_ALIASES:
+        return CANONICAL_PRODUCT_ALIASES[key]
+    if seen_canonical is not None:
+        if key in seen_canonical:
+            prev = seen_canonical[key]
+            if any(ord(ch) > 127 for ch in cleaned) and not any(ord(ch) > 127 for ch in prev):
+                seen_canonical[key] = cleaned
+            return seen_canonical[key]
+        pretty = cleaned.title() if cleaned.islower() or cleaned.isupper() else cleaned
+        seen_canonical[key] = pretty
+        return pretty
+    return cleaned.title() if cleaned.islower() or cleaned.isupper() else cleaned
+
+
+def _split_raw_product_combo_items(
+    raw_text: str,
+    seen_canonical: dict[str, str] | None = None,
+) -> list[tuple[str, Decimal]]:
+    """Extrae lista de (producto_canonico, cantidad) desde celdas simples o con combos."""
+    s = re.sub(r"\s+", " ", _clean_unified_text(raw_text, 180)).strip()
+    if not s:
+        return []
+    s = re.sub(r"\((\d+(?:[.,]\d+)?)\)", r" x\1", s)
+    s = re.sub(r"(?i)([a-záéíóúñ]{2,})\s*[x*]\s*(\d+(?:[.,]\d+)?)(?![a-z])", r"\1 x\2", s)
+    s = re.sub(r"(?i)(\bx\s*\d+(?:[.,]\d+)?)\s+(?=[a-záéíóúñ])", r"\1 | ", s)
+    parts = re.split(r"\s*(?:\||\/|\+|&|\s+y\s+|\s+e\s+)\s*", s, flags=re.IGNORECASE)
+
+    parsed: list[tuple[str, Decimal]] = []
+    for part in parts:
+        chunk = part.strip()
+        if not chunk:
+            continue
+        m = re.search(
+            r"(?i)(?:^|\s)[x*]\s*(\d+(?:[.,]\d+)?)(?!\s*(?:cm|mm|m|ml|g|kg|oz|lb|w)\b)\s*$",
+            chunk,
+        )
+        if not m:
+            m = re.search(
+                r"(?i)\bx\s*(\d+(?:[.,]\d+)?)(?!\s*(?:cm|mm|m|ml|g|kg|oz|lb|w)\b)\b",
+                chunk,
+            )
+        qty = Decimal("1.000")
+        name_part = chunk
+        if m:
+            try:
+                q_val = Decimal(m.group(1).replace(",", ".")).quantize(Decimal("0.001"))
+                if q_val > 0:
+                    qty = q_val
+            except (InvalidOperation, ValueError):
+                qty = Decimal("1.000")
+            name_part = (chunk[: m.start()] + " " + chunk[m.end() :]).strip()
+        cname = canonicalize_product_name(name_part, seen_canonical)
+        if cname:
+            parsed.append((cname, qty))
+    return parsed
+
+
+def parse_product_cell_and_combos(
+    raw_text: str,
+    line_value: Decimal,
+    known_unit_prices: dict[str, Decimal] | None = None,
+    seen_canonical: dict[str, str] | None = None,
+) -> list[dict[str, Any]]:
+    """
+    Descompone una celda de producto (con multiplicadores xN y/o combos combinados)
+    en ítems normalizados repartiendo proporcionalmente `line_value` al peso exacto.
+    """
+    items = _split_raw_product_combo_items(raw_text, seen_canonical)
+    if not items:
+        return []
+
+    total_val = Decimal(line_value).quantize(Decimal("0.01"))
+    prices_map = known_unit_prices or {}
+
+    if len(items) == 1:
+        name, qty = items[0]
+        unit_p = (
+            (total_val / qty).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP) if qty > 0 else total_val
+        )
+        return [
+            {
+                "product_name": name,
+                "quantity": qty.quantize(Decimal("0.001")),
+                "unit_price": unit_p,
+                "line_total": total_val,
+            }
+        ]
+
+    expected_weights: list[Decimal] = []
+    for name, qty in items:
+        base_p = prices_map.get(name) or Decimal("0.00")
+        w = (qty * base_p) if base_p > 0 else qty
+        expected_weights.append(w)
+
+    sum_weights = sum(expected_weights, Decimal("0.00"))
+    if sum_weights <= 0:
+        expected_weights = [qty for _, qty in items]
+        sum_weights = sum(expected_weights, Decimal("0.00"))
+
+    result: list[dict[str, Any]] = []
+    allocated = Decimal("0.00")
+    for idx, (name, qty) in enumerate(items):
+        if idx == len(items) - 1:
+            part_total = (total_val - allocated).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+        else:
+            ratio = expected_weights[idx] / sum_weights
+            part_total = (total_val * ratio).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            allocated += part_total
+        unit_p = (
+            (part_total / qty).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+            if qty > 0
+            else part_total
+        )
+        result.append(
+            {
+                "product_name": name,
+                "quantity": qty.quantize(Decimal("0.001")),
+                "unit_price": unit_p,
+                "line_total": part_total,
+            }
+        )
+    return result
+
+
 def inspect_workbook(
     filename: str,
     content: bytes,
@@ -220,54 +435,104 @@ def inspect_workbook(
         sheets = list(wb.sheetnames)
         if not sheets:
             raise HTTPException(status_code=422, detail="El libro de Excel no contiene hojas.")
-        selected_sheet = target_sheet if (target_sheet and target_sheet in sheets) else sheets[0]
-        ws = wb[selected_sheet]
 
-        for row_idx, row in enumerate(ws.iter_rows(values_only=True), start=1):
-            raw_matrix.append(list(row))
-            if row_idx >= MAX_SCAN_ROWS + 10:
-                break
+        def _read_ws_head(ws_obj) -> list[list[Any]]:
+            mat: list[list[Any]] = []
+            for row_idx, row in enumerate(ws_obj.iter_rows(values_only=True), start=1):
+                mat.append(list(row))
+                if row_idx >= MAX_SCAN_ROWS + 10:
+                    break
+            return mat
+
+        if target_sheet and target_sheet in sheets:
+            selected_sheet = target_sheet
+            raw_matrix = _read_ws_head(wb[selected_sheet])
+        else:
+            selected_sheet = sheets[0]
+            for cand in sheets:
+                cand_mat = _read_ws_head(wb[cand])
+                if not _is_ignored_sheet(cand, cand_mat):
+                    selected_sheet = cand
+                    raw_matrix = cand_mat
+                    break
+            if not raw_matrix:
+                raw_matrix = _read_ws_head(wb[selected_sheet])
         wb.close()
 
     # Detección inteligente de fila de encabezados en las primeras 15 filas
     best_row_idx = 0
-    best_score = -1
+    best_score = -1.0
+    col_offset = 0
     best_headers: list[str] = []
 
-    all_synonyms = set(SYNONYMS_MAP) | {syn for syn_list in SYNONYMS_MAP.values() for syn in syn_list}
+    all_synonyms = (
+        set(SYNONYMS_MAP)
+        | {syn for syn_list in SYNONYMS_MAP.values() for syn in syn_list}
+        | set(UNIFIED_SALE_SYNONYMS)
+        | {syn for syn_list in UNIFIED_SALE_SYNONYMS.values() for syn in syn_list}
+    )
 
     for row_idx, row in enumerate(raw_matrix[:MAX_SCAN_ROWS]):
-        score = 0
-        non_empty = [str(c or "").strip() for c in row if c is not None and str(c).strip()]
-        if len(non_empty) < 2:
+        offset, block_headers = _extract_contiguous_header_block(row)
+        if len(block_headers) < 2:
             continue
-        for cell in non_empty:
+        score = 0.0
+        for cell in block_headers:
             norm = normalize_text(cell)
             if norm in all_synonyms:
-                score += 3
+                score += 3.0
             elif any(syn in norm for syn in all_synonyms):
-                score += 1
+                score += 1.0
             elif re.search(r"[a-zA-Z]", norm):
                 score += 0.2
         if score > best_score:
             best_score = score
             best_row_idx = row_idx
-            best_headers = [str(c or "").strip() for c in row]
+            col_offset = offset
+            best_headers = block_headers
 
     if not best_headers:
-        # Fallback a la primera fila con contenido
         for row_idx, row in enumerate(raw_matrix):
-            if any(c is not None and str(c).strip() for c in row):
+            offset, block_headers = _extract_contiguous_header_block(row)
+            if block_headers:
                 best_row_idx = row_idx
-                best_headers = [str(c or "").strip() for c in row]
+                col_offset = offset
+                best_headers = block_headers
                 break
 
-    # Filtrar columnas vacías al final
-    while best_headers and not best_headers[-1]:
-        best_headers.pop()
-
-    # Generar nombres amigables si alguna columna intermedia está vacía
     columns = [h if h else f"Columna_{i + 1}" for i, h in enumerate(best_headers)]
+
+    sales_mapping: dict[str, str | None] = {
+        "occurred_at": None,
+        "product": None,
+        "payment_method": None,
+        "total": None,
+    }
+    sale_hits = 0
+    for col in columns:
+        norm = normalize_text(col)
+        if not sales_mapping["occurred_at"] and _match_synonyms(
+            norm, UNIFIED_SALE_SYNONYMS["occurred_at"]
+        ):
+            sales_mapping["occurred_at"] = col
+            sale_hits += 1
+        elif not sales_mapping["payment_method"] and _match_synonyms(
+            norm, UNIFIED_SALE_SYNONYMS["payment_method"]
+        ):
+            sales_mapping["payment_method"] = col
+            sale_hits += 1
+        elif not sales_mapping["total"] and (
+            _match_synonyms(norm, UNIFIED_SALE_SYNONYMS["line_total"])
+            or norm in ("valor", "total", "monto", "importe")
+        ):
+            sales_mapping["total"] = col
+            sale_hits += 1
+        elif not sales_mapping["product"] and _match_synonyms(norm, ["nombre", *SYNONYMS_MAP["name"]]):
+            sales_mapping["product"] = col
+
+    is_sales_sheet = sale_hits >= 2 or any(
+        kw in normalize_text(selected_sheet) for kw in ("venta", "flujo", "factur", "sale", "pos")
+    )
 
     # Auto-Mapeo usando sinónimos comerciales
     suggested_mapping: dict[str, str | None] = {
@@ -283,13 +548,31 @@ def inspect_workbook(
     }
 
     assigned_cols: set[str] = set()
+    blocked_for_catalog = {
+        c
+        for c in (sales_mapping.get("occurred_at"), sales_mapping.get("payment_method"))
+        if c is not None
+    }
 
     for field, synonyms in SYNONYMS_MAP.items():
         synonyms = [field, *synonyms]
         for col in columns:
-            if col in assigned_cols:
+            if col in assigned_cols or col in blocked_for_catalog:
                 continue
             norm = normalize_text(col)
+            if (
+                is_sales_sheet
+                and field
+                in (
+                    "sku",
+                    "vat_rate",
+                    "cost_price",
+                    "initial_stock",
+                    "min_stock",
+                )
+                and norm in ("valor", "total", "fecha", "metodo_pago")
+            ):
+                continue
             # Coincidencia exacta o contenida
             if norm in synonyms or any(
                 norm == syn or norm.startswith(syn + "_") or norm.endswith("_" + syn) for syn in synonyms
@@ -300,24 +583,33 @@ def inspect_workbook(
 
     # Extraer previsualización de 3 filas posteriores al encabezado
     sample_rows: list[dict[str, Any]] = []
-    data_rows = raw_matrix[best_row_idx + 1 : best_row_idx + 4]
+    data_rows = raw_matrix[best_row_idx + 1 : best_row_idx + 6]
 
     for d_row in data_rows:
-        if not any(c is not None and str(c).strip() for c in d_row):
+        slice_row = d_row[col_offset : col_offset + len(columns)]
+        if not any(c is not None and str(c).strip() for c in slice_row):
             continue
         row_dict: dict[str, Any] = {}
         for c_idx, col_name in enumerate(columns):
-            val = d_row[c_idx] if c_idx < len(d_row) else ""
-            row_dict[col_name] = "" if val is None else str(val).strip()
+            val = slice_row[c_idx] if c_idx < len(slice_row) else ""
+            if isinstance(val, datetime):
+                row_dict[col_name] = val.strftime("%Y-%m-%d")
+            else:
+                row_dict[col_name] = "" if val is None else str(val).strip()
         sample_rows.append(row_dict)
+        if len(sample_rows) >= 3:
+            break
 
     return {
         "filename": filename,
         "sheets": sheets,
         "selected_sheet": selected_sheet,
+        "sheet_kind": "sales" if is_sales_sheet else "products",
         "header_row_index": best_row_idx + 1,  # 1-indexed para humanos
+        "col_offset": col_offset,
         "columns": columns,
         "suggested_mapping": suggested_mapping,
+        "sales_mapping": sales_mapping,
         "sample_rows": sample_rows,
     }
 
@@ -612,14 +904,15 @@ def _detect_sheet_header_and_maps(
 
     best_idx = 0
     best_score = -1.0
+    col_offset = 0
     best_headers: list[str] = []
     for idx, row in enumerate(raw_rows[:MAX_SCAN_ROWS]):
-        non_empty = [str(c or "").strip() for c in row if c is not None and str(c).strip()]
-        if len(non_empty) < 2:
+        offset, block_headers = _extract_contiguous_header_block(row)
+        if len(block_headers) < 2:
             continue
         score = 0.0
-        for cell in non_empty:
-            norm = normalize_text(cell)
+        for cell_txt in block_headers:
+            norm = normalize_text(cell_txt)
             if norm in all_syns:
                 score += 3.0
             elif any(s in norm for s in all_syns):
@@ -629,32 +922,44 @@ def _detect_sheet_header_and_maps(
         if score > best_score:
             best_score = score
             best_idx = idx
-            best_headers = [str(c or "").strip() for c in row]
+            col_offset = offset
+            best_headers = block_headers
 
-    while best_headers and not best_headers[-1]:
-        best_headers.pop()
     columns = [h if h else f"Columna_{i + 1}" for i, h in enumerate(best_headers)]
 
     prod_idx: dict[str, int] = {}
     sale_idx: dict[str, int] = {}
-    for col_i, col_name in enumerate(columns):
+    for rel_i, col_name in enumerate(columns):
+        abs_i = col_offset + rel_i
         norm = normalize_text(col_name)
         for field, syns in prod_syns.items():
             if field not in prod_idx and _match_synonyms(norm, syns):
-                prod_idx[field] = col_i
+                prod_idx[field] = abs_i
         for field, syns in sale_syns.items():
             if field not in sale_idx and _match_synonyms(norm, syns):
-                sale_idx[field] = col_i
+                sale_idx[field] = abs_i
 
     return best_idx, columns, prod_idx, sale_idx
+
+
+def _is_ignored_summary_row(raw_text: str) -> bool:
+    norm = normalize_text(raw_text)
+    if not norm:
+        return True
+    if norm in IGNORED_ROW_TERMS:
+        return True
+    return any(
+        norm.startswith(prefix)
+        for prefix in ("total_", "resumen_", "utilidad_", "pago_vale", "pago_juan", "gastos_")
+    )
 
 
 def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
     """
     Analizador unificado 100% determinista para cualquier Excel (.xlsx) o CSV.
-    Recorre todas las hojas del libro y extrae automáticamente:
-    - Catálogo deduplicado de productos
-    - Transacciones de venta detectadas (en hojas de ventas o mixtas)
+    - Ignora hojas gerenciales/inversión/gastos y filas de totales/resúmenes.
+    - Normaliza tildes/variantes y separa cantidades (xN) y combos en celdas de producto.
+    - Calcula precios unitarios sugeridos y reparte proporcionalmente los combos al peso exacto.
     """
     if not filename:
         raise HTTPException(status_code=422, detail="Nombre de archivo requerido.")
@@ -702,7 +1007,10 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
 
     products_by_key: dict[str, dict[str, Any]] = {}
     name_to_key: dict[str, str] = {}
-    sales_list: list[dict[str, Any]] = []
+    seen_canonical: dict[str, str] = {}
+    unit_price_samples: dict[str, list[Decimal]] = defaultdict(list)
+    units_sold_by_name: dict[str, Decimal] = defaultdict(Decimal)
+    pending_sale_rows: list[dict[str, Any]] = []
     auto_sku_seq = 1
     sale_seq = 1
 
@@ -726,7 +1034,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
         sheet_name: str,
     ) -> dict[str, Any]:
         nonlocal auto_sku_seq
-        clean_name = _clean_unified_text(name_raw, 180)
+        clean_name = canonicalize_product_name(name_raw, seen_canonical)
         clean_sku = _clean_unified_text(sku_raw, 64).upper()
         name_key = normalize_text(clean_name)
 
@@ -740,7 +1048,10 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
                 prod["initial_stock"] = initial_stock
             return prod
         if not clean_sku and name_key and name_key in name_to_key:
-            return products_by_key[name_to_key[name_key]]
+            prod = products_by_key[name_to_key[name_key]]
+            if prod["sale_price"] == Decimal("0.00") and sale_price > 0:
+                prod["sale_price"] = sale_price
+            return prod
 
         if not clean_sku:
             while f"AUTO-{auto_sku_seq:04d}" in products_by_key:
@@ -765,30 +1076,54 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             name_to_key[name_key] = clean_sku
         return prod_entry
 
-    sale_sheet_keywords = ("venta", "factur", "sale", "pos", "pedido", "historial", "comprobante")
-
     for sheet_name, matrix in sheets_matrices:
-        if not matrix:
+        if not matrix or _is_ignored_sheet(sheet_name, matrix):
             continue
         hdr_idx, _cols, p_map, s_map = _detect_sheet_header_and_maps(matrix)
         if not p_map and not s_map:
             continue
 
         norm_sheet = normalize_text(sheet_name)
+        is_sale_sheet_name = bool(
+            re.search(
+                r"(?:^|_)(ventas?|flujo|factur\w*|sales?|pos|pedidos?|historial|comprobantes?)(?:$|_)",
+                norm_sheet,
+            )
+        )
+
+        # Si la hoja es un libro de ventas sin columna de cantidad ni de total explícito
+        # (ej. FECHA | PRODUCTO | MÉTODO PAGO | VALOR), 'VALOR' representa el total de la venta.
+        if (
+            "line_total" not in s_map
+            and "quantity_sold" not in s_map
+            and "unit_price" in s_map
+            and (
+                is_sale_sheet_name
+                or any(k in s_map for k in ("occurred_at", "payment_method", "sale_number"))
+            )
+        ):
+            up_idx = s_map["unit_price"]
+            up_hdr = (
+                normalize_text(str(matrix[hdr_idx][up_idx] or ""))
+                if up_idx < len(matrix[hdr_idx])
+                else ""
+            )
+            if "unitario" not in up_hdr and "unit" not in up_hdr:
+                s_map["line_total"] = s_map.pop("unit_price")
+                if p_map.get("sale_price") == up_idx:
+                    p_map.pop("sale_price", None)
+
         explicit_sale_col = any(
             k in s_map
             for k in ("occurred_at", "sale_number", "customer_label", "payment_method", "line_total")
         )
-        # Detectar si la hoja tiene columna dedicada a cantidad vendida distinta a stock
-        qty_header_norm = (
-            normalize_text(_cols[s_map["quantity_sold"]])
-            if "quantity_sold" in s_map and s_map["quantity_sold"] < len(_cols)
-            else ""
-        )
+        qty_col_idx = s_map.get("quantity_sold")
+        qty_header_norm = ""
+        if qty_col_idx is not None and qty_col_idx < len(matrix[hdr_idx]):
+            qty_header_norm = normalize_text(str(matrix[hdr_idx][qty_col_idx] or ""))
         explicit_qty_sold = any(
             tok in qty_header_norm for tok in ("vendid", "sold", "venta", "quantity", "cantidad", "cant")
         )
-        is_sale_sheet_name = any(kw in norm_sheet for kw in sale_sheet_keywords)
 
         has_sales = bool(
             ("quantity_sold" in s_map or "line_total" in s_map)
@@ -808,19 +1143,25 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             )
         )
 
-        # Si la columna "cantidad" se usó tanto para stock como para venta en una hoja netamente de ventas, evitar confundir stock con cantidad vendida
         if has_sales and not explicit_qty_sold and is_sale_sheet_name:
             p_map.pop("initial_stock", None)
             if "cost_price" not in p_map and "min_stock" not in p_map:
                 has_products = False
 
         for row in matrix[hdr_idx + 1 :]:
-            if not any(c is not None and str(c).strip() for c in row):
+            relevant_cells = [
+                row[i]
+                for i in set(p_map.values()) | set(s_map.values())
+                if i < len(row) and row[i] is not None and str(row[i]).strip()
+            ]
+            if not relevant_cells:
                 continue
 
-            raw_name = _clean_unified_text(cell(row, p_map, "name"), 180)
+            raw_name_text = _clean_unified_text(cell(row, p_map, "name"), 180)
             raw_sku = _clean_unified_text(cell(row, p_map, "sku"), 64).upper()
-            if not raw_name and not raw_sku:
+            if not raw_name_text and not raw_sku:
+                continue
+            if _is_ignored_summary_row(raw_name_text or raw_sku):
                 continue
 
             cost_val = _normalize_unified_decimal(cell(row, p_map, "cost_price"), "0.01", "0")
@@ -834,84 +1175,208 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
                 if vat_raw is not None
                 else Decimal("0.00")
             )
-
-            stock_val = (
-                _normalize_unified_decimal(cell(row, p_map, "initial_stock"), "0.001", "0")
-                if has_products and "initial_stock" in p_map
-                else Decimal("0.000")
-            )
             min_stock_val = _normalize_unified_decimal(cell(row, p_map, "min_stock"), "0.001", "2")
+            cat_val = str(cell(row, p_map, "category") or "General")
+            unit_val = str(cell(row, p_map, "unit") or "und")
 
-            prod_entry = register_product(
-                sku_raw=raw_sku,
-                name_raw=raw_name,
-                category=str(cell(row, p_map, "category") or "General"),
-                unit=str(cell(row, p_map, "unit") or "und"),
-                cost_price=cost_val,
-                sale_price=sale_price_val,
-                vat_rate=vat_val,
-                initial_stock=stock_val,
-                min_stock=min_stock_val,
-                sheet_name=sheet_name,
-            )
+            if has_products:
+                stock_val = (
+                    _normalize_unified_decimal(cell(row, p_map, "initial_stock"), "0.001", "0")
+                    if "initial_stock" in p_map
+                    else Decimal("0.000")
+                )
+                prod_entry = register_product(
+                    sku_raw=raw_sku,
+                    name_raw=raw_name_text,
+                    category=cat_val,
+                    unit=unit_val,
+                    cost_price=cost_val,
+                    sale_price=sale_price_val,
+                    vat_rate=vat_val,
+                    initial_stock=stock_val,
+                    min_stock=min_stock_val,
+                    sheet_name=sheet_name,
+                )
+                if sale_price_val > 0:
+                    unit_price_samples[prod_entry["name"]].append(sale_price_val)
 
             if has_sales:
-                qty_sold = _normalize_unified_decimal(cell(row, s_map, "quantity_sold"), "0.001", "0")
+                qty_col_val = _normalize_unified_decimal(cell(row, s_map, "quantity_sold"), "0.001", "0")
                 total_cell = _normalize_unified_decimal(cell(row, s_map, "line_total"), "0.01", "0")
-                unit_p = sale_price_val if sale_price_val > 0 else prod_entry["sale_price"]
-                if qty_sold <= 0 and total_cell > 0 and unit_p > 0:
-                    qty_sold = (total_cell / unit_p).quantize(Decimal("0.001"))
-                if qty_sold > 0:
-                    if unit_p == Decimal("0.00") and total_cell > 0:
-                        unit_p = (total_cell / qty_sold).quantize(Decimal("0.01"))
-                    discount_val = _normalize_unified_decimal(cell(row, s_map, "discount"), "0.01", "0")
-                    computed_total = max(
+                discount_val = _normalize_unified_decimal(cell(row, s_map, "discount"), "0.01", "0")
+                parts = _split_raw_product_combo_items(raw_name_text or raw_sku, seen_canonical)
+                if not parts:
+                    continue
+                if len(parts) == 1 and qty_col_val > 0:
+                    parts = [(parts[0][0], qty_col_val)]
+
+                unit_p_explicit = sale_price_val if sale_price_val > 0 else Decimal("0.00")
+                if total_cell > 0:
+                    line_val = total_cell
+                elif len(parts) == 1 and unit_p_explicit > 0:
+                    line_val = max(
                         Decimal("0.00"),
-                        (qty_sold * unit_p - discount_val).quantize(Decimal("0.01")),
+                        (parts[0][1] * unit_p_explicit - discount_val).quantize(Decimal("0.01")),
                     )
-                    line_total_val = total_cell if total_cell > 0 else computed_total
-                    sale_ref = (
-                        _clean_unified_text(cell(row, s_map, "sale_number"), 64) or f"EXC-{sale_seq:04d}"
-                    )
-                    sale_seq += 1
-                    sales_list.append(
-                        {
-                            "sale_reference": sale_ref,
-                            "occurred_at": _normalize_unified_date(cell(row, s_map, "occurred_at")),
-                            "sku": prod_entry["sku"],
-                            "product_name": prod_entry["name"],
-                            "quantity": str(qty_sold),
-                            "unit_price": str(unit_p),
-                            "unit_cost": str(prod_entry["cost_price"]),
-                            "vat_rate": str(prod_entry["vat_rate"]),
-                            "discount": str(discount_val),
-                            "line_total": str(line_total_val),
-                            "customer_label": _clean_unified_text(
-                                cell(row, s_map, "customer_label") or "Cliente Mostrador", 80
-                            )
-                            or "Cliente Mostrador",
-                            "payment_method": _normalize_payment(cell(row, s_map, "payment_method")),
-                            "sheet_name": sheet_name,
-                        }
-                    )
+                else:
+                    continue
 
-    serialized_products = [
-        {
-            **p,
-            "cost_price": str(p["cost_price"]),
-            "sale_price": str(p["sale_price"]),
-            "vat_rate": str(p["vat_rate"]),
-            "initial_stock": str(p["initial_stock"]),
-            "min_stock": str(p["min_stock"]),
-        }
-        for p in products_by_key.values()
-    ]
+                if line_val <= 0 and qty_col_val <= 0:
+                    continue
 
+                # Recolectar muestra de precio unitario base cuando la fila tiene 1 producto
+                if len(parts) == 1:
+                    cname, cqty = parts[0]
+                    if cqty > 0 and line_val > 0:
+                        implied_u = (line_val / cqty).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+                        unit_price_samples[cname].append(implied_u)
+
+                sale_ref = (
+                    _clean_unified_text(cell(row, s_map, "sale_number"), 64) or f"EXC-{sale_seq:04d}"
+                )
+                sale_seq += 1
+                pending_sale_rows.append(
+                    {
+                        "sale_reference": sale_ref,
+                        "occurred_at": _normalize_unified_date(cell(row, s_map, "occurred_at")),
+                        "raw_text": raw_name_text or raw_sku,
+                        "forced_qty": qty_col_val if len(parts) == 1 and qty_col_val > 0 else None,
+                        "line_value": line_val,
+                        "discount": discount_val,
+                        "customer_label": _clean_unified_text(
+                            cell(row, s_map, "customer_label") or "Cliente Mostrador", 80
+                        )
+                        or "Cliente Mostrador",
+                        "payment_method": _normalize_payment(cell(row, s_map, "payment_method")),
+                        "sheet_name": sheet_name,
+                        "sku_hint": raw_sku if len(parts) == 1 else "",
+                        "cost_val": cost_val,
+                        "vat_val": vat_val,
+                        "min_stock_val": min_stock_val,
+                        "cat_val": cat_val,
+                        "unit_val": unit_val,
+                    }
+                )
+
+    # Calcular precio unitario sugerido por producto (moda o mediana de muestras simples)
+    known_unit_prices: dict[str, Decimal] = {}
+    for p_name, samples in unit_price_samples.items():
+        if not samples:
+            continue
+        counts = Counter(samples)
+        top_freq = counts.most_common(1)[0][1]
+        modes = [val for val, cnt in counts.items() if cnt == top_freq]
+        if len(modes) == 1:
+            known_unit_prices[p_name] = modes[0]
+        else:
+            med = Decimal(str(statistics.median([float(x) for x in samples]))).quantize(Decimal("0.01"))
+            known_unit_prices[p_name] = med
+
+    # Pasada 2: descomponer cada venta (incluyendo combos) y consolidar catálogo único
+    sales_list: list[dict[str, Any]] = []
+    total_sales_acc = Decimal("0.00")
+
+    for pending in pending_sale_rows:
+        raw_for_parse = pending["raw_text"]
+        if pending["forced_qty"] is not None:
+            canon_only = canonicalize_product_name(raw_for_parse, seen_canonical)
+            items = parse_product_cell_and_combos(
+                f"{canon_only} x{pending['forced_qty']}",
+                pending["line_value"],
+                known_unit_prices,
+                seen_canonical,
+            )
+        else:
+            items = parse_product_cell_and_combos(
+                raw_for_parse,
+                pending["line_value"],
+                known_unit_prices,
+                seen_canonical,
+            )
+        if not items:
+            continue
+
+        resolved_items: list[dict[str, Any]] = []
+        summary_parts: list[str] = []
+        for it in items:
+            p_name = it["product_name"]
+            base_sug = known_unit_prices.get(p_name, it["unit_price"])
+            prod_entry = register_product(
+                sku_raw=pending["sku_hint"] if len(items) == 1 else "",
+                name_raw=p_name,
+                category=pending["cat_val"],
+                unit=pending["unit_val"],
+                cost_price=pending["cost_val"],
+                sale_price=base_sug,
+                vat_rate=pending["vat_val"],
+                initial_stock=Decimal("0.000"),
+                min_stock=pending["min_stock_val"],
+                sheet_name=pending["sheet_name"],
+            )
+            units_sold_by_name[prod_entry["name"]] += it["quantity"]
+            q_fmt = (
+                str(int(it["quantity"]))
+                if it["quantity"] == it["quantity"].to_integral_value()
+                else str(it["quantity"])
+            )
+            summary_parts.append(f"{prod_entry['name']} x{q_fmt}")
+            resolved_items.append(
+                {
+                    "sku": prod_entry["sku"],
+                    "product_name": prod_entry["name"],
+                    "quantity": str(it["quantity"]),
+                    "unit_price": str(it["unit_price"]),
+                    "line_total": str(it["line_total"]),
+                }
+            )
+
+        total_sales_acc += pending["line_value"]
+        first_item = resolved_items[0]
+        sales_list.append(
+            {
+                "sale_reference": pending["sale_reference"],
+                "occurred_at": pending["occurred_at"],
+                "sku": first_item["sku"],
+                "product_name": first_item["product_name"],
+                "products_summary": " + ".join(summary_parts),
+                "quantity": first_item["quantity"],
+                "unit_price": first_item["unit_price"],
+                "unit_cost": str(products_by_key[first_item["sku"]]["cost_price"]),
+                "vat_rate": str(products_by_key[first_item["sku"]]["vat_rate"]),
+                "discount": str(pending["discount"]),
+                "line_total": str(pending["line_value"]),
+                "customer_label": pending["customer_label"],
+                "payment_method": pending["payment_method"],
+                "sheet_name": pending["sheet_name"],
+                "items": resolved_items,
+            }
+        )
+
+    serialized_products = []
+    for p in products_by_key.values():
+        suggested_sale_p = known_unit_prices.get(p["name"], p["sale_price"])
+        if p["sale_price"] == Decimal("0.00") and suggested_sale_p > 0:
+            p["sale_price"] = suggested_sale_p
+        sold_total = units_sold_by_name.get(p["name"], Decimal("0.000"))
+        serialized_products.append(
+            {
+                **p,
+                "cost_price": str(p["cost_price"]),
+                "sale_price": str(p["sale_price"]),
+                "vat_rate": str(p["vat_rate"]),
+                "initial_stock": str(p["initial_stock"]),
+                "min_stock": str(p["min_stock"]),
+                "units_sold": str(sold_total.quantize(Decimal("0.001"))),
+            }
+        )
+
+    total_str = str(total_sales_acc.quantize(Decimal("0.01")))
     return {
         "filename": filename,
         "sheets": [name for name, _ in sheets_matrices],
         "products_count": len(serialized_products),
         "sales_count": len(sales_list),
+        "total_sales_cop": total_str,
         "summary_text": (
             f"Análisis de tu archivo completado: Se encontraron {len(serialized_products)} productos "
             f"y {len(sales_list)} ventas registradas"

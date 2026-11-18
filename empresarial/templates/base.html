@@ -148,5 +148,31 @@
   <script src="{{ root_path | default('') }}/static/vendor/lucide.min.js"></script>
   <script src="{{ root_path | default('') }}/static/js/app.js" defer></script>
   <script src="{{ root_path | default('') }}/static/js/spotlight_tour.js" defer></script>
+  <script>
+    window.addEventListener('pageshow', function (event) {
+      var navEntries = window.performance && window.performance.getEntriesByType
+        ? window.performance.getEntriesByType('navigation')
+        : [];
+      var isBackForward = navEntries.length > 0 && navEntries[0].type === 'back_forward';
+      if (event.persisted || isBackForward) {
+        var rp = window.__ROOT_PATH__ || '{{ root_path | default("") }}';
+        if (event.persisted) {
+          window.location.reload();
+          return;
+        }
+        fetch(rp + '/api/auth/session-check', {
+          method: 'GET',
+          credentials: 'same-origin',
+          cache: 'no-store'
+        }).then(function (resp) {
+          if (!resp.ok) {
+            window.location.replace(rp + '/login');
+          }
+        }).catch(function () {
+          window.location.reload();
+        });
+      }
+    });
+  </script>
 </body>
 </html>
