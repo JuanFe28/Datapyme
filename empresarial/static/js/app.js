@@ -62,6 +62,7 @@ function openDrawer(drawerId, { focus = true } = {}) {
     if (!cartLines.length) {
       renderCart();
       addCartLine();
+      calculateCartTotals();
     }
   }
   if (focus) {
@@ -116,6 +117,9 @@ function formatQtyValue(val) {
 
 // 4. Estado del Carrito Multi-Producto y Seguridad de Sesión por Inactividad
 let cartLines = [];
+let submittingSale = false;
+let submittingProduct = false;
+window.hasPendingCommercialWrite = () => submittingSale || submittingProduct;
 
 const INACTIVITY_TIMEOUT_MS = 10 * 60 * 1000;
 let inactivityTimerId = null;
@@ -1170,7 +1174,7 @@ function renderCart() {
     subtotalDisplay.style.fontWeight = '600';
     subtotalDisplay.style.textAlign = 'right';
     subtotalDisplay.style.padding = '8px 0';
-    const lineTotal = (line.quantity || 1) * (line.unit_price || 0);
+    const lineTotal = lineAmounts(line.quantity, line.unit_price, 0).base;
     subtotalDisplay.textContent = formatCOP(lineTotal);
 
     // 4. Botón Quitar Línea
@@ -1238,8 +1242,8 @@ function calculateCartTotals() {
   let vatTotal = 0;
   const rawTaxStatus = dashboardData.company_tax?.status || 'pending';
   const taxStatus = rawTaxStatus === 'pending' && window.__SPOTLIGHT_TRAINING_ACTIVE__ ? 'not_responsible' : rawTaxStatus;
-  let hasStockExceeded = taxStatus === 'pending';
-  let stockErrorMsg = hasStockExceeded ? 'Confirma la condición de IVA de la empresa antes de vender.' : '';
+  let stockErrorMsg = taxStatus === 'pending' ? 'Confirma la condición de IVA de la empresa antes de vender.' : '';
+  const quantitiesByProduct = new Map();
 
   cartLines.forEach((line) => {
     const prod = prods.find((p) => p.id === line.product_id);
@@ -1250,13 +1254,14 @@ function calculateCartTotals() {
     line.unit_price = price;
     line.max_stock = stock;
 
-    if (qty > stock) {
-      hasStockExceeded = true;
-      stockErrorMsg = `La cantidad para '${prod ? prod.name : 'un producto'}' (${qty} und) supera el stock disponible (${stock} und).`;
-    }
-    if (qty <= 0) {
-      hasStockExceeded = true;
-      stockErrorMsg = 'Ingrese una cantidad mayor a cero (hasta tres decimales).';
+    const requested = (quantitiesByProduct.get(line.product_id) ?? 0n) + scaledUnsigned(qty, 3);
+    quantitiesByProduct.set(line.product_id, requested);
+    if (!prod) {
+      stockErrorMsg = 'Selecciona un producto disponible para cada línea.';
+    } else if (requested > scaledUnsigned(stock, 3)) {
+      stockErrorMsg = `La cantidad total de '${prod.name || prod.sku}' (${Number(requested) / 1000}) supera el stock disponible (${stock}).`;
+    } else if (qty <= 0) {
+      stockErrorMsg = 'Ingresa una cantidad mayor a cero (hasta tres decimales).';
     }
 
     const rate = taxStatus === 'not_responsible' ? 0 : (prod ? Number(prod.vat_rate) : 0);
@@ -1280,26 +1285,21 @@ function calculateCartTotals() {
   if (vatEl) vatEl.textContent = taxStatus === 'pending' ? 'Por confirmar' : formatCOP(vatTotal);
   if (totalEl) totalEl.textContent = taxStatus === 'pending' ? 'Por confirmar' : formatCOP(total);
 
-  if (warningEl) {
-    if (hasStockExceeded) {
-      warningEl.style.display = 'block';
-      if (warningText) warningText.textContent = stockErrorMsg;
-      if (submitBtn) submitBtn.disabled = true;
-    } else {
-      warningEl.style.display = 'none';
-      if (submitBtn) submitBtn.disabled = false;
-    }
-  }
+  if (warningEl) warningEl.style.display = stockErrorMsg ? 'block' : 'none';
+  if (warningText) warningText.textContent = stockErrorMsg;
+  const canSubmit = cartLines.length > 0 && !stockErrorMsg && !submittingSale;
+  if (submitBtn) submitBtn.disabled = !canSubmit;
 
   // Actualizar subtotales individuales de cada línea
   const rows = document.querySelectorAll('#sale-cart-items .cart-item-row');
   rows.forEach((row, idx) => {
     if (cartLines[idx]) {
-      const lineTotal = (cartLines[idx].quantity || 1) * (cartLines[idx].unit_price || 0);
+      const lineTotal = lineAmounts(cartLines[idx].quantity, cartLines[idx].unit_price, 0).base;
       const subtotalCol = row.querySelector('.price-cell');
       if (subtotalCol) subtotalCol.textContent = formatCOP(lineTotal);
     }
   });
+  return canSubmit;
 }
 
 function getAuthHeaders(extra = {}) {
@@ -1318,6 +1318,8 @@ function quickSaleProduct(prodId, price) {
 
 async function handleSaleSubmit(e) {
   e.preventDefault();
+  if (submittingSale || !calculateCartTotals()) return;
+  submittingSale = true;
   const btn = document.getElementById('btn-submit-sale');
   if (btn) {
     btn.disabled = true;
@@ -1327,15 +1329,6 @@ async function handleSaleSubmit(e) {
   const customer = document.getElementById('sale-customer').value || 'Cliente Mostrador';
   const payment = document.getElementById('sale-payment').value || 'cash';
 
-  if (!cartLines.length) {
-    showToast('Agregue al menos un producto a la venta', 'error');
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Confirmar Venta';
-    }
-    return;
-  }
-
   const training = Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__);
   const itemsPayload = cartLines.map((it) => ({
     product_id: it.product_id,
@@ -1343,6 +1336,8 @@ async function handleSaleSubmit(e) {
     unit_price: it.unit_price,
   }));
 
+  let reloading = false;
+  let advanceTour = false;
   try {
     const resp = await fetch(`${ROOT_PATH}/api/sales`, {
       method: 'POST',
@@ -1363,24 +1358,29 @@ async function handleSaleSubmit(e) {
           if (product) product.stock_qty = Math.round((Number(product.stock_qty) - Number(item.quantity)) * 1000) / 1000;
         }
         showToast('Venta de práctica registrada.', 'success');
-        window.advanceSpotlightTour('drawer-sale');
+        cartLines = [];
+        renderCart();
+        advanceTour = true;
       } else {
         showToast('Venta registrada con éxito. Kardex actualizado.', 'success');
+        reloading = true;
         closeDrawer('drawer-sale');
         setTimeout(() => location.reload(), 700);
       }
     } else {
       const err = await resp.json();
-      showToast(err.detail || 'Error al registrar la venta', 'error');
+      showToast(typeof err.detail === 'string' ? err.detail : 'Revisa los datos del carrito antes de confirmar.', 'error');
     }
   } catch (err) {
-    showToast('Error de conexión con el servidor', 'error');
+    showToast('No se pudo confirmar el resultado. Revisa el historial antes de reenviar la venta.', 'error');
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Confirmar Venta';
+    if (!reloading) {
+      submittingSale = false;
+      if (btn) btn.textContent = 'Confirmar Venta';
+      calculateCartTotals();
     }
   }
+  if (advanceTour) window.advanceSpotlightTour('drawer-sale');
 }
 
 async function handleProductImageSelection(e) {
@@ -1743,6 +1743,8 @@ function renderMapperPreviewTable(sampleRows, columnsSpec) {
 
 async function handleProductSubmit(e) {
   e.preventDefault();
+  if (submittingProduct) return;
+  submittingProduct = true;
   const btn = document.getElementById('btn-submit-product');
   if (btn) {
     btn.disabled = true;
@@ -1763,6 +1765,8 @@ async function handleProductSubmit(e) {
     is_training_data: Boolean(window.__SPOTLIGHT_TRAINING_ACTIVE__),
   };
 
+  let reloading = false;
+  let savedPracticeSku;
   try {
     const resp = await fetch(`${ROOT_PATH}/api/products`, {
       method: 'POST',
@@ -1775,24 +1779,29 @@ async function handleProductSubmit(e) {
         (dashboardData.products ??= []).push(product);
         e.target.reset();
         showToast('Producto de práctica guardado.', 'success');
-        window.advanceSpotlightTour('drawer-product');
+        savedPracticeSku = product.sku;
       } else {
         showToast('Producto agregado al catálogo exitosamente', 'success');
+        reloading = true;
         closeDrawer('drawer-product');
         setTimeout(() => location.reload(), 700);
       }
     } else {
       const err = await resp.json();
-      showToast(err.detail || 'Error al crear el producto', 'error');
+      showToast(typeof err.detail === 'string' ? err.detail : 'Revisa los datos del producto antes de guardar.', 'error');
     }
   } catch (err) {
-    showToast('Error de conexión con el servidor', 'error');
+    showToast('No se pudo confirmar el resultado. Revisa el catálogo antes de guardar de nuevo.', 'error');
   } finally {
-    if (btn) {
-      btn.disabled = false;
-      btn.textContent = 'Guardar Producto';
+    if (!reloading) {
+      submittingProduct = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = 'Guardar Producto';
+      }
     }
   }
+  if (savedPracticeSku) window.advanceSpotlightTour('drawer-product', savedPracticeSku);
 }
 
 async function handleImportSubmit(e) {
@@ -2129,23 +2138,6 @@ async function handleEditProductSubmit(e) {
 }
 
 // --- DETALLE Y COMPROBANTE DE VENTA (F-DC-124) ---
-function formatDateEs(dateStr) {
-  if (!dateStr) return '-';
-  try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return dateStr;
-    const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
-    const month = months[d.getMonth()];
-    let hour = d.getHours();
-    const minute = String(d.getMinutes()).padStart(2, '0');
-    const ampm = hour < 12 ? 'a. m.' : 'p. m.';
-    hour = hour % 12 || 12;
-    return `${d.getDate()} ${month} ${d.getFullYear()} · ${hour}:${minute} ${ampm}`;
-  } catch (e) {
-    return dateStr;
-  }
-}
-
 function formatPaymentLabel(method) {
   const map = {
     cash: 'Efectivo',
@@ -2181,7 +2173,7 @@ async function openSaleDetailDrawer(saleId) {
   if (numEl) numEl.textContent = `#${sale.sale_number}`;
 
   const dateEl = document.getElementById('sale-detail-date');
-  if (dateEl) dateEl.textContent = formatDateEs(sale.occurred_at);
+  if (dateEl) dateEl.textContent = sale.occurred_at_display || '-';
 
   const custEl = document.getElementById('sale-detail-customer');
   if (custEl) custEl.textContent = sale.customer_label || 'Cliente Mostrador';

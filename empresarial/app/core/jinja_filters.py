@@ -1,6 +1,6 @@
 """Filtros y serializadores de Jinja2 para la capa de presentación de Datapyme Empresarial."""
 
-from datetime import datetime
+from datetime import UTC, datetime, timedelta, timezone
 from decimal import ROUND_HALF_UP, Decimal, InvalidOperation
 from typing import Any
 
@@ -17,6 +17,7 @@ def serialize_sale(sale: Sale) -> dict[str, Any]:
         "tenant_id": sale.tenant_id,
         "sale_number": sale.sale_number,
         "occurred_at": sale.occurred_at.isoformat() if sale.occurred_at else None,
+        "occurred_at_display": format_date_es_filter(sale.occurred_at),
         "customer_label": sale.customer_label,
         "payment_method": sale.payment_method,
         "subtotal": str(Decimal(str(sale.subtotal)).quantize(TWO_PLACES)),
@@ -89,6 +90,9 @@ def format_date_es_filter(val: Any) -> str:
             dt = val
         else:
             return str(val)
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=UTC)
+        dt = dt.astimezone(timezone(timedelta(hours=-5)))
         months = ["ene", "feb", "mar", "abr", "may", "jun", "jul", "ago", "sep", "oct", "nov", "dic"]
         month_name = months[dt.month - 1]
         hour_12 = dt.hour % 12 or 12

@@ -161,6 +161,11 @@ def render_adaptive_dashboard(
         if page == 1
         else [serialize_sale(sale) for sale in ordered_sales.limit(15).all()]
     )
+    practice_skus = [
+        sku
+        for (sku,) in db.query(Product.sku)
+        .filter(Product.tenant_id == tenant.id, Product.sku.ilike("PRUEBA-%"))
+    ]
     current_tax = tax_profile(db, tenant.id)
     for product in products:
         rate = Decimal(product["vat_rate"]) if current_tax["status"] == "responsible" else Decimal(0)
@@ -230,6 +235,7 @@ def render_adaptive_dashboard(
             "view_mode": resolved_mode,
             "onboarding_tour_completed": bool(tenant.onboarding_tour_completed),
             "tour_scope": tenant.id,
+            "practice_skus": practice_skus,
             "mfa_enabled": bool(user.mfa_enabled),
             "products": products,
             "recent_sales": recent_sales,
@@ -284,6 +290,7 @@ def complete_onboarding_tour(
 ):
     _, tenant = ctx
     if payload.action == "purge_training":
+        db.query(Tenant).filter_by(id=tenant.id).with_for_update().one()
         training_ids = [
             p.id for p in db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=True)
         ]

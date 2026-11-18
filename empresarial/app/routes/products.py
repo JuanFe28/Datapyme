@@ -27,6 +27,7 @@ def create_product(
     db: Session = Depends(get_db),
 ):
     user, tenant = ctx
+    db.query(Tenant).filter_by(id=tenant.id).with_for_update().one()
     try:
         prod = create_product_with_initial_stock(
             db=db,
@@ -99,6 +100,7 @@ def update_product(
     db: Session = Depends(get_db),
 ):
     _, tenant = ctx
+    db.query(Tenant).filter_by(id=tenant.id).with_for_update().one()
     prod = db.query(Product).filter_by(tenant_id=tenant.id, id=product_id).first()
     if not prod:
         raise HTTPException(status_code=404, detail="Producto no encontrado.")

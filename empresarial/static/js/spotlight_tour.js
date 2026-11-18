@@ -20,7 +20,7 @@
       openDrawer: 'drawer-product',
       prefillProduct: true,
       title: 'Código y Nombre del Producto',
-      desc: 'Abrimos el panel de "+ Nuevo Producto" y cargamos un producto de ejemplo listo para probar ("PRUEBA-01 · Producto de Entrenamiento").',
+      desc: 'Abrimos el panel de "+ Nuevo Producto" y cargamos un producto de ejemplo listo para probar con un código disponible.',
     },
     {
       stepLabel: 'Paso 2.2 de 5 · Nuevo Producto',
@@ -74,6 +74,7 @@
   let layerEl = null;
   let completing = false;
   let tourScope;
+  const usedPracticeSkus = new Set();
 
   function readState() {
     try {
@@ -134,7 +135,14 @@
     const price = document.getElementById('prod-price');
     const stock = document.getElementById('prod-initial-stock');
     const minStock = document.getElementById('prod-min-stock');
-    if (sku && !sku.value) sku.value = 'PRUEBA-01';
+    if (sku && !sku.value) {
+      let number = 1;
+      let candidate;
+      do {
+        candidate = 'PRUEBA-' + String(number++).padStart(2, '0');
+      } while (usedPracticeSkus.has(candidate));
+      sku.value = candidate;
+    }
     if (name && !name.value) name.value = 'Producto de Entrenamiento';
     if (cost && !cost.value) cost.value = '10000';
     if (price && !price.value) price.value = '18000';
@@ -236,7 +244,7 @@
   }
 
   async function completeTour(action) {
-    if (completing) return;
+    if (completing || window.hasPendingCommercialWrite?.()) return;
     completing = true;
     const headers = { 'Content-Type': 'application/json' };
     if (window.dashboardDataToken) {
@@ -277,7 +285,7 @@
   }
 
   async function renderStep(idx) {
-    if (completing) return;
+    if (completing || window.hasPendingCommercialWrite?.()) return;
     currentStepIdx = Math.max(0, Math.min(STEPS.length - 1, idx));
     const step = STEPS[currentStepIdx];
     window.__SPOTLIGHT_TRAINING_ACTIVE__ = true;
@@ -373,6 +381,7 @@
     try {
       const dash = JSON.parse(dataEl.textContent);
       tourScope = dash.tour_scope;
+      for (const sku of dash.practice_skus || []) usedPracticeSkus.add(sku.toUpperCase());
       const saved = readState();
       if (tourScope && saved?.scope === tourScope && saved.active && Number.isInteger(saved.step)) {
         renderStep(saved.step);
@@ -385,7 +394,8 @@
   });
 
   window.startSpotlightTour = () => renderStep(0);
-  window.advanceSpotlightTour = (drawerId) => {
+  window.advanceSpotlightTour = (drawerId, usedSku) => {
+    if (usedSku) usedPracticeSkus.add(usedSku.toUpperCase());
     if (STEPS[currentStepIdx].openDrawer === drawerId) {
       const next = STEPS.findIndex((step, index) => index > currentStepIdx && step.openDrawer !== drawerId);
       if (next !== -1) renderStep(next);

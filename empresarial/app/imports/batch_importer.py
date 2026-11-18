@@ -203,6 +203,8 @@ def import_products_batch(
             except (ValueError, KeyError, TypeError, HTTPException) as exc:
                 errors.append({"row": idx, "message": str(exc)})
 
+    if mode == "commit":
+        db.query(Tenant).filter_by(id=tenant_id).with_for_update().one()
     seen = {sku.upper() for (sku,) in db.query(Product.sku).filter_by(tenant_id=tenant_id)}
     checked_rows = []
     for idx, item in enumerate(valid_rows, start=2):

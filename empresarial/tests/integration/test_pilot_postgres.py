@@ -1,6 +1,7 @@
 """Pruebas opcionales contra PostgreSQL local dedicado, nunca contra participantes."""
 
 import os
+import shutil
 import subprocess
 import uuid
 from concurrent.futures import ThreadPoolExecutor
@@ -97,19 +98,25 @@ def test_postgres_dump_restore_recovers_sale_lines_tax_and_stock(pgclient, tmp_p
     source = pgclient.app.state.engine.url.database
     restored_name, restored_url = new_database()
     bindir = Path("C:/Program Files/PostgreSQL/17/bin")
+    pg_dump = shutil.which("pg_dump") or str(bindir / "pg_dump.exe")
+    pg_restore = shutil.which("pg_restore") or str(bindir / "pg_restore.exe")
     backup = tmp_path / "synthetic.dump"
     common = ["-h", "127.0.0.1", "-p", "55439", "-U", "datapyme_qa"]
-    subprocess.run(
-        [str(bindir / "pg_dump.exe"), *common, "-d", source, "-Fc", "-f", str(backup)],
-        check=True,
+    dump = subprocess.run(
+        [pg_dump, *common, "-d", source, "-Fc", "-f", str(backup)],
+        check=False,
         capture_output=True,
+        text=True,
     )
+    assert dump.returncode == 0, dump.stderr
     assert backup.stat().st_size > 0
-    subprocess.run(
-        [str(bindir / "pg_restore.exe"), *common, "-d", restored_name, "--exit-on-error", str(backup)],
-        check=True,
+    restore = subprocess.run(
+        [pg_restore, *common, "-d", restored_name, "--exit-on-error", str(backup)],
+        check=False,
         capture_output=True,
+        text=True,
     )
+    assert restore.returncode == 0, restore.stderr
     with TestClient(create_app(restored_url, testing=True)) as restored:
         result = restored.get("/api/sales/" + sale["id"], headers=h).json()
         assert result["total"] == "238.00" and result["vat_total"] == "38.00"

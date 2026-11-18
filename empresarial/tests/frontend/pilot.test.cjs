@@ -84,3 +84,52 @@ test('privacy request sends authenticated JSON instead of a cookie-only form', a
   assert.equal(status.textContent,'No se pudo registrar');
   assert.equal(button.disabled,false);
 });
+
+
+test('cart rejects the combined quantity of repeated products and sends a sale only once', async () => {
+  const button = {disabled:false, textContent:''};
+  const message = {textContent:''};
+  const elements = new Map([
+    ['btn-submit-sale', button],
+    ['cart-stock-warning-text', message],
+    ['sale-payment', {value:'cash'}],
+    ['sale-customer', {value:''}],
+  ]);
+  let requestCount = 0;
+  let resolveRequest;
+  const request = new Promise(resolve => { resolveRequest = resolve; });
+  const reloadTimers = [];
+  const ctx = vm.createContext({
+    Intl,
+    window:{location:{pathname:'/dashboard'}},
+    document:{addEventListener(){}, getElementById:id=>elements.get(id), querySelectorAll:()=>[]},
+    fetch: () => { requestCount++; return request; },
+    setTimeout: callback => reloadTimers.push(callback),
+  });
+  vm.runInContext(script, ctx);
+  vm.runInContext(`
+    dashboardData={company_tax:{status:'not_responsible'},products:[
+      {id:'p',name:'Producto',sale_price:'100',vat_rate:'0',stock_qty:'1.000'},
+    ]};
+    cartLines=[{product_id:'p',quantity:0.501},{product_id:'p',quantity:0.5}];
+    calculateCartTotals();
+  `, ctx);
+  assert.equal(button.disabled, true);
+  assert.match(message.textContent, /cantidad total/);
+  await vm.runInContext('handleSaleSubmit({preventDefault(){}})', ctx);
+  assert.equal(requestCount, 0);
+
+  vm.runInContext('cartLines[0].quantity = 0.5; calculateCartTotals();', ctx);
+  assert.equal(button.disabled, false);
+  const first = vm.runInContext('handleSaleSubmit({preventDefault(){}})', ctx);
+  vm.runInContext('calculateCartTotals();', ctx);
+  await vm.runInContext('handleSaleSubmit({preventDefault(){}})', ctx);
+  assert.equal(button.disabled, true);
+  assert.equal(requestCount, 1);
+
+  resolveRequest({ok:true});
+  await first;
+  await vm.runInContext('handleSaleSubmit({preventDefault(){}})', ctx);
+  assert.equal(requestCount, 1);
+  assert.equal(reloadTimers.length, 1);
+});

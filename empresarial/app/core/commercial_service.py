@@ -213,9 +213,9 @@ def record_inventory_movement(
 
     was_at_risk = old_stock <= min_s
     now_at_risk = new_stock <= min_s
-    if not was_at_risk and now_at_risk:
+    if not prod.is_training_data and not was_at_risk and now_at_risk:
         db.add(UsageEvent(tenant_id=tenant_id, event_type="stock_alert_raised"))
-    elif was_at_risk and not now_at_risk:
+    elif not prod.is_training_data and was_at_risk and not now_at_risk:
         db.add(UsageEvent(tenant_id=tenant_id, event_type="stock_alert_resolved"))
 
     prod.stock_qty = new_stock
@@ -229,6 +229,7 @@ def record_inventory_movement(
         quantity=signed_qty,
         unit_cost=unit_cost if unit_cost is not None else prod.cost_price,
         reason=sanitize_cell_text(reason, 180),
+        is_training_data=prod.is_training_data,
         created_by=user_id,
     )
     db.add(mov)

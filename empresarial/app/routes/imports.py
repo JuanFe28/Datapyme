@@ -90,10 +90,19 @@ async def import_unified_endpoint(
             ) from exc
 
     db.query(Tenant).filter_by(id=tenant.id).with_for_update().one()
-    existing_products = db.query(Product).filter_by(tenant_id=tenant.id, is_training_data=False).all()
-    existing_by_sku = {p.sku.upper(): p for p in existing_products}
+    existing_products = db.query(Product).filter_by(tenant_id=tenant.id).all()
+    practice_skus = {p.sku.upper() for p in existing_products if p.is_training_data}
+    if any(item["sku"].upper() in practice_skus for item in analysis["products"]):
+        raise HTTPException(
+            status_code=409,
+            detail="El archivo contiene un código reservado por un producto de práctica. "
+            "Cambia ese código en el archivo o elimina la práctica antes de importar.",
+        )
+    existing_by_sku = {p.sku.upper(): p for p in existing_products if not p.is_training_data}
     existing_by_name = {
-        sanitize_cell_text(p.name, 180).casefold(): p for p in existing_products if p.is_active
+        sanitize_cell_text(p.name, 180).casefold(): p
+        for p in existing_by_sku.values()
+        if p.is_active
     }
 
     job = ImportJob(

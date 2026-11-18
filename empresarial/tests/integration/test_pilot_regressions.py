@@ -8,7 +8,7 @@ import pytest
 from fastapi import HTTPException
 from test_company_tax import account
 
-from app.core.models import Product, Tenant, User
+from app.core.models import InventoryMovement, Product, Tenant, User
 from app.core.research_sync_service import sync_research_companies
 
 
@@ -94,19 +94,21 @@ def test_training_sale_cannot_use_real_stock(client):
 def test_training_purge_rejects_product_with_real_movements(client):
     h = account(client)
     p = product(client, h, is_training_data=True)
-    assert (
-        client.post(
-            "/api/inventory/movements",
-            headers=h,
-            json={
-                "product_id": p["id"],
-                "movement_type": "purchase_in",
-                "quantity": "2",
-                "reason": "Movimiento real sintético",
-            },
-        ).status_code
-        == 201
-    )
+    # Reproduce un movimiento heredado que quedó registrado como real.
+    with client.app.state.Session() as db:
+        training_product = db.get(Product, p["id"])
+        training_product.stock_qty += Decimal(2)
+        db.add(
+            InventoryMovement(
+                tenant_id=training_product.tenant_id,
+                product_id=training_product.id,
+                movement_type="purchase_in",
+                quantity=Decimal(2),
+                reason="Movimiento real legado sintético",
+                is_training_data=False,
+            )
+        )
+        db.commit()
     r = client.post("/api/onboarding/complete-tour", headers=h, json={"action": "purge_training"})
     assert r.status_code == 409, r.text
     assert client.get("/api/products/" + p["id"], headers=h).json()["stock_qty"] == "7.000"
@@ -375,3 +377,45 @@ def test_backup_restore_recovers_sales_and_stock(client, tmp_path):
         result = restored.get("/api/sales/" + sale["id"], headers=h).json()
         assert result["total"] == "119.00"
         assert result["items"][0]["product_id"] == p["id"]
+
+
+def test_training_stock_adjustment_stays_out_of_real_profitability_and_can_be_purged(client):
+    headers = account(client)
+    training = product(client, headers, is_training_data=True)
+    real = product(client, headers, sku="REAL-01")
+
+    result = client.post(
+        "/api/inventory/movements",
+        headers=headers,
+        json={
+            "product_id": training["id"],
+            "movement_type": "adjustment_out",
+            "quantity": "0.125",
+            "reason": "Ajuste sintético de práctica",
+        },
+    )
+    assert result.status_code == 201, result.text
+    assert result.json()["new_stock_qty"] == "4.875"
+    report = client.get("/api/analytics/profitability", headers=headers).json()
+    assert report["pnl"]["shrinkage_loss_cop"] == "0.00"
+
+    result = client.post(
+        "/api/onboarding/complete-tour", headers=headers, json={"action": "purge_training"}
+    )
+    assert result.status_code == 200, result.text
+    assert client.get("/api/products/" + training["id"], headers=headers).status_code == 404
+    assert client.get("/api/products/" + real["id"], headers=headers).json()["stock_qty"] == "5.000"
+
+
+def test_unified_import_reports_practice_sku_conflict_without_changing_inventory(client):
+    headers = account(client)
+    training = product(client, headers, sku="PRUEBA-01", is_training_data=True)
+    data = b"sku,nombre,costo,precio,stock\nPRUEBA-01,Producto comercial,25,100,30\n"
+    response = client.post(
+        "/api/imports/unified?mode=commit",
+        headers=headers,
+        files={"file": ("catalogo.csv", data, "text/csv")},
+    )
+    assert response.status_code == 409, response.text
+    assert "producto de práctica" in response.json()["detail"]
+    assert client.get("/api/products", headers=headers).json() == [training]

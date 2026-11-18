@@ -158,3 +158,18 @@ def test_sales_module_pages_past_recent_sales_and_accepts_zero_minimum_stock(cli
     assert "25 de 26 ventas" in first_history
     assert "26 de 26 ventas" in second_history
     assert "Histórica" in second_history
+
+
+def test_imported_sale_shows_colombian_date_in_history_and_receipt(client):
+    headers = account(client)
+    catalog(client, headers)
+    data = (
+        b"sale_number,occurred_at,sku,quantity,unit_price,unit_cost,vat_rate\n"
+        b"NOCHE-01,2026-08-16T03:15:00Z,HIST1,1,150,60,0\n"
+    )
+    assert upload(client, headers, data).status_code == 201
+    sales = client.get("/api/sales", headers=headers).json()
+    assert sales[0]["occurred_at"].startswith("2026-08-16")
+    expected = "15 ago 2026 · 10:15 p. m."
+    assert sales[0]["occurred_at_display"] == expected
+    assert expected in client.get("/dashboard?sales_page=1", headers=headers).text
