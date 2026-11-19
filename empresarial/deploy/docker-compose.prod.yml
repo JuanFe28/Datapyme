@@ -1,9 +1,9 @@
 name: datapyme_empresarial
 
-# Stack aislado para Oracle Cloud (convive con Research Studio, Transporte y Documind):
-# - Red propia (empresarial_net); NO se une a ninguna red de otros proyectos.
+# Stack para Oracle Cloud (convive con Research Studio, Transporte y Documind):
+# - Red propia (empresarial_net) para base de datos y tunel.
+# - Conexion interna de solo consulta a Research Studio (transporte_internal_prod) unicamente en empresarial_app.
 # - Sin puertos publicos: la app escucha solo en 127.0.0.1:8210 y se expone por tunel HTTPS.
-# - Sin tocar los puertos 80/443 (ocupados por otro proxy).
 services:
   empresarial_db:
     image: postgres:16-alpine
@@ -38,11 +38,13 @@ services:
     environment:
       APP_ENV: production
       DATABASE_URL: postgresql+psycopg://datapyme_emp:${POSTGRES_PASSWORD}@empresarial_db:5432/datapyme_empresarial
+      RESEARCH_DATABASE_URL: ${RESEARCH_DATABASE_URL:-}
       SESSION_SECRET: ${SESSION_SECRET:?Defina SESSION_SECRET en .env}
     ports:
       - "127.0.0.1:8210:8010"
     networks:
       - empresarial_net
+      - research_pg_net
     mem_limit: 768m
 
   empresarial_tunnel:
@@ -62,3 +64,6 @@ volumes:
 networks:
   empresarial_net:
     driver: bridge
+  research_pg_net:
+    name: transporte_internal_prod
+    external: true

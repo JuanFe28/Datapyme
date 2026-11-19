@@ -217,3 +217,87 @@ def test_synthetic_sync_triple_login_mfa_and_training_purge(tmp_path):
         )
         assert reset_res.status_code == 200
         assert reset_res.json()["mfa_enabled"] is False
+
+
+def test_sync_research_via_database_url_preserves_existing_passwords_and_adds_new(tmp_path, monkeypatch):
+    import json
+    import sqlite3
+
+    db_url = f"sqlite:///{(tmp_path / 'sync_env.db').as_posix()}"
+    research_path = research_database(tmp_path / "research_live.db")
+    monkeypatch.setenv("RESEARCH_DATABASE_URL", f"sqlite:///{research_path.as_posix()}")
+
+    application = create_app(db_url, testing=True)
+    with TestClient(application) as client:
+        _seed_superadmin(db_url)
+        sa_token = client.post(
+            "/api/auth/login",
+            json={"email": "auditoruts", "password": "SuperAdmin2026!"},
+        ).json()["access_token"]
+        sa_headers = {"Authorization": f"Bearer {sa_token}"}
+
+        # 1. Primera sincronización vía RESEARCH_DATABASE_URL
+        r1 = client.post("/api/admin/tenants/sync-research", headers=sa_headers)
+        assert r1.status_code == 200, r1.text
+        d1 = r1.json()
+        assert d1["synced_count"] == 1
+        assert d1["created_count"] == 1
+        first_pw = d1["clients"][0]["temporary_password"]
+        assert len(first_pw) >= 20
+
+        # Guardar hash original del primer cliente
+        engine = create_engine(db_url)
+        with sessionmaker(bind=engine)() as db:
+            first_user = db.query(User).filter_by(username="comerciosinteticoqa").one()
+            first_hash_before = first_user.password_hash
+        engine.dispose()
+
+        # 2. Agregar una empresa nueva en Research Studio y re-sincronizar
+        with sqlite3.connect(research_path) as conn:
+            conn.execute(
+                "INSERT INTO companies VALUES (2, ?, ?, ?)",
+                ("Tienda Deportiva Norte", "Bucaramanga", "Pequeña"),
+            )
+            conn.execute(
+                "INSERT INTO company_contacts VALUES (2, ?, ?)",
+                ("Representante Norte", "3120000099"),
+            )
+            conn.execute(
+                "INSERT INTO responses VALUES (2, ?, ?, ?)",
+                (
+                    "mercado",
+                    "complete",
+                    json.dumps(
+                        {
+                            "M05": "Ropa, calzado y accesorios",
+                            "M10": ["Dificultad para analizar ventas"],
+                            "M12": ["Ventas por periodo"],
+                            "M17": "Inventarios y existencias",
+                        }
+                    ),
+                ),
+            )
+
+        r2 = client.post("/api/admin/tenants/sync-research", headers=sa_headers)
+        assert r2.status_code == 200, r2.text
+        d2 = r2.json()
+        assert d2["synced_count"] == 2
+        assert d2["created_count"] == 1
+
+        by_user = {c["username"]: c for c in d2["clients"]}
+        assert by_user["comerciosinteticoqa"]["created_now"] is False
+        assert by_user["tiendadeportivanorte"]["created_now"] is True
+        assert by_user["tiendadeportivanorte"]["phone"] == "3120000099"
+        assert len(by_user["tiendadeportivanorte"]["temporary_password"]) >= 20
+
+        # Verificar que el hash del usuario previo no fue alterado
+        engine = create_engine(db_url)
+        with sessionmaker(bind=engine)() as db:
+            first_user_after = db.query(User).filter_by(username="comerciosinteticoqa").one()
+            assert first_user_after.password_hash == first_hash_before
+        engine.dispose()
+
+        # Ambas empresas aparecen en /api/admin/tenants/credentials-report y /admin/impacto
+        rep = client.get("/api/admin/tenants/credentials-report", headers=sa_headers).json()
+        usernames = {c["username"] for c in rep["clients"]}
+        assert {"comerciosinteticoqa", "tiendadeportivanorte"}.issubset(usernames)

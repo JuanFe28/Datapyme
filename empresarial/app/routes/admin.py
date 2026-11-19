@@ -3,6 +3,7 @@
 import csv
 import io
 import json
+import os
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse, PlainTextResponse, RedirectResponse
@@ -124,9 +125,16 @@ def sync_from_research_studio_endpoint(
     scheme = request.headers.get("x-forwarded-proto") or request.url.scheme
     host = request.headers.get("host") or request.url.netloc
     base_url = f"{scheme}://{host}{root_path}" if host else root_path
-    research_db = ROOT.parent / "datapyme_local.db"
-    results = sync_research_companies(db, sqlite_path=research_db, access_url=base_url)
-    return {"synced_count": len(results), "clients": results}
+    research_db_url = (os.getenv("RESEARCH_DATABASE_URL") or "").strip() or None
+    research_db = None if research_db_url else (ROOT.parent / "datapyme_local.db")
+    results = sync_research_companies(
+        db,
+        database_url=research_db_url,
+        sqlite_path=research_db,
+        access_url=base_url,
+    )
+    created_count = sum(1 for r in results if r.get("created_now"))
+    return {"synced_count": len(results), "created_count": created_count, "clients": results}
 
 
 @router.get("/api/admin/tenants/credentials-report")

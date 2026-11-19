@@ -3,6 +3,7 @@
 import csv
 import io
 import json
+import os
 import re
 import secrets
 import sqlite3
@@ -12,6 +13,8 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import HTTPException
+from sqlalchemy import create_engine, text
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from app.core.models import CompanyUIPreference, Tenant, User, UserViewSetting
@@ -76,6 +79,49 @@ def generate_temp_password() -> str:
     return secrets.token_urlsafe(24)
 
 
+_RESEARCH_COMPLETE_SQL = """
+SELECT c.id, c.name, c.city, c.size,
+       COALESCE(cc.name, c.name), COALESCE(cc.detail, ''),
+       r.data
+FROM companies c
+JOIN responses r ON r.company_id = c.id
+LEFT JOIN company_contacts cc ON cc.company_id = c.id
+WHERE r.category = 'mercado' AND r.status = 'complete'
+ORDER BY c.id ASC
+"""
+
+
+def _normalize_research_rows(rows: list[tuple[Any, ...]]) -> list[dict[str, Any]]:
+    results_by_id: dict[int, dict[str, Any]] = {}
+    for cid, name, city, size, owner_name, detail, raw_json in rows:
+        clean_name = str(name or "").strip()
+        if not clean_name or "[demo" in clean_name.lower() or "[qa" in clean_name.lower():
+            continue
+        cid_int = int(cid)
+        detail_str = str(detail or "").strip()
+        if cid_int in results_by_id:
+            if not results_by_id[cid_int]["contact_detail"] and detail_str:
+                results_by_id[cid_int]["contact_detail"] = detail_str
+            continue
+        if isinstance(raw_json, dict):
+            ans = raw_json
+        elif isinstance(raw_json, str) and raw_json.strip():
+            ans = json.loads(raw_json)
+        else:
+            ans = {}
+        clean_city = "Bucaramanga" if not city or "verificar" in str(city).lower() else str(city)
+        results_by_id[cid_int] = {
+            "research_company_id": cid_int,
+            "trade_name": clean_name,
+            "city": clean_city,
+            "size": str(size or "Pequeña"),
+            "owner_full_name": (str(owner_name or "").strip() or clean_name),
+            "contact_detail": detail_str,
+            "answers": ans,
+        }
+    return list(results_by_id.values())
+
+
 def load_companies_from_research_sqlite(sqlite_path: str | Path) -> list[dict[str, Any]]:
     """Lee las empresas con encuesta `mercado` completa desde una BD SQLite de Research Studio."""
     path = Path(sqlite_path)
@@ -83,39 +129,35 @@ def load_companies_from_research_sqlite(sqlite_path: str | Path) -> list[dict[st
         return []
     conn = sqlite3.connect(str(path))
     try:
-        rows = conn.execute(
-            """
-            SELECT c.id, c.name, c.city, c.size,
-                   COALESCE(cc.name, c.name), COALESCE(cc.detail, ''),
-                   r.data
-            FROM companies c
-            JOIN responses r ON r.company_id = c.id
-            LEFT JOIN company_contacts cc ON cc.company_id = c.id
-            WHERE r.category = 'mercado' AND r.status = 'complete'
-            ORDER BY c.id ASC
-            """
-        ).fetchall()
+        rows = conn.execute(_RESEARCH_COMPLETE_SQL).fetchall()
     finally:
         conn.close()
+    return _normalize_research_rows(rows)
 
-    results: list[dict[str, Any]] = []
-    for cid, name, city, size, owner_name, detail, raw_json in rows:
-        if "[DEMO-FDC125]" in (name or ""):
-            continue
-        ans = json.loads(raw_json) if isinstance(raw_json, str) else (raw_json or {})
-        clean_city = "Bucaramanga" if not city or "verificar" in str(city).lower() else str(city)
-        results.append(
-            {
-                "research_company_id": int(cid),
-                "trade_name": str(name).strip(),
-                "city": clean_city,
-                "size": str(size or "Pequeña"),
-                "owner_full_name": (str(owner_name).strip() or str(name).strip()),
-                "contact_detail": str(detail or "").strip(),
-                "answers": ans,
-            }
-        )
-    return results
+
+def load_companies_from_research_database(database_url: str) -> list[dict[str, Any]]:
+    """Lee empresas completas directamente desde Research Studio (PostgreSQL o SQLite vía SQLAlchemy)."""
+    url = (database_url or "").strip()
+    if not url:
+        return []
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg://" + url.removeprefix("postgres://")
+    elif url.startswith("postgresql://"):
+        url = "postgresql+psycopg://" + url.removeprefix("postgresql://")
+
+    connect_args = {"connect_timeout": 5} if url.startswith("postgresql") else {}
+    engine = create_engine(url, pool_pre_ping=True, connect_args=connect_args)
+    try:
+        with engine.connect() as conn:
+            rows = conn.execute(text(_RESEARCH_COMPLETE_SQL)).fetchall()
+    except SQLAlchemyError as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="No se pudo conectar con la base de datos de Research Studio.",
+        ) from exc
+    finally:
+        engine.dispose()
+    return _normalize_research_rows([tuple(r) for r in rows])
 
 
 def _build_whatsapp_handoff(
@@ -147,15 +189,20 @@ def _build_whatsapp_handoff(
 def sync_research_companies(
     db: Session,
     *,
+    database_url: str | None = None,
     sqlite_path: str | Path | None = None,
     access_url: str = "",
 ) -> list[dict[str, Any]]:
-    """Sincroniza una fuente privada explícita sin inventar empresas ni respuestas."""
-    source_rows = (
-        load_companies_from_research_sqlite(sqlite_path)
-        if sqlite_path and Path(sqlite_path).exists()
-        else []
-    )
+    """Sincroniza desde Research Studio (PostgreSQL vía RESEARCH_DATABASE_URL o SQLite local)."""
+    env_url = (os.getenv("RESEARCH_DATABASE_URL") or "").strip()
+    if database_url and database_url.strip():
+        source_rows = load_companies_from_research_database(database_url.strip())
+    elif sqlite_path and Path(sqlite_path).exists():
+        source_rows = load_companies_from_research_sqlite(sqlite_path)
+    elif env_url:
+        source_rows = load_companies_from_research_database(env_url)
+    else:
+        source_rows = []
     if not source_rows:
         raise HTTPException(
             status_code=409,
