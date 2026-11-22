@@ -172,27 +172,38 @@
       </div>
     </div>
 
+    <!-- Barra de estado en vivo -->
+    <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; margin-bottom: 14px;">
+      <div style="display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--ink-secondary);">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: #10B981; display: inline-block;"></span>
+        <span id="impact-live-timestamp">Datos consultados en vivo desde PostgreSQL (actualización automática cada 30 s)</span>
+      </div>
+      <button type="button" id="btn-refresh-impact" class="btn btn-secondary" style="height: 32px; font-size: 12px; padding: 0 12px;">
+        Actualizar métricas ahora
+      </button>
+    </div>
+
     <!-- 1. Tarjetas de Telemetría Global de Impacto (F-DC-125) -->
     <section class="impact-kpi-grid">
       <div class="impact-card">
         <div class="impact-card-label">Empresas en Muestra Activa</div>
-        <div class="impact-card-value">{{ telemetry.global.active_tenants }}</div>
-        <div class="impact-card-meta">
-          {{ telemetry.global.active_data_tenants }} con ventas/datos cargados &middot; {{ telemetry.global.registered_real_tenants }} empresas reales registradas
+        <div id="kpi-active-tenants" class="impact-card-value">{{ telemetry.global.active_tenants }}</div>
+        <div id="kpi-active-tenants-meta" class="impact-card-meta">
+          {{ telemetry.global.active_tenants }} activadas (Ley 1581) &middot; {{ telemetry.global.active_data_tenants }} con ventas/catálogo &middot; {{ telemetry.global.registered_real_tenants }} registradas
         </div>
       </div>
 
       <div class="impact-card">
         <div class="impact-card-label">Ventas Totales Procesadas</div>
-        <div class="impact-card-value price-cell">{{ telemetry.global.sales_amount_cop | cop }}</div>
-        <div class="impact-card-meta">
+        <div id="kpi-sales-amount" class="impact-card-value price-cell">{{ telemetry.global.sales_amount_cop | cop }}</div>
+        <div id="kpi-sales-count" class="impact-card-meta">
           {{ telemetry.global.sales_count }} transacciones registradas
         </div>
       </div>
 
       <div class="impact-card">
         <div class="impact-card-label">Catálogo Administrado</div>
-        <div class="impact-card-value">{{ telemetry.global.products_managed }} SKUs</div>
+        <div id="kpi-products-managed" class="impact-card-value">{{ telemetry.global.products_managed }} SKUs</div>
         <div class="impact-card-meta">
           Mercancía en seguimiento activo
         </div>
@@ -200,23 +211,23 @@
 
       <div class="impact-card">
         <div class="impact-card-label">Tiempo Ahorrado Estimado</div>
-        <div class="impact-card-value">{{ ((telemetry.global.est_minutes_saved | float) / 60) | round(1) }} h</div>
-        <div class="impact-card-meta">
+        <div id="kpi-hours-saved" class="impact-card-value">{{ ((telemetry.global.est_minutes_saved | float) / 60) | round(1) }} h</div>
+        <div id="kpi-minutes-saved" class="impact-card-meta">
           ~{{ telemetry.global.est_minutes_saved }} min vs. gestión manual M24
         </div>
       </div>
 
       <div class="impact-card">
         <div class="impact-card-label">Alertas de Quiebre Prevenidas</div>
-        <div class="impact-card-value" style="color: #0D7A6F;">{{ telemetry.global.stockout_risk_alerts }}</div>
-        <div class="impact-card-meta">
+        <div id="kpi-stockout-alerts" class="impact-card-value" style="color: #0D7A6F;">{{ telemetry.global.stockout_risk_alerts }}</div>
+        <div id="kpi-overstock-flags" class="impact-card-meta">
           {{ telemetry.global.overstock_flags }} alertas de sobre-stock
         </div>
       </div>
 
       <div class="impact-card">
         <div class="impact-card-label">Pronósticos OLS Generados</div>
-        <div class="impact-card-value">{{ telemetry.global.forecasts_generated }}</div>
+        <div id="kpi-forecasts-generated" class="impact-card-value">{{ telemetry.global.forecasts_generated }}</div>
         <div class="impact-card-meta">
           Modelos matemáticos ejecutados
         </div>
@@ -236,7 +247,7 @@
             <div style="font-weight: 600; color: var(--ink-primary);">Enfoque en Ventas</div>
             <div style="font-size: 11px; color: var(--ink-muted);">Prioridad: Facturación y clientes</div>
           </div>
-          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+          <span id="focus-count-sales" class="badge-neutral" style="font-size: 13px; font-weight: 700;">
             {{ telemetry.global.focus_distribution.sales | default(0) }}
           </span>
         </div>
@@ -246,7 +257,7 @@
             <div style="font-weight: 600; color: var(--ink-primary);">Enfoque en Inventario</div>
             <div style="font-size: 11px; color: var(--ink-muted);">Prioridad: Quiebres y rotación</div>
           </div>
-          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+          <span id="focus-count-inventory" class="badge-neutral" style="font-size: 13px; font-weight: 700;">
             {{ telemetry.global.focus_distribution.inventory | default(0) }}
           </span>
         </div>
@@ -256,7 +267,7 @@
             <div style="font-weight: 600; color: var(--ink-primary);">Enfoque Predictivo</div>
             <div style="font-size: 11px; color: var(--ink-muted);">Prioridad: Regresión OLS y proyección</div>
           </div>
-          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+          <span id="focus-count-predictive" class="badge-neutral" style="font-size: 13px; font-weight: 700;">
             {{ telemetry.global.focus_distribution.predictive | default(0) }}
           </span>
         </div>
@@ -266,7 +277,7 @@
             <div style="font-weight: 600; color: var(--ink-primary);">Enfoque Balanceado</div>
             <div style="font-size: 11px; color: var(--ink-muted);">Pesos equivalentes en las 3 áreas</div>
           </div>
-          <span class="badge-neutral" style="font-size: 13px; font-weight: 700;">
+          <span id="focus-count-balanced" class="badge-neutral" style="font-size: 13px; font-weight: 700;">
             {{ telemetry.global.focus_distribution.balanced | default(0) }}
           </span>
         </div>
@@ -285,18 +296,20 @@
           <thead>
             <tr>
               <th>Tipo de Comercio (Subsector)</th>
-              <th style="text-align: center;">Empresas Registradas (Total en el estudio)</th>
-              <th style="text-align: center;">Empresas con Datos Activos</th>
-              <th style="text-align: right;">Ventas Procesadas (Transacciones)</th>
+              <th style="text-align: center;">Registradas</th>
+              <th style="text-align: center;">Activadas (Ley 1581)</th>
+              <th style="text-align: center;">Con Datos Activos</th>
+              <th style="text-align: right;">Ventas Procesadas</th>
               <th style="text-align: right;">Monto Facturado (COP)</th>
               <th style="text-align: center;">Productos en Catálogo (SKUs)</th>
             </tr>
           </thead>
-          <tbody>
+          <tbody id="impact-subsectors-tbody">
             {% for sub in telemetry.subsectors %}
             <tr>
               <td style="font-weight: 600;">{{ sub.subsector }}</td>
               <td style="text-align: center;">{{ sub.registered_tenants }}</td>
+              <td style="text-align: center;">{{ sub.active_tenants }}</td>
               <td style="text-align: center;">{{ sub.active_data_tenants }}</td>
               <td style="text-align: right;">{{ sub.sales_count }}</td>
               <td class="price-cell" style="text-align: right;">{{ sub.sales_amount_cop | cop }}</td>
@@ -304,7 +317,7 @@
             </tr>
             {% else %}
             <tr>
-              <td colspan="6" style="text-align: center; color: var(--ink-muted); padding: 18px;">
+              <td colspan="7" style="text-align: center; color: var(--ink-muted); padding: 18px;">
                 Aún no hay empresas reales registradas en el estudio.
               </td>
             </tr>
@@ -313,11 +326,12 @@
           <tfoot>
             <tr style="background: #ECFDF5; font-weight: 700; color: #065F46;">
               <td>Total Muestra Real Consolidada (Anónima Ley 1581)</td>
-              <td style="text-align: center;">{{ telemetry.global.registered_real_tenants }}</td>
-              <td style="text-align: center;">{{ telemetry.global.active_data_tenants }}</td>
-              <td style="text-align: right;">{{ telemetry.global.sales_count }}</td>
-              <td class="price-cell" style="text-align: right;">{{ telemetry.global.sales_amount_cop | cop }}</td>
-              <td style="text-align: center;">{{ telemetry.global.products_managed }} SKUs</td>
+              <td id="tfoot-registered" style="text-align: center;">{{ telemetry.global.registered_real_tenants }}</td>
+              <td id="tfoot-activated" style="text-align: center;">{{ telemetry.global.active_tenants }}</td>
+              <td id="tfoot-active-data" style="text-align: center;">{{ telemetry.global.active_data_tenants }}</td>
+              <td id="tfoot-sales-count" style="text-align: right;">{{ telemetry.global.sales_count }}</td>
+              <td id="tfoot-sales-amount" class="price-cell" style="text-align: right;">{{ telemetry.global.sales_amount_cop | cop }}</td>
+              <td id="tfoot-products-managed" style="text-align: center;">{{ telemetry.global.products_managed }} SKUs</td>
             </tr>
           </tfoot>
         </table>
@@ -341,21 +355,21 @@
       <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; background: var(--surface-subtle); padding: 16px; border-radius: var(--radius-control); margin-top: 14px;">
         <div>
           <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Total Registros Auditados</div>
-          <div style="font-size: 16px; font-weight: 700; color: var(--ink-primary); margin-top: 4px;">
+          <div id="consents-total-nodes" style="font-size: 16px; font-weight: 700; color: var(--ink-primary); margin-top: 4px;">
             {{ telemetry.legal_consents_integrity.total_consent_nodes }} nodos de consentimiento
           </div>
         </div>
 
         <div>
           <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Nodos Criptográficamente Válidos</div>
-          <div style="font-size: 16px; font-weight: 700; color: #0D7A6F; margin-top: 4px;">
+          <div id="consents-valid-nodes" style="font-size: 16px; font-weight: 700; color: #0D7A6F; margin-top: 4px;">
             {{ telemetry.legal_consents_integrity.valid_nodes }} verificados
           </div>
         </div>
 
         <div>
           <div style="font-size: 11px; font-weight: 600; color: var(--ink-muted); text-transform: uppercase;">Enlaces Rotos Detectados</div>
-          <div style="font-size: 16px; font-weight: 700; color: #0D7A6F; margin-top: 4px;">
+          <div id="consents-broken-links" style="font-size: 16px; font-weight: 700; color: #0D7A6F; margin-top: 4px;">
             {{ telemetry.legal_consents_integrity.broken_links }} (Cero alteraciones)
           </div>
         </div>
@@ -751,7 +765,9 @@
       });
 
       var saIdleTimer = null;
+      var lastInteractionAt = Date.now();
       function scheduleSuperadminIdleLogout() {
+        lastInteractionAt = Date.now();
         clearTimeout(saIdleTimer);
         saIdleTimer = setTimeout(async function () {
           try {
@@ -764,6 +780,130 @@
         document.addEventListener(evName, scheduleSuperadminIdleLogout, { passive: true });
       });
       scheduleSuperadminIdleLogout();
+
+      function fmtCopLive(raw) {
+        const num = Number(raw || 0);
+        if (!Number.isFinite(num)) return '$ 0';
+        return '$ ' + Math.round(num).toLocaleString('es-CO');
+      }
+
+      async function refreshLiveImpactMetrics(manual) {
+        if (!manual && (document.hidden || Date.now() - lastInteractionAt > 540000)) return;
+        const btn = document.getElementById('btn-refresh-impact');
+        const tsEl = document.getElementById('impact-live-timestamp');
+        if (btn && manual) {
+          btn.disabled = true;
+          btn.textContent = 'Actualizando...';
+        }
+        try {
+          const headers = {};
+          if (activeToken) headers['Authorization'] = `Bearer ${activeToken}`;
+          const resp = await fetch(`${rootPath}/api/admin/impact`, {
+            method: 'GET',
+            headers,
+            credentials: 'same-origin',
+            cache: 'no-store',
+          });
+          if (!resp.ok) return;
+          const t = await resp.json();
+          const g = t.global || {};
+          const setText = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = String(val);
+          };
+          setText('kpi-active-tenants', g.active_tenants ?? 0);
+          setText(
+            'kpi-active-tenants-meta',
+            `${g.active_tenants ?? 0} activadas (Ley 1581) · ${g.active_data_tenants ?? 0} con ventas/catálogo · ${g.registered_real_tenants ?? 0} registradas`
+          );
+          setText('kpi-sales-amount', fmtCopLive(g.sales_amount_cop));
+          setText('kpi-sales-count', `${g.sales_count ?? 0} transacciones registradas`);
+          setText('kpi-products-managed', `${g.products_managed ?? 0} SKUs`);
+          const mins = Number(g.est_minutes_saved || 0);
+          setText('kpi-hours-saved', `${(mins / 60).toFixed(1)} h`);
+          setText('kpi-minutes-saved', `~${g.est_minutes_saved ?? 0} min vs. gestión manual M24`);
+          setText('kpi-stockout-alerts', g.stockout_risk_alerts ?? 0);
+          setText('kpi-overstock-flags', `${g.overstock_flags ?? 0} alertas de sobre-stock`);
+          setText('kpi-forecasts-generated', g.forecasts_generated ?? 0);
+
+          const fc = g.focus_distribution || {};
+          setText('focus-count-sales', fc.sales ?? 0);
+          setText('focus-count-inventory', fc.inventory ?? 0);
+          setText('focus-count-predictive', fc.predictive ?? 0);
+          setText('focus-count-balanced', fc.balanced ?? 0);
+
+          const tbody = document.getElementById('impact-subsectors-tbody');
+          if (tbody) {
+            tbody.textContent = '';
+            const subs = Array.isArray(t.subsectors) ? t.subsectors : [];
+            if (!subs.length) {
+              const tr = document.createElement('tr');
+              const td = document.createElement('td');
+              td.colSpan = 7;
+              td.style.textAlign = 'center';
+              td.style.color = 'var(--ink-muted)';
+              td.style.padding = '18px';
+              td.textContent = 'Aún no hay empresas reales registradas en el estudio.';
+              tr.appendChild(td);
+              tbody.appendChild(tr);
+            } else {
+              subs.forEach((s) => {
+                const tr = document.createElement('tr');
+                const cells = [
+                  { text: s.subsector, align: 'left', bold: true },
+                  { text: String(s.registered_tenants ?? 0), align: 'center' },
+                  { text: String(s.active_tenants ?? 0), align: 'center' },
+                  { text: String(s.active_data_tenants ?? 0), align: 'center' },
+                  { text: String(s.sales_count ?? 0), align: 'right' },
+                  { text: fmtCopLive(s.sales_amount_cop), align: 'right', cls: 'price-cell' },
+                  { text: `${s.products_managed ?? 0} SKUs`, align: 'center' },
+                ];
+                cells.forEach((c) => {
+                  const td = document.createElement('td');
+                  td.style.textAlign = c.align;
+                  if (c.bold) td.style.fontWeight = '600';
+                  if (c.cls) td.className = c.cls;
+                  td.textContent = c.text;
+                  tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+              });
+            }
+          }
+          setText('tfoot-registered', g.registered_real_tenants ?? 0);
+          setText('tfoot-activated', g.active_tenants ?? 0);
+          setText('tfoot-active-data', g.active_data_tenants ?? 0);
+          setText('tfoot-sales-count', g.sales_count ?? 0);
+          setText('tfoot-sales-amount', fmtCopLive(g.sales_amount_cop));
+          setText('tfoot-products-managed', `${g.products_managed ?? 0} SKUs`);
+
+          const lc = t.legal_consents_integrity || {};
+          setText('consents-total-nodes', `${lc.total_consent_nodes ?? 0} nodos de consentimiento`);
+          setText('consents-valid-nodes', `${lc.valid_nodes ?? 0} verificados`);
+          setText('consents-broken-links', `${lc.broken_links ?? 0} (Cero alteraciones)`);
+
+          if (tsEl) {
+            const nowStr = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            tsEl.textContent = `Datos en tiempo real · Última actualización: ${nowStr}`;
+          }
+        } catch (_) {
+          // Mantener cifras actuales ante fallo transitorio de red
+        } finally {
+          if (btn && manual) {
+            btn.disabled = false;
+            btn.textContent = 'Actualizar métricas ahora';
+          }
+        }
+      }
+
+      const refreshBtn = document.getElementById('btn-refresh-impact');
+      if (refreshBtn) {
+        refreshBtn.addEventListener('click', () => refreshLiveImpactMetrics(true));
+      }
+      document.addEventListener('visibilitychange', () => {
+        if (!document.hidden) refreshLiveImpactMetrics(false);
+      });
+      setInterval(() => refreshLiveImpactMetrics(false), 30000);
     })();
   </script>
 </body>

@@ -205,7 +205,7 @@ def _compute_cohort_metrics(
 
     tenants_with_data = {s.tenant_id for s in sales} | {p.tenant_id for p in active_products}
     active_data_count = len(tenants_with_data)
-    active_count = active_data_count if active_data_count > 0 else len(opt_in_tenants)
+    active_count = len(opt_in_tenants)
 
     stockout_risk_alerts = 0
     overstock_flags = 0
@@ -336,6 +336,7 @@ def compute_platform_impact_telemetry(
             "Ley 1581 de 2012 | Zero PII / Zero NIT"
         ),
         "k_threshold": k_threshold,
+        "generated_at": utcnow().isoformat(),
         "global": global_metrics,
         "subsectors": subsector_cohorts,
         "legal_consents_integrity": chain_audit,

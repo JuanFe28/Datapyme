@@ -99,6 +99,29 @@ def test_k_anonymity_suppression_role_segregation_and_habeas_data(tmp_path):
         assert impact_k3["global"]["registered_real_tenants"] == 3
         assert impact_k3["global"]["is_suppressed"] is False
         assert impact_k3["global"]["sales_amount_cop"] == "0"
+        assert impact_k3.get("generated_at")
+
+        # Crear producto en 1 sola de las 3 empresas activadas: muestra activa sigue en 3 y datos activos en 1
+        p_t1 = client.post(
+            "/api/products",
+            headers=headers_t1,
+            json={
+                "sku": "IMP-01",
+                "name": "Producto Prueba Impacto",
+                "category": "General",
+                "unit": "und",
+                "cost_price": "1000",
+                "sale_price": "2000",
+                "vat_rate": "0",
+                "initial_stock": "5",
+                "min_stock": "1",
+            },
+        )
+        assert p_t1.status_code == 201
+        impact_with_data = client.get("/api/admin/impact", headers=admin_headers).json()
+        assert impact_with_data["global"]["active_tenants"] == 3
+        assert impact_with_data["global"]["active_data_tenants"] == 1
+        assert impact_with_data["global"]["products_managed"] == 1
 
         by_sub = {s["subsector"]: s for s in impact_k3["subsectors"]}
         assert by_sub["Ferretería y Construcción"]["registered_tenants"] == 2
