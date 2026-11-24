@@ -1,0 +1,72 @@
+﻿1
+00:00:00,000 --> 00:00:06,618
+¿Qué mercancía tienes, qué vendiste y qué
+necesitas revisar? Datapyme reúne
+
+2
+00:00:06,618 --> 00:00:13,588
+inventario, ventas e indicadores de tu
+comercio. Estas pantallas utilizan datos
+
+3
+00:00:13,588 --> 00:00:15,000
+de demostración.
+
+4
+00:00:15,000 --> 00:00:21,139
+En el catálogo consultas existencias y
+costos. Al registrar una venta, revisas
+
+5
+00:00:21,139 --> 00:00:27,593
+artículos, cantidades, IVA y total antes
+de confirmar. El movimiento se refleja en
+
+6
+00:00:27,593 --> 00:00:32,000
+el inventario y puedes consultar su
+comprobante interno.
+
+7
+00:00:32,000 --> 00:00:37,793
+Los indicadores muestran ingresos sin IVA,
+utilidad bruta y mercancía disponible. La
+
+8
+00:00:37,793 --> 00:00:42,759
+utilidad bruta no equivale a ganancia
+neta. Con suficiente historial, la
+
+9
+00:00:42,759 --> 00:00:48,000
+proyección estadística ofrece una
+estimación, sin garantizar ventas futuras.
+
+10
+00:00:48,000 --> 00:00:53,495
+Puedes revisar archivos antes de
+importarlos y acceder desde un navegador.
+
+11
+00:00:53,495 --> 00:00:59,213
+Para comenzar, prepara tu catálogo,
+confirma cantidades y condición de IVA, y
+
+12
+00:00:59,213 --> 00:01:03,000
+compara una operación controlada con tus
+registros.
+
+13
+00:01:03,000 --> 00:01:08,820
+Datapyme: información comercial organizada
+para revisar inventarios y ventas. Una
+
+14
+00:01:08,820 --> 00:01:14,425
+demostración de sus herramientas y sus
+límites, para valorar su utilidad en tu
+
+15
+00:01:14,425 --> 00:01:15,000
+negocio.

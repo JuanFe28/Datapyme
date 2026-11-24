@@ -1,0 +1,52 @@
+DATAPYME — PLAN DE GRABACIÓN Y EDICIÓN
+Versión de trabajo 24/11/2026. Leer primero LEEME_PRIMERO.txt.
+
+PREPARACIÓN
+Resolver el bloqueo de precio de alta y edición; acordar si el formulario recibe precio base o precio final y comprobar ambos estados de IVA. No grabar una solución provisional como si fuera comportamiento definitivo.
+Fijar revisión del código, entorno y navegador. La copia comprobada es d7833e7. Usar exclusivamente una cuenta y base sintéticas. La demostración del servidor público exige otra cuenta sintética separada; no entrar a comercios reales para grabar.
+Comprobar /ready, inicio de sesión, exportaciones, respaldo y recuperación en el entorno que vaya a recibir empresas. La demostración local SQLite no certifica PostgreSQL de producción.
+Grabar pantalla real a 1920 x 1080, horizontal, 25 o 30 fps. Capturar únicamente la ventana de la aplicación; ocultar notificaciones, otras pestañas, correos y archivos personales. No grabar contraseñas ni QR de 2FA. Si el equipo no mantiene esa resolución, no escalar una toma ilegible para llamarla 1080p.
+Voz: grabar a uno de los autores en español natural, con micrófono cercano y habitación silenciosa; sin avatar. Hacer una prueba de 20 segundos y escucharla. Esta entrega no incluye audio ni suplanta la voz de una persona.
+
+DATOS DEL EJEMPLO COMPROBADO
+Cuenta local sintética: Ferretería Cabecera. No usar sus credenciales de demostración en producción.
+Venta comprobada: BOT-SEG-42, 1 par; base 115.000 COP; IVA 21.850; total 136.850; costo 78.000; utilidad bruta 37.000; inventario 12 -> 11 pares. Son cifras sintéticas, no resultados de empresas participantes.
+Nuevo artículo VIDEO-001: sirve para reproducir el bloqueo de precios. No incluirlo como alta correcta en el video hasta corregir y repetir la prueba.
+Para demostrar descuentos, conseguir primero una ruta visual que permita ingresarlos y verificar su cálculo. El formulario observado no mostró ese campo; no agregar un botón ficticio ni una edición de video que simule la función.
+
+ESCENAS Y ACCIONES (LOS TIEMPOS SON OBJETIVOS DE EDICIÓN)
+
+00:00–00:35 · Propósito. Panel real, luego una toma de inventario y una de ventas. Sobreimpreso discreto permanente: «Demostración con datos sintéticos». No leer toda la interfaz ni usar imágenes de oficina. Referencia: capturas/01_panel.jpg.
+
+00:35–01:20 · Acceso. Mostrar login con campos vacíos. Cortar antes de escribir la clave y retomar ya dentro del panel. Para cuentas entregadas por el equipo, explicar la activación y cambio de clave a partir de la pantalla real, sin completar esa contraseña en la grabación. No mostrar botones ni contraseñas de cuentas demo en el material destinado a empresas. Esta activación debe verificarse antes de filmarla; hoy se revisó código, no se cambió una clave desde la UI.
+
+01:20–02:10 · Preparar catálogo e IVA. Abrir Mis Datos y la condición de IVA. Mostrar pendiente/responsable/no responsable sin inferir cuál corresponde a una empresa real. Explicar motivo e historial; no cambiar el régimen de un comercio para demostrar. Referencia: capturas/04_iva_y_datos.jpg.
+
+02:10–03:10 · Producto e inventario. Mostrar catálogo, Nuevo Producto, SKU único, nombre, categoría, unidad, costo, precio y mínimo; guardar, localizar por SKU, abrir Editar y registrar un ajuste con motivo. Repetir la escena después de resolver el bloqueo de precio. La creación fue observada; edición y ajuste necesitan una toma de comprobación propia antes de aparecer como demostrados. No anunciar buscador o Kardex detallado si no aparecen realmente. Referencias: 02_inventario y 03_producto.
+
+03:10–04:15 · Venta. Elegir BOT-SEG-42, cantidad 1 y medio de pago; revisar 115.000 + 21.850 = 136.850; confirmar una sola vez; abrir historial y detalle; contrastar 12 -> 11 pares. Si se demuestra un descuento, ajustar todas las cifras a la prueba efectivamente grabada. Referencias: 07_historial y 08_comprobante.
+
+04:15–05:05 · Errores y corrección. Intentar cantidad 99 cuando hay 12 pares. Mostrar advertencia y botón deshabilitado; restituir 1 sin fingir que hubo una venta rechazada en el servidor. Para anulación, usar otra venta sintética, confirmar, comprobar estado anulado y saldo restaurado; no repetirla por si no se vio el resultado. La anulación no se ejecutó en el recorrido visual del 24/11: probarla antes de grabar. Referencia: 06_stock_insuficiente.
+
+05:05–06:15 · Archivos. Abrir Importar Excel. Elegir primero «Solo revisar si el archivo está bien (sin guardar aún)». Para la primera demostración usar «Solo catálogo de productos», no la detección integral. Preparar dos archivos pequeños, uno válido y otro con cantidad o importe inválido; comprobar sus encabezados con la plantilla que descarga la aplicación. Mostrar error, corregir archivo, revisar y confirmar. Comprobar productos realmente guardados y filas rechazadas. El 24/11 se observó el panel, no se cargaron archivos nuevos en la UI. No confundir esa observación con una prueba completa de importación. Referencia: 05_importacion.
+Separar explícitamente: ventas actuales descuentan existencias; la opción específica «Solo historial de ventas (sin cambiar stock)» requiere fecha, referencia, costo e IVA históricos. No prometer que la detección integral preserva existencias como el importador histórico: requiere revisión adicional antes de anunciarlo. No prometer cualquier archivo Excel; mostrar formatos admitidos y revisión humana de columnas.
+
+06:15–07:15 · Indicadores. Seleccionar 7, 30 y 90 días; observar cambio real. Explicar base sin IVA, utilidad bruta, inventario al costo y productos sin movimiento. No llamar utilidad neta a cifras que no descuentan todos los gastos. Comprobar filtros en la toma definitiva. Referencia: 01_panel.
+
+07:15–08:10 · Proyección. Abrir Proyección Estadística. Mostrar línea histórica, estimación y advertencia R². La cuenta demo contiene una serie sintética regular: no mostrar su R² de 100 % como rendimiento real del producto. Crear una cuenta sintética nueva o una serie insuficiente y mostrar el estado sin datos; no borrar historial de una cuenta real para lograrlo. Referencia: 09_proyeccion. El estado insuficiente está cubierto por pruebas automatizadas, no por una captura nueva del 24/11.
+
+08:10–09:00 · Acceso y portabilidad. Explicar propietario y administrador de plataforma brevemente; los enfoques inventario/ventas/proyección son vistas del propietario. Mostrar Mis Datos y enlaces JSON/CSV; descargar y abrir un archivo sintético de cada formato antes de filmar. No mostrar el panel interno administrativo en el video para empresas ni prometer que el comercio tiene esos permisos. No certificar cumplimiento legal por mostrar un aviso de privacidad.
+
+09:00–09:35 · Móvil y uso diario. Mostrar interfaz real 390 x 844, navegar a Inventario y Ventas; volver al escritorio. No usar un teléfono renderizado con una interfaz inventada. La navegación móvil se observó; no se completó una venta desde móvil en esta sesión. Referencia: 10_movil.
+
+09:35–10:00 · Cierre. Volver al panel. Cierre centrado en inventarios, ventas e información del comercio. Sin contacto, QR, enlaces, costos, duración ni condiciones del piloto, por instrucción del usuario.
+
+EDICIÓN
+Mantener cursor visible sin movimientos circulares; una acción por plano; hacer pausas de 2–3 segundos en resultados. Recortar esperas reales, sin ocultar decisiones o confirmaciones importantes. Acercar discretamente campos y totales; no reconstruir la pantalla ni reemplazar números. Poner la narración sobre la acción correspondiente, no varios pasos después.
+Grabar primero las acciones; adaptar el guion a los nombres y resultados de esa revisión. Los tiempos de SRT son provisionales: alinear después de editar y escuchar cada bloque. Texto máximo dos líneas y márgenes seguros; revisar lectura en móvil.
+Sin música o con pista propia/licenciada muy discreta; nunca incorporar canciones sin permiso. No usar plantillas o activos pagos sin autorización.
+Exportar MP4 H.264, audio AAC, 1920 x 1080, 25/30 fps y calidad que permita leer cifras. Revisar reproducción completa, audio sin saturación, subtítulos, ausencia de claves y que no se anuncie facturación electrónica DIAN.
+Versión corta: 75 segundos, mismo material comprobado, no tráiler de funcionalidades pendientes.
+
+ENTREGA FINAL CUANDO SE GRABE
+DATAPYME_RECORRIDO_10MIN.mp4, DATAPYME_RESUMEN_75S.mp4, subtítulos sincronizados y capítulos ajustados al corte final. Esta carpeta aún no contiene esos MP4.

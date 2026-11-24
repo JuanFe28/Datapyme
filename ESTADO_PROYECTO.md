@@ -1,4 +1,67 @@
-# Estado vigente — cierre del piloto acompañado
+# Estado vigente — revisión para demostración a empresas
+
+## Fecha, hora y autor/agente
+
+24/11/2026, America/Bogota. Codex para Alvino. Hora exacta no registrada.
+Base de producto d7833e7, coincidente con origin/main al consultar GitHub.
+Esta actualización solo incorpora documentación de producción audiovisual.
+
+## Fase y actividad del F-DC-124
+
+Revisión de uso y material explicativo para empresas, actividades 3.6–3.8.
+No se declara lista la operación comercial ni validación de campo. Jarvis fue
+cancelado y retirado; esta entrega no lo incorpora. Research Studio y F-DC-125
+se conservan sin cambios.
+
+## Resumen técnico de cambios
+
+Guion de diez minutos, versión breve de 75 segundos, índice, plan de grabación
+y subtítulos provisionales en empresarial/docs/video_empresas/2026-11-24.
+No se produjo MP4 ni audio: no se dispuso de grabación continua/exportación
+verificada y el editor conectado correspondía a otra cuenta no autorizada.
+El cierre omite contactos, costos, condiciones y duración del piloto según
+instrucción del usuario. No se modificó código ni información comercial real.
+
+## Estado de pruebas y evidencia
+
+Se ejecutaron 104 pruebas Python aprobadas, cuatro PostgreSQL omitidas por no
+estar habilitada su instancia sintética y un aviso Starlette/httpx; 12 pruebas
+JavaScript aprobadas. Recorrido visible con una base nueva sintética: login de
+propietario y administrador, catálogo y alta, condición de IVA, stock insuficiente,
+venta y comprobante, inventario 12 -> 11, proyección y navegación móvil 390×844.
+No hubo uso con participantes reales ni prueba de cada botón o línea.
+
+**Bloqueo detectado:** alta/edición dicen precio de venta al público, pero envían
+el importe como base sin IVA. Introducir 11.900 al 19 % mostró base 11.900 y final
+14.161. Resolver coherencia del formulario/API/catálogo antes de incorporar
+empresas y de grabar esa escena como correcta. La suite actual no cubre este
+desajuste semántico. No se corrigió dentro del encargo audiovisual.
+
+Login y /ready de la URL Cloudflare confirmada respondieron HTTP 200, status ok.
+No se verificaron versión exacta ni persistencia/recuperación del servidor.
+Activación, anulación, importación y exportación no completaron un recorrido
+visual nuevo en esta sesión; no atribuirles evidencia inexistente.
+
+## Arranque y comprobaciones
+
+Producto desde empresarial, con DATABASE_URL sintética explícita y entorno
+independiente: python -m uvicorn app.main:app --host 127.0.0.1 --port 8024.
+Pruebas: python -m pytest tests/unit tests/integration tests/security -o addopts=-ra -q;
+node --test tests/frontend/*.test.cjs. No apuntar pruebas a la base real.
+El paquete local completo está fuera de Git en
+C:\Datapyme\03_DEMOSTRACION_EMPRESAS\2026-11-24; sus bases y notas privadas no se publican.
+
+## Siguiente paso exacto
+
+Corregir la referencia de precios en alta/edición y probar IVA 0/5/19,
+responsable/no responsable y redondeo sin reescribir registros históricos.
+Comprobar el despliegue autenticado, persistencia y recuperación con cuenta
+sintética. Completar las tomas pendientes, grabar voz/pantalla real y ajustar
+subtítulos antes de compartir el video como demostración final aprobada.
+
+---
+
+# Estado anterior — cierre del piloto acompañado
 
 ## Fecha, hora y autor/agente
 

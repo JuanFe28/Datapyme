@@ -1,0 +1,28 @@
+DATAPYME — PRODUCCIÓN AUDIOVISUAL PARA EMPRESAS · 24/11/2026
+
+Este es un paquete de guion y planificación. NO hay un video exportado, audio grabado ni subtítulos sincronizados con una grabación existente.
+
+Incluye narración de diez minutos previstos (1.190 palabras), versión breve de 75 segundos previstos (143 palabras), plan de grabación, índice y SRT provisionales. Ajustar el tiempo después de grabar la voz y editar la pantalla real. No fabricar interfaces ni testimonios.
+
+Por instrucción del usuario, el video no mencionará contactos, enlaces de contacto, costos, condiciones ni duración del piloto. Se aclaran fuera del video. Jarvis fue cancelado y no forma parte del producto.
+
+BASE Y COMPROBACIONES
+Versión de producto d7833e7; al consultar GitHub el 24/11 coincidía con main remoto. 104 pruebas Python aprobadas, cuatro PostgreSQL omitidas y un aviso Starlette/httpx; 12 pruebas JavaScript aprobadas. Esta revisión no modifica código.
+Login y /ready del enlace Cloudflare confirmado respondieron HTTP 200. No se acreditaron commit remoto exacto, acceso autenticado, persistencia ni restauración del servidor público.
+
+BLOQUEO ANTES DE PUBLICAR EL VIDEO O DECLARAR LISTO EL PILOTO
+Alta/edición rotulan el campo como «Precio de venta al público», pero envían su valor a sale_price como base sin IVA. Prueba sintética visible: introducir 11.900 con tarifa 19 % muestra base 11.900 y final 14.161. Hay que unificar la referencia del precio en formulario, API, importador y tabla, con pruebas de redondeo y responsabilidad de IVA. No recalcular datos antiguos automáticamente.
+
+REFERENCIAS PARA CORREGIR
+empresarial/templates/dashboard.html: etiquetas de prod-price y edit-prod-price.
+empresarial/static/js/app.js: handleProductSubmit, handleEditProductSubmit y calculateEditProductMargin.
+
+OTROS CUIDADOS
+El campo de descuento no apareció en el formulario de venta observado; no simularlo en el video. La importación integral necesita comprobar sus efectos de stock por separado del modo específico de historial. No prometer cualquier Excel compatible ni revisión sin guardado por defecto: seleccionar explícitamente la opción de revisión.
+No repetir «ganancia neta auditada» del login como promesa: los importes comprobados acreditan utilidad bruta, sin todos los gastos generales. No anunciar facturación electrónica DIAN ni conformidad legal certificada.
+
+RECORRIDO OBSERVADO
+Login de propietario y administrador sintéticos; panel; alta de artículo; condición de IVA visible; aviso y bloqueo por stock insuficiente; venta y detalle; inventario 12 -> 11; proyección; navegación móvil 390 x 844. Venta controlada: base 115.000, IVA 21.850, total 136.850, costo 78.000, utilidad bruta 37.000. Son datos sintéticos.
+Activación, edición/ajuste, anulación, carga completa de archivos y descarga deben completar sus tomas visuales antes de presentar un video final. No se afirma haber probado cada botón o línea.
+
+El paquete local completo, con guion visual, capturas de referencia y nota privada para autores, está fuera de los repositorios en C:\Datapyme\03_DEMOSTRACION_EMPRESAS\2026-11-24. No compartir la subcarpeta privado ni usar capturas de baja legibilidad como máster del video.
