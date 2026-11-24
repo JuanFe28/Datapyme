@@ -1,4 +1,58 @@
-# Estado vigente — revisión para demostración a empresas
+# Estado vigente — correcciones guardadas, trabajo detenido por el usuario
+
+## Fecha, hora y autor/agente
+
+24/11/2026, America/Bogota. Codex para Alvino. Rama fix/precios-y-demo-20261124,
+basada en b73bd14 y d7833e7. Hora exacta no registrada. El usuario pidió detener
+el trabajo y publicar el avance en GitHub para conservar créditos.
+
+## Fase y actividad del F-DC-124
+
+Correcciones y comprobación de recorridos para demostración a empresas,
+actividades 3.6–3.8. No se declara cierre académico, validación de campo ni
+preparación comercial absoluta. Research Studio, F-DC-125 y datos reales intactos.
+
+## Resumen técnico de cambios
+
+Precio base sin IVA explícito y vista previa del total en alta/edición; revisión
+sin guardar por defecto al importar; botón coherente con la acción elegida.
+El importador unificado rechaza importes inválidos, bloquea archivos repetidos,
+exige IVA confirmado para ventas y distingue precios inferidos de totales brutos
+de precios base del catálogo. Se retiraron promesas de ganancia neta y de aceptar
+cualquier hoja de cálculo. No se reescribieron datos históricos.
+
+## Estado de pruebas y evidencia
+
+112 pruebas Python aprobadas; cuatro PostgreSQL omitidas; un aviso Starlette/httpx.
+Quince pruebas JavaScript aprobadas. Ruff correcto en archivos modificados.
+Revisión independiente y pruebas de regresión para los problemas de importación.
+Recorridos sintéticos y tomas reales de productos/ajuste, IVA, ventas/anulación,
+archivo inválido, importación válida, filtros, proyección y falta de historial,
+activación sin cambiar contraseña, tutorial y móvil. No se probó cada línea.
+
+Hay fotogramas con tiempos y narración WAV local; **no hay MP4 final**. Falta
+montaje, sincronización, exportación y revisión. PostgreSQL de QA se inició,
+pero sus pruebas no se ejecutaron de nuevo antes de parar. Login y /ready remotos
+respondieron HTTP 200; no se verificó persistencia ni versión exacta del servidor.
+
+## Arranque y comprobaciones
+
+Los servidores sintéticos se detienen al cerrar este avance. El material local
+se conserva en C:\Datapyme\03_DEMOSTRACION_EMPRESAS\2026-11-24\privado.
+El código de aplicación solo cambia en la rama indicada, no en main ni servidor.
+Detalles de arranque, material, pruebas y límites en
+empresarial/docs/video_empresas/2026-11-24/CONTINUAR_DESDE_AQUI.txt.
+
+## Siguiente paso exacto
+
+Esperar a que el usuario pida retomar. Entonces leer el punto de reanudación,
+comprobar el estado Git, completar la comprobación PostgreSQL pendiente y montar
+el MP4 desde las tomas y audio conservados. Sin cuentas ajenas ni servicios pagos.
+No repetir trabajo ya comprobado sin motivo. Jarvis sigue cancelado.
+
+---
+
+# Estado anterior — revisión para demostración a empresas
 
 ## Fecha, hora y autor/agente
 

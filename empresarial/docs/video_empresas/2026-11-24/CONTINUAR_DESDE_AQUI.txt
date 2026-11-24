@@ -1,0 +1,52 @@
+PUNTO DE REANUDACIÓN — 24/11/2026, AMERICA/BOGOTA
+
+Trabajo detenido por petición expresa del usuario: parar y subir todo a GitHub para conservar créditos. No continuar desarrollo, pruebas o grabación automáticamente desde este archivo; esperar a que el usuario pida retomar.
+
+RAMA: fix/precios-y-demo-20261124, basada en b73bd14, que conserva la documentación anterior sobre d7833e7. Los cambios de Juan Felipe están preservados. No se ha incorporado esta revisión en main ni actualizado el servidor.
+
+CORRECCIONES REALIZADAS
+1. Alta/edición: «Precio base de venta, sin IVA» y vista previa del total final según condición de IVA, con el mismo cálculo de centavos del carrito. Verificado visualmente 10.000 + 1.900 = 11.900, también al editar. No se convierten ni reescriben registros históricos.
+2. Importación: revisión sin guardar por defecto; botón distingue revisar y confirmar. Texto deja de prometer cualquier Excel compatible.
+3. Importador unificado: rechaza números explícitos negativos/no numéricos/no finitos en vez de sustituirlos por cero; rechaza ajustes manuales inválidos.
+4. Unificado: exige confirmar IVA para importar ventas; ya no asigna automáticamente no_responsable.
+5. Unificado: bloquea el mismo archivo ya aplicado bajo bloqueo transaccional de la empresa.
+6. Unificado: distingue total de línea de precio unitario y conserva la procedencia del precio inferido; convierte a base el precio inferido de un total bruto cuando la empresa es responsable, para evitar agregar IVA otra vez en ventas futuras.
+7. Textos de login/datos describen utilidad bruta y sus límites, sin prometer ganancia neta auditada.
+
+VERIFICACIÓN OBSERVADA
+112 pruebas Python aprobadas, cuatro PostgreSQL omitidas, un aviso Starlette/httpx (47,33 s). Quince pruebas JavaScript aprobadas; Ruff sin hallazgos en los archivos Python modificados. Las nuevas pruebas se ejecutaron primero en fallo y después en éxito.
+Revisión independiente de código identificó cuatro problemas de importación; las correcciones cuentan con pruebas de regresión. No se declara revisión exhaustiva de cada línea ni preparación comercial definitiva.
+PostgreSQL de QA dedicado se inició en 127.0.0.1:55439, pero NO se ejecutaron sus pruebas nuevas antes de la petición de parar. Se detiene al cerrar esta sesión. No confundir arranque con prueba aprobada.
+
+RECORRIDOS VISUALES Y TOMAS REALES
+Panel y cambio de pestañas; IVA; alta, edición y ajuste de stock; venta y comprobante; advertencia por falta de stock; anulación y restitución; archivo con costo inválido rechazado; revisión sin guardar y confirmación de archivo válido; filtros 7/30/90; proyección y detalle; cuenta sin historia; tutorial inicial; pantalla de activación sin cambiar contraseña; navegación móvil; cierre. Datos exclusivamente sintéticos.
+Ejemplo de venta: base 115.000 + IVA 21.850 = 136.850; costo 78.000, utilidad bruta 37.000; stock 12 -> 11 y anulación -> 12.
+Ejemplo de producto corregido: base 10.000, costo 6.000, IVA 19 %, final 11.900, utilidad bruta 4.000. Ajuste sintético de stock 10 -> 12.
+La activación solo se mostró sin llenar una contraseña nueva ni aceptar acuerdos desde la UI. Las exportaciones se observaron en la interfaz y existen pruebas automatizadas; falta verificar y filmar su descarga final.
+
+VIDEO — ESTADO EXACTO
+No hay MP4 final producido. Hay tomas de pantalla reales capturadas como secuencias de fotogramas con tiempos y narración local en WAV con marcas de palabra. Falta montar, sincronizar, exportar y revisar el principal y la versión breve.
+Todo el material privado está conservado fuera de Git en:
+C:\Datapyme\03_DEMOSTRACION_EMPRESAS\2026-11-24\privado
+- frames/take_*/manifest.json: tomas válidas y sus fotogramas JPEG. Ignorar directorios 01_panel/02_acceso con errores; usar los nombres take_.
+- audio/escena_01.wav ... escena_12.wav y sus .json: narración local con Microsoft Helena y tiempos de palabra. No se clonó ninguna voz. Revisar calidad y pronunciación antes de dar el video por aprobado.
+- escenas.json: texto y planificación de capítulos.
+- media_env: entorno audiovisual separado con imageio-ffmpeg y Pillow.
+- voz_con_tiempos.ps1: genera audio y marcas de palabra localmente.
+- servidor_demo.py y demostracion_sintetica.db: entorno independiente, puerto 8024, sin datos de participantes.
+- preparar_cuentas_sinteticas.py: prepara cuentas auxiliares para activación y falta de historia.
+Estos archivos privados, bases, audio y fotogramas no se suben al repositorio. No contienen material de clientes reales. No confundir clips prueba.mp4/prueba_desktop.mp4 con entregables: la prueba GDI fue negra o detenida, no sirve como video.
+
+CAPTURA QUE SÍ FUNCIONÓ
+CUA, navegador del chat, pestaña de demo local. Al ampliar el panel del navegador a vista completa y quitar el viewport forzado, las capturas fueron legibles. Dentro de UNA llamada CUA, se ejecutó un bucle de tab.screenshot({fullPage:false}) concurrente con acciones documentadas; se guardaron JPEG y tiempo transcurrido. Los temporizadores que sobreviven a la llamada fallan por contexto: no utilizarlos. Las tomas válidas tienen error:null en manifest.json.
+La captura por FFmpeg/GDI desde procesos de terminal no pudo acceder al escritorio interactivo y no se usó como fuente. FFmpeg instalado sí puede ensamblar/exportar los fotogramas ya capturados. El editor Descript conectado es de otra cuenta: no crear proyectos ni subir material allí.
+
+SIGUIENTE PASO CUANDO EL USUARIO PIDA RETOMAR
+1. Leer este archivo, git status y estado; no repetir los recorridos o suites ya aprobados sin una razón nueva.
+2. Comprobar los cambios finales, ampliar casos de precio bruto inferido a cantidades/IVA distintos si queda una duda concreta, y completar PostgreSQL dedicado antes de proponer la integración en main.
+3. Montar un MP4 de 8–12 minutos desde manifest.json, las tomas reales y audio local. Usar cortes/pausas editoriales, sin simular una interfaz. Sincronizar subtítulos con los JSON de palabras. Preparar versión de 60–90 segundos. La captura tiene pocos fotogramas por segundo: revisar legibilidad y ritmo; no prometer fluidez inexistente.
+4. Revisar reproducción, voz, cifras, datos sintéticos y ausencia de claves. No mencionar contactos, costos, duración ni condiciones del piloto: el usuario los aclarará en persona o mensaje.
+5. Subir código/pruebas/documentación a GitHub; no subir bases ni secretos. Integración en main y despliegue deben quedar identificados y comprobados; Juan Felipe administra el servidor.
+
+URL confirmada: https://driving-where-bicycle-indiana.trycloudflare.com/login. Login y /ready respondieron HTTP 200 el 24/11, pero no se verificaron commit exacto, acceso autenticado, persistencia ni respaldo del servidor remoto. No declarar el piloto completo basándose solo en esas respuestas.
+Jarvis sigue cancelado. Research Studio y F-DC-125 no se modificaron.

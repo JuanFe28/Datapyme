@@ -840,15 +840,28 @@ def _match_synonyms(norm_header: str, candidates: list[str]) -> bool:
     )
 
 
-def _normalize_unified_decimal(raw_val: Any, precision: str = "0.01", default: str = "0") -> Decimal:
+def _normalize_unified_decimal(
+    raw_val: Any,
+    precision: str = "0.01",
+    default: str = "0",
+    *,
+    field: str = "importe o cantidad",
+    row: int | None = None,
+) -> Decimal:
     if raw_val is None:
         return Decimal(default).quantize(Decimal(precision))
     s = str(raw_val).strip()
-    if not s or s.lower() in ("none", "null", "nan", "-"):
+    if not s or s == "-":
         return Decimal(default).quantize(Decimal(precision))
+    error = HTTPException(
+        status_code=422,
+        detail=f"Dato inválido en {field}"
+        + (f", fila {row}" if row else "")
+        + ". Revise el archivo: use números finitos no negativos; no se reemplazarán por cero.",
+    )
     cleaned_input = s.replace("COP", "").replace("$", "").replace(" ", "")
     if not re.fullmatch(r"-?\d+(?:[.,]\d+)*", cleaned_input):
-        return Decimal(default).quantize(Decimal(precision))
+        raise error
     normalized = clean_currency_or_number_string(s)
     if (
         precision == "0.001"
@@ -858,10 +871,12 @@ def _normalize_unified_decimal(raw_val: Any, precision: str = "0.01", default: s
     ):
         normalized = cleaned_input.replace(",", ".")
     try:
-        dec = Decimal(normalized).quantize(Decimal(precision))
-        return dec if dec.is_finite() and dec >= 0 else Decimal(default).quantize(Decimal(precision))
-    except (InvalidOperation, ValueError):
-        return Decimal(default).quantize(Decimal(precision))
+        dec = Decimal(normalized)
+        if not dec.is_finite() or dec < 0:
+            raise error
+        return dec.quantize(Decimal(precision))
+    except (InvalidOperation, ValueError) as exc:
+        raise error from exc
 
 
 def _normalize_unified_date(raw_val: Any) -> str:
@@ -1034,6 +1049,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
         initial_stock: Decimal,
         min_stock: Decimal,
         sheet_name: str,
+        sale_price_includes_vat: bool = False,
     ) -> dict[str, Any]:
         nonlocal auto_sku_seq
         clean_name = canonicalize_product_name(name_raw, seen_canonical)
@@ -1046,6 +1062,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
                 prod["cost_price"] = cost_price
             if prod["sale_price"] == Decimal("0.00") and sale_price > 0:
                 prod["sale_price"] = sale_price
+                prod["sale_price_includes_vat"] = sale_price_includes_vat
             if prod["initial_stock"] == Decimal("0.000") and initial_stock > 0:
                 prod["initial_stock"] = initial_stock
             return prod
@@ -1053,6 +1070,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             prod = products_by_key[name_to_key[name_key]]
             if prod["sale_price"] == Decimal("0.00") and sale_price > 0:
                 prod["sale_price"] = sale_price
+                prod["sale_price_includes_vat"] = sale_price_includes_vat
             return prod
 
         if not clean_sku:
@@ -1068,6 +1086,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             "unit": normalize_unit_of_measure(unit),
             "cost_price": cost_price,
             "sale_price": sale_price,
+            "sale_price_includes_vat": sale_price_includes_vat,
             "vat_rate": vat_rate if vat_rate <= Decimal("100.00") else Decimal("0.00"),
             "initial_stock": initial_stock,
             "min_stock": min_stock,
@@ -1115,6 +1134,10 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
                 if p_map.get("sale_price") == up_idx:
                     p_map.pop("sale_price", None)
 
+        # Un total de línea no es un precio unitario del catálogo.
+        if "line_total" in s_map and p_map.get("sale_price") == s_map["line_total"]:
+            p_map.pop("sale_price", None)
+
         explicit_sale_col = any(
             k in s_map
             for k in ("occurred_at", "sale_number", "customer_label", "payment_method", "line_total")
@@ -1150,7 +1173,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             if "cost_price" not in p_map and "min_stock" not in p_map:
                 has_products = False
 
-        for row in matrix[hdr_idx + 1 :]:
+        for row_number, row in enumerate(matrix[hdr_idx + 1 :], start=hdr_idx + 2):
             relevant_cells = [
                 row[i]
                 for i in set(p_map.values()) | set(s_map.values())
@@ -1166,11 +1189,15 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
             if _is_ignored_summary_row(raw_name_text or raw_sku):
                 continue
 
-            cost_val = _normalize_unified_decimal(cell(row, p_map, "cost_price"), "0.01", "0")
+            cost_val = _normalize_unified_decimal(
+                cell(row, p_map, "cost_price"), "0.01", "0", field="costo", row=row_number
+            )
             price_raw = cell(row, p_map, "sale_price")
             if price_raw is None:
                 price_raw = cell(row, s_map, "unit_price")
-            sale_price_val = _normalize_unified_decimal(price_raw, "0.01", "0")
+            sale_price_val = _normalize_unified_decimal(
+                price_raw, "0.01", "0", field="precio", row=row_number
+            )
             vat_raw = cell(row, p_map, "vat_rate")
             vat_val = (
                 _normalize_unified_decimal(vat_raw, "0.01", "0")
@@ -1314,6 +1341,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
                 initial_stock=Decimal("0.000"),
                 min_stock=pending["min_stock_val"],
                 sheet_name=pending["sheet_name"],
+                sale_price_includes_vat=True,
             )
             units_sold_by_name[prod_entry["name"]] += it["quantity"]
             q_fmt = (
@@ -1359,6 +1387,7 @@ def analyze_unified_workbook(filename: str, content: bytes) -> dict[str, Any]:
         suggested_sale_p = known_unit_prices.get(p["name"], p["sale_price"])
         if p["sale_price"] == Decimal("0.00") and suggested_sale_p > 0:
             p["sale_price"] = suggested_sale_p
+            p["sale_price_includes_vat"] = True
         sold_total = units_sold_by_name.get(p["name"], Decimal("0.000"))
         serialized_products.append(
             {

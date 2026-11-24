@@ -57,6 +57,7 @@ function openDrawer(drawerId, { focus = true } = {}) {
   backdrop.inert = false;
   backdrop.classList.add('open');
   backdrop.setAttribute('aria-hidden', 'false');
+  if (drawerId === 'drawer-product' || drawerId === 'drawer-edit-product') updateProductPricePreviews();
   if (drawerId === 'drawer-sale') {
     if (!focus) cartLines = [];
     if (!cartLines.length) {
@@ -453,6 +454,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const editPriceInput = document.getElementById('edit-prod-price');
   if (editCostInput) editCostInput.addEventListener('input', calculateEditProductMargin);
   if (editPriceInput) editPriceInput.addEventListener('input', calculateEditProductMargin);
+
+  for (const id of ['prod-price', 'prod-vat-rate', 'edit-prod-price', 'edit-prod-vat-rate']) {
+    document.getElementById(id)?.addEventListener('input', updateProductPricePreviews);
+    document.getElementById(id)?.addEventListener('change', updateProductPricePreviews);
+  }
+  updateProductPricePreviews();
+
+  document.getElementById('import-mode')?.addEventListener('change', updateImportButton);
+  updateImportButton();
 
   // Imagen en edición de producto
   const editImgFile = document.getElementById('edit-prod-image-file');
@@ -1804,6 +1814,12 @@ async function handleProductSubmit(e) {
   if (savedPracticeSku) window.advanceSpotlightTour('drawer-product', savedPracticeSku);
 }
 
+function updateImportButton() {
+  const button = document.getElementById('btn-submit-import');
+  if (button) button.textContent = document.getElementById('import-mode')?.value === 'commit'
+    ? 'Confirmar y guardar en mi negocio' : 'Revisar archivo sin guardar';
+}
+
 async function handleImportSubmit(e) {
   e.preventDefault();
   const btn = document.getElementById('btn-submit-import');
@@ -1919,7 +1935,7 @@ async function handleImportSubmit(e) {
   } finally {
     if (btn) {
       btn.disabled = false;
-      btn.textContent = 'Confirmar y Guardar Todo en Mi Cuenta';
+      updateImportButton();
     }
   }
 }
@@ -1945,7 +1961,25 @@ async function voidSale(saleId) {
 window.voidSale = voidSale;
 
 // --- EDICIÓN DE PRODUCTOS EN CATÁLOGO Y KARDEX (F-DC-124) ---
+function updateProductPricePreviews() {
+  const taxStatus = dashboardData.company_tax?.status || 'pending';
+  for (const prefix of ['prod', 'edit-prod']) {
+    const output = document.getElementById(prefix + '-final-price');
+    if (!output) continue;
+    if (taxStatus === 'pending') {
+      output.textContent = 'Confirma la condición de IVA de la empresa para conocer el precio final. La cifra ingresada es base sin IVA.';
+      continue;
+    }
+    const price = document.getElementById(prefix + '-price')?.value || '0';
+    const rate = taxStatus === 'responsible' ? document.getElementById(prefix + '-vat-rate')?.value || '0' : '0';
+    const amounts = lineAmounts('1', price, rate);
+    output.textContent = 'Final a cobrar por unidad: ' + formatCOP(amounts.base + amounts.vat) +
+      ' COP (base ' + formatCOP(amounts.base) + ' + IVA ' + formatCOP(amounts.vat) + ').';
+  }
+}
+
 function calculateEditProductMargin() {
+  updateProductPricePreviews();
   const cost = parseFloat(document.getElementById('edit-prod-cost')?.value) || 0;
   const price = parseFloat(document.getElementById('edit-prod-price')?.value) || 0;
   const profit = price - cost;

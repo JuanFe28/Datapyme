@@ -1223,7 +1223,7 @@
       </div>
       <div class="value-prop-item">
         <strong>Control de pérdidas en pesos</strong>
-        <span>Separa ganancia real en caja de mermas en bodega, ventas bajo costo e inventario inmóvil.</span>
+        <span>Consulta utilidad bruta, mermas en bodega, ventas bajo costo e inventario inmóvil. No incluye todos los gastos del negocio.</span>
       </div>
       <div class="value-prop-item">
         <strong>Adaptación por subsector</strong>
@@ -1386,18 +1386,20 @@
             <input type="number" id="prod-cost" class="form-input" min="0" step="0.01" required placeholder="0">
           </div>
           <div class="form-group">
-            <label class="form-label" for="prod-price">Precio de venta al público (COP) *</label>
-            <input type="number" id="prod-price" class="form-input" min="0" step="0.01" required placeholder="0">
+            <label class="form-label" for="prod-price">Precio base de venta, sin IVA (COP) *</label>
+            <input type="number" id="prod-price" class="form-input" min="0" step="0.01" required placeholder="0" aria-describedby="prod-final-price">
           </div>
           <div class="form-group" style="grid-column: 1 / -1;">
             <label class="form-label" for="prod-vat-rate">IVA del producto *</label>
             <select id="prod-vat-rate" class="form-input" required>
-              <option value="0" selected>No aplica / Exento (0% - Precio final)</option>
+              <option value="0" selected>Tarifa 0% (verificar clasificación tributaria)</option>
               <option value="5">IVA 5%</option>
               <option value="19">IVA 19%</option>
             </select>
           </div>
         </div>
+
+        <p id="prod-final-price" role="status" style="font-size:13px;line-height:1.5;color:var(--ink-secondary);">El IVA se suma a la base solo si la empresa es responsable. Si no es responsable, la base es el precio final.</p>
 
         <div id="prod-stock-row" style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
           <div class="form-group">
@@ -1426,7 +1428,7 @@
     <div class="drawer-header">
       <div>
         <h3 id="drawer-import-title" class="drawer-title">Importar Archivo de Excel</h3>
-        <p class="drawer-subtitle">Sube cualquier Excel (.xlsx) o CSV propio y detectaremos productos y ventas al instante.</p>
+        <p class="drawer-subtitle">Carga un archivo .xlsx o CSV compatible y revisa sus columnas y resultados antes de guardar.</p>
       </div>
       <button type="button" class="drawer-close-btn" data-close-drawer="drawer-import" aria-label="Cerrar panel">
         <i data-lucide="x" style="width: 16px; height: 16px;"></i>
@@ -1442,7 +1444,7 @@
           </label>
           <input type="file" id="import-file" class="form-input" accept=".xlsx,.csv" required>
           <div class="form-hint" style="font-size: 12px; color: var(--ink-muted); margin-top: 4px;">
-            No necesitas usar plantillas rígidas: lee cualquier hoja de cálculo (.xlsx o .csv) y detecta productos e historial de ventas automáticamente.
+            Puedes usar la plantilla opcional o revisar la detección de columnas de tu archivo. La inspección inicial no reemplaza la validación: selecciona revisar sin guardar para comprobar los datos.
           </div>
         </div>
 
@@ -1459,8 +1461,8 @@
           <div class="form-group" style="margin-bottom: 0;">
             <label class="form-label" for="import-mode">Acción al confirmar</label>
             <select id="import-mode" class="form-input">
-              <option value="commit" selected>Guardar todo en mi negocio</option>
-              <option value="preview">Solo revisar si el archivo está bien (sin guardar aún)</option>
+              <option value="preview" selected>Solo revisar si el archivo está bien (sin guardar aún)</option>
+              <option value="commit">Guardar todo en mi negocio</option>
             </select>
           </div>
         </div>
@@ -1627,7 +1629,7 @@
 
       <div class="drawer-footer">
         <button type="button" class="btn btn-secondary" data-close-drawer="drawer-import">Cerrar</button>
-        <button type="submit" class="btn btn-primary" id="btn-submit-import">Confirmar y Guardar Todo en Mi Cuenta</button>
+          <button type="submit" class="btn btn-primary" id="btn-submit-import">Revisar archivo sin guardar</button>
       </div>
     </form>
   </aside>
@@ -1704,19 +1706,20 @@
             <input type="number" id="edit-prod-cost" class="form-input" min="0" step="0.01" required>
           </div>
           <div class="form-group">
-            <label class="form-label" for="edit-prod-price">Precio de venta al público (COP) *</label>
-            <input type="number" id="edit-prod-price" class="form-input" min="0" step="0.01" required>
+            <label class="form-label" for="edit-prod-price">Precio base de venta, sin IVA (COP) *</label>
+            <input type="number" id="edit-prod-price" class="form-input" min="0" step="0.01" required aria-describedby="edit-prod-final-price">
           </div>
           <div class="form-group" style="grid-column: 1 / -1;">
             <label class="form-label" for="edit-prod-vat-rate">IVA del producto *</label>
             <select id="edit-prod-vat-rate" class="form-input" required>
-              <option value="0">No aplica / Exento (0% - Precio final)</option>
+              <option value="0">Tarifa 0% (verificar clasificación tributaria)</option>
               <option value="5">IVA 5%</option>
               <option value="19">IVA 19%</option>
             </select>
           </div>
         </div>
 
+        <p id="edit-prod-final-price" role="status" style="font-size:13px;line-height:1.5;color:var(--ink-secondary);"></p>
         <!-- Caja de Ganancia y Margen Dinámico en Vivo -->
         <div id="edit-margin-live-box" style="background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: var(--radius-control); padding: 12px 14px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center;">
           <div>

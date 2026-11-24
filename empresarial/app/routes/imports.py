@@ -28,7 +28,7 @@ from app.core.commercial_service import (
 )
 from app.core.company_tax import effective_vat_rate, sale_tax_policy, tax_profile
 from app.core.dependencies import get_current_context, get_db
-from app.core.models import CompanyTaxChange, ImportJob, Product, Tenant, UsageEvent, User, utcnow
+from app.core.models import ImportJob, Product, Tenant, UsageEvent, User, utcnow
 from app.core.security import sha256_hex
 from app.imports.batch_importer import MAX_UPLOAD_BYTES, import_products_batch, import_sales_batch
 from app.imports.smart_excel_mapper import analyze_unified_workbook, inspect_workbook
@@ -66,6 +66,17 @@ async def import_unified_endpoint(
     user, tenant = ctx
     content = await file.read(MAX_UPLOAD_BYTES + 1)
     analysis = analyze_unified_workbook(file.filename or "", content)
+    current_tax_status = tax_profile(db, tenant.id)["status"]
+    # Los totales de ventas son brutos; el contrato del catálogo conserva base sin IVA.
+    for item in analysis["products"]:
+        if item.get("sale_price_includes_vat") and current_tax_status == "responsible":
+            rate = Decimal(item["vat_rate"])
+            item["sale_price"] = str(
+                (Decimal(item["sale_price"]) / (1 + rate / 100)).quantize(
+                    TWO_PLACES, rounding=ROUND_HALF_UP
+                )
+            )
+            item["sale_price_includes_vat"] = False
     if mode == "preview":
         response.status_code = 200
         return {**analysis, "mode": "preview"}
@@ -90,6 +101,24 @@ async def import_unified_endpoint(
             ) from exc
 
     db.query(Tenant).filter_by(id=tenant.id).with_for_update().one()
+    # Si cambió IVA mientras se analizaba el archivo, exigir una revisión nueva.
+    if tax_profile(db, tenant.id)["status"] != current_tax_status:
+        raise HTTPException(
+            status_code=409,
+            detail="La condición de IVA cambió durante la importación. Revisa el archivo de nuevo.",
+        )
+    file_hash = sha256_hex(content.hex())
+    if (
+        db.query(ImportJob)
+        .filter_by(tenant_id=tenant.id, kind="unified", status="committed", sha256=file_hash)
+        .first()
+    ):
+        raise HTTPException(
+            status_code=409,
+            detail="Este archivo ya fue aplicado en tu empresa. Revisa el historial antes de repetir la importación.",
+        )
+    if analysis["sales"]:
+        sale_tax_policy(db, tenant.id, None)
     existing_products = db.query(Product).filter_by(tenant_id=tenant.id).all()
     practice_skus = {p.sku.upper() for p in existing_products if p.is_training_data}
     if any(item["sku"].upper() in practice_skus for item in analysis["products"]):
@@ -107,7 +136,7 @@ async def import_unified_endpoint(
         tenant_id=tenant.id,
         kind="unified",
         filename_safe=sanitize_cell_text(Path(file.filename or "archivo.xlsx").name, 180),
-        sha256=sha256_hex(content.hex()),
+        sha256=file_hash,
         status="committed",
         rows_total=analysis["products_count"] + analysis["sales_count"],
         rows_ok=0,
@@ -124,10 +153,16 @@ async def import_unified_endpoint(
         try:
             val = Decimal(str(raw).replace(",", ".").strip())
             if not val.is_finite() or val < 0:
-                return default
+                raise HTTPException(
+                    status_code=422,
+                    detail="Ajuste numérico inválido: use un costo o cantidad finitos no negativos. No se guardó la importación.",
+                )
             return val.quantize(q)
-        except (InvalidOperation, ValueError):
-            return default
+        except (InvalidOperation, ValueError) as exc:
+            raise HTTPException(
+                status_code=422,
+                detail="Ajuste numérico inválido: revise costos y cantidades antes de guardar.",
+            ) from exc
 
     products_created = 0
     sku_alias_map: dict[str, Product] = {}
@@ -204,18 +239,6 @@ async def import_unified_endpoint(
 
     sales_created = 0
     if analysis["sales"]:
-        if tax_profile(db, tenant.id)["status"] == "pending":
-            db.add(
-                CompanyTaxChange(
-                    tenant_id=tenant.id,
-                    revision=1,
-                    status="not_responsible",
-                    reason="Condición inicial asignada al importar Excel unificado",
-                    changed_by=user.id,
-                )
-            )
-            db.flush()
-
         policy = sale_tax_policy(db, tenant.id, None)
 
         for s_item in analysis["sales"]:
