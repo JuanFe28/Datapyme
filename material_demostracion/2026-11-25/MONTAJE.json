@@ -1,0 +1,411 @@
+{
+  "source_revision": "a95aac66825bfab5334c5843eb57ce07b1758fab",
+  "duration": 370,
+  "chapters": [
+    {
+      "chapter": 1,
+      "title": "El negocio, en una sola vista",
+      "source": "2026-11-24\\EDICION\\completo\\01.mp4",
+      "source_sha256": "8cae46b18a2041f28fc6792195cfae6e7aeeb8c682f868fca18037b579355552",
+      "source_duration": 35.0,
+      "start": 8,
+      "duration": 14
+    },
+    {
+      "chapter": 2,
+      "title": "Acceso y primeros pasos",
+      "source": "2026-11-24\\EDICION\\completo\\02.mp4",
+      "source_sha256": "fd5df681fdb39bccc15a567913c8a43d499a06f02a30939a26e145066b2089ef",
+      "source_duration": 45.0,
+      "start": 22,
+      "duration": 24
+    },
+    {
+      "chapter": 3,
+      "title": "Preparar la información",
+      "source": "2026-11-24\\EDICION\\completo\\03.mp4",
+      "source_sha256": "c2187a8e0042cdda3cdbad7b44853b1f452377d8c65a8fe40cf1b98aa75f0701",
+      "source_duration": 51.44,
+      "start": 46,
+      "duration": 30
+    },
+    {
+      "chapter": 4,
+      "title": "Inventario bajo control",
+      "source": "2026-11-24\\EDICION\\completo\\04.mp4",
+      "source_sha256": "77313e234f1d43135050ca9ba3905cddc152c937a0288818adaf1d2ba324f780",
+      "source_duration": 60.0,
+      "start": 76,
+      "duration": 38
+    },
+    {
+      "chapter": 5,
+      "title": "Una venta, de principio a fin",
+      "source": "2026-11-24\\EDICION\\completo\\05.mp4",
+      "source_sha256": "0a93297517f2a96ebbc41f2668552a5b7d4ba378b9f5392f5509f2b8f27ad849",
+      "source_duration": 65.0,
+      "start": 114,
+      "duration": 50
+    },
+    {
+      "chapter": 6,
+      "title": "Validar y corregir",
+      "source": "2026-11-24\\EDICION\\completo\\06.mp4",
+      "source_sha256": "eba1c0f52af7f2eb5c7e122df227ef3cd2f92636a7deb70ecd18405c56e749fa",
+      "source_duration": 50.0,
+      "start": 164,
+      "duration": 30
+    },
+    {
+      "chapter": 7,
+      "title": "Importar con revisión previa",
+      "source": "2026-11-24\\EDICION\\completo\\07.mp4",
+      "source_sha256": "88677b3367999d0ff6211ee76fb8aa2c22c073244c45e3655a5a721dfc20389d",
+      "source_duration": 70.0,
+      "start": 194,
+      "duration": 40
+    },
+    {
+      "chapter": 8,
+      "title": "Indicadores que se pueden explicar",
+      "source": "2026-11-24\\EDICION\\completo\\08.mp4",
+      "source_sha256": "db8b104a995c8e1d32a130060cd85ed56fffaba70d31837bb1da66dc38b4b7c1",
+      "source_duration": 60.0,
+      "start": 234,
+      "duration": 32
+    },
+    {
+      "chapter": 9,
+      "title": "Proyectar sin crear falsas expectativas",
+      "source": "2026-11-24\\EDICION\\completo\\09.mp4",
+      "source_sha256": "2d713d1702d00d708e56919c2907078dfd5242cd016236235d9bf5464db8fa27",
+      "source_duration": 55.0,
+      "start": 266,
+      "duration": 30
+    },
+    {
+      "chapter": 10,
+      "title": "Cuenta y cuidado de la información",
+      "source": "2026-11-24\\EDICION\\completo\\10.mp4",
+      "source_sha256": "aaf8094d83b38ddf3c31f7f7ebaabac5fc10b4c40e9676f606547bf539dd6129",
+      "source_duration": 50.0,
+      "start": 296,
+      "duration": 24
+    },
+    {
+      "chapter": 11,
+      "title": "Continuidad desde el celular",
+      "source": "2026-11-24\\EDICION\\completo\\11.mp4",
+      "source_sha256": "fde7f8b2cfd5b4247f161ef13c5c7eb1d0891a514200bfa9e9d8a253f9a4e3f0",
+      "source_duration": 35.24,
+      "start": 320,
+      "duration": 24
+    },
+    {
+      "chapter": 12,
+      "title": "Qué proponemos revisar juntos",
+      "source": "2026-11-24\\EDICION\\completo\\12.mp4",
+      "source_sha256": "55cc282328a49e9b048d797da7059e9508a1bfef60c8a446250fc34e356edf3d",
+      "source_duration": 27.68,
+      "start": 344,
+      "duration": 14
+    }
+  ],
+  "subtitles": [
+    {
+      "chapter": 1,
+      "start": 8.3,
+      "end": 14.947,
+      "text": "Inventario, ventas e indicadores conectados en una misma aplicación.",
+      "cps": 10.23
+    },
+    {
+      "chapter": 1,
+      "start": 14.947,
+      "end": 21.3,
+      "text": "Recorrido de una ferretería con datos sintéticos de demostración.",
+      "cps": 10.23
+    },
+    {
+      "chapter": 2,
+      "start": 22.3,
+      "end": 28.916,
+      "text": "La cuenta de la empresa permite entrar a su espacio de trabajo.",
+      "cps": 9.52
+    },
+    {
+      "chapter": 2,
+      "start": 28.916,
+      "end": 37.003,
+      "text": "Una clave temporal se cambia por una contraseña privada al activar la cuenta.",
+      "cps": 9.52
+    },
+    {
+      "chapter": 2,
+      "start": 37.003,
+      "end": 45.3,
+      "text": "El recorrido guiado ayuda a ubicar Inventarios, Ventas, Proyección y Mis Datos.",
+      "cps": 9.52
+    },
+    {
+      "chapter": 3,
+      "start": 46.3,
+      "end": 56.338,
+      "text": "Revise códigos, unidades, costos, precios y existencias antes de operar.",
+      "cps": 7.17
+    },
+    {
+      "chapter": 3,
+      "start": 56.338,
+      "end": 67.213,
+      "text": "La condición de IVA de la empresa y la tarifa del artículo afectan el cálculo.",
+      "cps": 7.17
+    },
+    {
+      "chapter": 3,
+      "start": 67.213,
+      "end": 75.3,
+      "text": "Confirme esos datos antes de registrar operaciones reales.",
+      "cps": 7.17
+    },
+    {
+      "chapter": 4,
+      "start": 76.3,
+      "end": 86.227,
+      "text": "Registre el producto con su código, unidad, costo, precio y cantidad inicial.",
+      "cps": 7.76
+    },
+    {
+      "chapter": 4,
+      "start": 86.227,
+      "end": 95.38,
+      "text": "Ejemplo del catálogo: base $10.000 + IVA $1.900 = precio final $11.900.",
+      "cps": 7.76
+    },
+    {
+      "chapter": 4,
+      "start": 95.38,
+      "end": 104.662,
+      "text": "Revise la vista previa y compruebe que el producto quedó en el catálogo.",
+      "cps": 7.76
+    },
+    {
+      "chapter": 4,
+      "start": 104.662,
+      "end": 113.3,
+      "text": "Para corregir cantidades físicas, registre un ajuste con su motivo.",
+      "cps": 7.76
+    },
+    {
+      "chapter": 5,
+      "start": 114.3,
+      "end": 122.3,
+      "text": "Seleccione el producto, confirme la cantidad y el medio de pago.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 5,
+      "start": 122.3,
+      "end": 130.175,
+      "text": "Ejemplo: base $115.000 + IVA $21.850 = total a cobrar $136.850.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 5,
+      "start": 130.175,
+      "end": 137.925,
+      "text": "Después de confirmar, revise el comprobante y las existencias.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 5,
+      "start": 137.925,
+      "end": 146.3,
+      "text": "En el ejemplo se vende un par: el inventario pasa de 12 a 11 pares.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 5,
+      "start": 146.3,
+      "end": 153.175,
+      "text": "Base $115.000 − costo $78.000 = utilidad bruta $37.000.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 5,
+      "start": 153.175,
+      "end": 163.3,
+      "text": "El comprobante es un registro interno; no sustituye una factura electrónica DIAN.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 6,
+      "start": 164.3,
+      "end": 171.304,
+      "text": "Una cantidad superior a las existencias bloquea la confirmación.",
+      "cps": 9.14
+    },
+    {
+      "chapter": 6,
+      "start": 171.304,
+      "end": 178.089,
+      "text": "Corrija y revise el total antes de continuar con la operación.",
+      "cps": 9.14
+    },
+    {
+      "chapter": 6,
+      "start": 178.089,
+      "end": 185.421,
+      "text": "La anulación del ejemplo devuelve el par al inventario: de 11 a 12.",
+      "cps": 9.14
+    },
+    {
+      "chapter": 6,
+      "start": 185.421,
+      "end": 193.3,
+      "text": "Si se pierde la conexión, revise el historial antes de repetir la venta.",
+      "cps": 9.14
+    },
+    {
+      "chapter": 7,
+      "start": 194.3,
+      "end": 201.684,
+      "text": "Revise el archivo de Excel antes de guardar información en el catálogo.",
+      "cps": 9.62
+    },
+    {
+      "chapter": 7,
+      "start": 201.684,
+      "end": 209.172,
+      "text": "Compruebe las columnas, códigos, unidades, costos, precios y cantidades.",
+      "cps": 9.62
+    },
+    {
+      "chapter": 7,
+      "start": 209.172,
+      "end": 216.868,
+      "text": "Si aparece un dato inválido, corríjalo en el archivo y vuelva a revisarlo.",
+      "cps": 9.62
+    },
+    {
+      "chapter": 7,
+      "start": 216.868,
+      "end": 226.124,
+      "text": "Las ventas actuales descuentan existencias; el historial conserva operaciones anteriores.",
+      "cps": 9.62
+    },
+    {
+      "chapter": 7,
+      "start": 226.124,
+      "end": 233.3,
+      "text": "Elija el tipo de importación adecuado y verifique el resultado final.",
+      "cps": 9.62
+    },
+    {
+      "chapter": 8,
+      "start": 234.3,
+      "end": 241.79,
+      "text": "Seleccione el periodo y revise los ingresos sin IVA y la utilidad bruta.",
+      "cps": 9.61
+    },
+    {
+      "chapter": 8,
+      "start": 241.79,
+      "end": 249.592,
+      "text": "La utilidad bruta todavía no descuenta arriendo, servicios ni otros gastos.",
+      "cps": 9.61
+    },
+    {
+      "chapter": 8,
+      "start": 249.592,
+      "end": 256.666,
+      "text": "Consulte el inventario al costo y los artículos con poco movimiento.",
+      "cps": 9.61
+    },
+    {
+      "chapter": 8,
+      "start": 256.666,
+      "end": 265.3,
+      "text": "Estos indicadores apoyan la revisión del negocio; no garantizan mejoras económicas.",
+      "cps": 9.61
+    },
+    {
+      "chapter": 9,
+      "start": 266.3,
+      "end": 277.175,
+      "text": "La proyección necesita al menos tres meses completos y consecutivos con datos suficientes.",
+      "cps": 8.28
+    },
+    {
+      "chapter": 9,
+      "start": 277.175,
+      "end": 286.358,
+      "text": "Una cuenta nueva muestra datos insuficientes hasta contar con ese historial.",
+      "cps": 8.28
+    },
+    {
+      "chapter": 9,
+      "start": 286.358,
+      "end": 295.3,
+      "text": "El ajuste estadístico describe el pasado; no garantiza las ventas futuras.",
+      "cps": 8.28
+    },
+    {
+      "chapter": 10,
+      "start": 296.3,
+      "end": 305.197,
+      "text": "La persona propietaria entra al espacio de su comercio; la administración es un acceso aparte.",
+      "cps": 10.57
+    },
+    {
+      "chapter": 10,
+      "start": 305.197,
+      "end": 311.917,
+      "text": "Mis Datos permite revisar opciones de seguridad y exportar información.",
+      "cps": 10.57
+    },
+    {
+      "chapter": 10,
+      "start": 311.917,
+      "end": 319.3,
+      "text": "Proteja las copias exportadas y cierre sesión cuando use un equipo compartido.",
+      "cps": 10.57
+    },
+    {
+      "chapter": 11,
+      "start": 320.3,
+      "end": 328.197,
+      "text": "La interfaz móvil permite recorrer las secciones principales desde el navegador.",
+      "cps": 10.13
+    },
+    {
+      "chapter": 11,
+      "start": 328.197,
+      "end": 335.304,
+      "text": "Antes de operar, pruebe con pocos productos y una venta de demostración.",
+      "cps": 10.13
+    },
+    {
+      "chapter": 11,
+      "start": 335.304,
+      "end": 343.3,
+      "text": "Compare importes y existencias con sus registros en el dispositivo que utilizará.",
+      "cps": 10.13
+    },
+    {
+      "chapter": 12,
+      "start": 344.3,
+      "end": 350.992,
+      "text": "Revisar la claridad de los datos, la utilidad de los indicadores y el flujo de trabajo.",
+      "cps": 13.0
+    },
+    {
+      "chapter": 12,
+      "start": 350.992,
+      "end": 357.3,
+      "text": "Identificar mejoras con profesionales antes de incorporar información de empresas.",
+      "cps": 13.0
+    }
+  ],
+  "audio": false
+}

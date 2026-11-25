@@ -1,0 +1,48 @@
+{
+  "verified_date": "2026-11-25",
+  "source_revision": "a95aac66825bfab5334c5843eb57ce07b1758fab",
+  "ffmpeg_version": "ffmpeg version 7.1-essentials_build-www.gyan.dev Copyright (c) 2000-2024 the FFmpeg developers",
+  "scope": "Complete technical decode, metadata, chapter counts, SRT timing/content, reading speed, source hashes and example arithmetic. Application/server tests not rerun.",
+  "videos": [
+    {
+      "file": "DATAPYME_PRESENTACION_PROFESIONAL_1080P.mp4",
+      "sha256": "0be3ae6e9d37c12fbcfbf66393ef3a58ad07c19c789526c70b8107734443eca8",
+      "bytes": 6199856,
+      "duration_seconds": 370.0,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "fps": 25.0,
+      "frames": 9250,
+      "complete_decode": "passed",
+      "audio_streams": 0,
+      "embedded_chapters": 14,
+      "subtitle_cues": 42,
+      "maximum_subtitle_characters_per_second": 13.0,
+      "subtitle_timing_and_content": "passed",
+      "source_hashes": "passed",
+      "srt_sha256": "4a73e21893d6147d3bf2b26f154cbd3d2ec9b5d4deeb34939153d3c14cd29a45"
+    },
+    {
+      "file": "DATAPYME_RESUMEN_PROFESIONAL_1080P.mp4",
+      "sha256": "4b988348c7f580f48592505c34ee4aa48ec8b78aac43a8a20a4723ed13ce59ea",
+      "bytes": 1919120,
+      "duration_seconds": 95.0,
+      "resolution": [
+        1920,
+        1080
+      ],
+      "fps": 25.0,
+      "frames": 2375,
+      "complete_decode": "passed",
+      "audio_streams": 0,
+      "embedded_chapters": 7,
+      "subtitle_cues": 10,
+      "maximum_subtitle_characters_per_second": 12.09,
+      "subtitle_timing_and_content": "passed",
+      "source_hashes": "passed",
+      "srt_sha256": "e7878b6d56fa9bcbd20238c75c2e8e79b118ec05cc8cee6d7d3175da8ba99539"
+    }
+  ]
+}

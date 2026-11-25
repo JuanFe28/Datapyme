@@ -1,0 +1,124 @@
+{
+  "source_revision": "a95aac66825bfab5334c5843eb57ce07b1758fab",
+  "duration": 95,
+  "chapters": [
+    {
+      "chapter": 1,
+      "title": "Una vista compartida del negocio",
+      "source": "2026-11-24\\EDICION\\breve\\01.mp4",
+      "source_sha256": "7b90a5f8331225a521cb2255406784a72a47c3fbbdd95db48cabbce408daed31",
+      "source_duration": 15.0,
+      "start": 8,
+      "duration": 12
+    },
+    {
+      "chapter": 2,
+      "title": "Del producto al registro de venta",
+      "source": "2026-11-24\\EDICION\\breve\\02.mp4",
+      "source_sha256": "0cd18d6c7e1ad0d0ae5eccfa3f36d0a8dcf858ba90d66011d4f2461391a420bb",
+      "source_duration": 18.32,
+      "start": 20,
+      "duration": 18
+    },
+    {
+      "chapter": 3,
+      "title": "Información para revisar decisiones",
+      "source": "2026-11-24\\EDICION\\breve\\03.mp4",
+      "source_sha256": "e893a16c8e82915477b105ba41663640f57c2025483ad16d87ed8669f4972c2a",
+      "source_duration": 18.84,
+      "start": 38,
+      "duration": 20
+    },
+    {
+      "chapter": 4,
+      "title": "Empezar con una prueba controlada",
+      "source": "2026-11-24\\EDICION\\breve\\04.mp4",
+      "source_sha256": "286f4b7dd8215379b950cdaccdb9c68aaf803fd1086e31639c5ee2c88d13e22b",
+      "source_duration": 15.92,
+      "start": 58,
+      "duration": 15
+    },
+    {
+      "chapter": 5,
+      "title": "Una revisión con profesionales",
+      "source": "2026-11-24\\EDICION\\breve\\05.mp4",
+      "source_sha256": "ecd6e10197fed750a7f7cedff6648d4d7adacda4950d1e7b6d5a2ed602177d61",
+      "source_duration": 13.72,
+      "start": 73,
+      "duration": 10
+    }
+  ],
+  "subtitles": [
+    {
+      "chapter": 1,
+      "start": 8.3,
+      "end": 14.007,
+      "text": "Inventario, ventas e indicadores conectados para revisar el comercio.",
+      "cps": 12.09
+    },
+    {
+      "chapter": 1,
+      "start": 14.007,
+      "end": 19.3,
+      "text": "Pantallas de la aplicación con datos sintéticos de demostración.",
+      "cps": 12.09
+    },
+    {
+      "chapter": 2,
+      "start": 20.3,
+      "end": 29.675,
+      "text": "Organice el catálogo y revise cantidades, precios e IVA antes de confirmar.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 2,
+      "start": 29.675,
+      "end": 37.3,
+      "text": "Consulte el comprobante y compruebe el cambio de existencias.",
+      "cps": 8.0
+    },
+    {
+      "chapter": 3,
+      "start": 38.3,
+      "end": 44.38,
+      "text": "Consulte ingresos sin IVA, utilidad bruta e inventario al costo.",
+      "cps": 10.53
+    },
+    {
+      "chapter": 3,
+      "start": 44.38,
+      "end": 50.175,
+      "text": "La utilidad bruta no equivale a la ganancia neta del negocio.",
+      "cps": 10.53
+    },
+    {
+      "chapter": 3,
+      "start": 50.175,
+      "end": 57.3,
+      "text": "Una proyección necesita historial suficiente y no garantiza ventas futuras.",
+      "cps": 10.53
+    },
+    {
+      "chapter": 4,
+      "start": 58.3,
+      "end": 64.882,
+      "text": "Active su cuenta y recorra las funciones con datos de práctica.",
+      "cps": 9.57
+    },
+    {
+      "chapter": 4,
+      "start": 64.882,
+      "end": 72.3,
+      "text": "Revise el archivo importado y contraste los resultados antes de operar.",
+      "cps": 9.57
+    },
+    {
+      "chapter": 5,
+      "start": 73.3,
+      "end": 82.3,
+      "text": "Evaluemos claridad, utilidad y flujo de trabajo antes de incorporar datos de empresas.",
+      "cps": 9.56
+    }
+  ],
+  "audio": false
+}

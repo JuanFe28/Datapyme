@@ -1,4 +1,34 @@
-# Estado vigente — demostraciones sin voz
+# Estado vigente — edición para profesionales
+
+25/11/2026, America/Bogota. Codex para Alvino. Edición basada en
+`a95aac66825bfab5334c5843eb57ce07b1758fab`, sin cambios de aplicación.
+Rama de trabajo `codex/video-profesionales-20261125`.
+
+Material nuevo en `material_demostracion/2026-11-25`: presentación sin audio
+de 6:10 y resumen de 1:35, ambos 1080p/25 fps. Apertura y cierre para la
+revisión con profesionales, títulos unificados, capítulos integrados y
+subtítulos en frases completas. Se conservan los originales del 24/11.
+
+Se comprobó la decodificación completa de ambos MP4, la ausencia de audio,
+los capítulos, tiempos y contenido de los SRT, velocidad de lectura,
+huellas de las fuentes y aritmética de los ejemplos. Se revisaron visualmente
+apertura, cierre y muestras de ventas, importación, indicadores y móvil.
+Informe en `material_demostracion/2026-11-25/VERIFICACION_TECNICA.json`.
+Scripts de edición y verificación incluidos para reproducir el resultado.
+
+Se revisaron las diferencias de precios, IVA e importación frente a main;
+el detalle está en REVISION_CAMBIOS.md de la nueva carpeta. No se repitieron
+pruebas de aplicación ni se verificó el servidor. No se declara validación
+de campo, despliegue ni cierre académico.
+
+Siguiente paso: revisar el MP4 con Alvino y Juan Felipe antes de presentarlo.
+Si se incorpora la voz de Alvino, adaptar la locución a los tiempos nuevos y
+mantener grabaciones y exportaciones personales en local. Antes de incorporar
+datos reales, completar las comprobaciones remotas del estado anterior.
+
+---
+
+# Estado anterior — demostraciones sin voz
 
 ## Fecha, hora y autor/agente
 

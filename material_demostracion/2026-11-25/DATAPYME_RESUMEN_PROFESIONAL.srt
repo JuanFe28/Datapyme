@@ -1,0 +1,40 @@
+1
+00:00:08,300 --> 00:00:14,007
+Inventario, ventas e indicadores conectados para revisar el comercio.
+
+2
+00:00:14,007 --> 00:00:19,300
+Pantallas de la aplicación con datos sintéticos de demostración.
+
+3
+00:00:20,300 --> 00:00:29,675
+Organice el catálogo y revise cantidades, precios e IVA antes de confirmar.
+
+4
+00:00:29,675 --> 00:00:37,300
+Consulte el comprobante y compruebe el cambio de existencias.
+
+5
+00:00:38,300 --> 00:00:44,380
+Consulte ingresos sin IVA, utilidad bruta e inventario al costo.
+
+6
+00:00:44,380 --> 00:00:50,175
+La utilidad bruta no equivale a la ganancia neta del negocio.
+
+7
+00:00:50,175 --> 00:00:57,300
+Una proyección necesita historial suficiente y no garantiza ventas futuras.
+
+8
+00:00:58,300 --> 00:01:04,882
+Active su cuenta y recorra las funciones con datos de práctica.
+
+9
+00:01:04,882 --> 00:01:12,300
+Revise el archivo importado y contraste los resultados antes de operar.
+
+10
+00:01:13,300 --> 00:01:22,300
+Evaluemos claridad, utilidad y flujo de trabajo antes de incorporar datos de
+empresas.
