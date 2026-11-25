@@ -2,6 +2,8 @@
 
 Material de trabajo de **Alvino y Juan Felipe**. El video muestra la aplicación con datos de demostración.
 
+**Edición más reciente:** [presentación para profesionales del 25 de noviembre](../2026-11-25/README.md), con recorrido de 6:10 y resumen de 1:35. Esta carpeta conserva las fuentes y las versiones anteriores.
+
 | Si quieres… | Abre… |
 | --- | --- |
 | Compartir el recorrido completo sin voz (10:04) | [Recorrido completo en MP4](DATAPYME_RECORRIDO_COMPLETO_SIN_VOZ_1080P.mp4) |
