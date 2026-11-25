@@ -25,6 +25,11 @@ Guion de locución en doce bloques, con las referencias de tiempo del MP4
 y las cifras escritas como se pronuncian. Disponible en
 material_demostracion/2026-11-24/GUION_PARA_GRABAR_DATAPYME.txt.
 
+Material de edición compartido por Alvino y Juan Felipe en
+material_demostracion/2026-11-24/EDICION. Incluye doce clips del recorrido y
+cinco del resumen, sin audio ni subtítulos incrustados, con sus órdenes y
+listas de unión. Los clips se decodificaron completos a 1080p y 25 fps.
+
 Versiones anteriores: MP4 principal de 604,39 s y breve de 81,91 s, 1920×1080 a 25 fps, narración
 en español y subtítulos incorporados; SRT, capítulos e informe técnico aparte.
 Ubicación versionada: material_demostracion/2026-11-24. Pantallas reales de la
@@ -52,9 +57,9 @@ Esta rama no se ha integrado en main ni desplegado en el servidor.
 
 ## Siguiente paso exacto
 
-Recibir la locución que grabe el autor, editarla y sincronizarla con las
-tomas y subtítulos del recorrido completo. El MP4 sin voz puede presentarse
-mientras llega la grabación.
+Alvino graba el guion en doce bloques. Juan Felipe puede usar las fuentes
+de EDICION para ajustar cortes, incorporar la locución y sincronizar
+subtítulos. Los MP4 sin voz están disponibles para presentar el prototipo.
 Antes de incorporar
 empresas: comprobar PostgreSQL pendiente, revisar/integrar correcciones,
 respaldar y actualizar el servidor administrado por Juan Felipe; verificar

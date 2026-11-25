@@ -1,0 +1,6 @@
+inicio (s) | fin (s) | archivo | capítulo
+0.00 | 15.00 | breve/01.mp4 | El negocio en una pantalla
+15.00 | 33.32 | breve/02.mp4 | Inventario y ventas
+33.32 | 52.16 | breve/03.mp4 | Información para decidir
+52.16 | 68.08 | breve/04.mp4 | Primeros pasos
+68.08 | 81.80 | breve/05.mp4 | Cierre

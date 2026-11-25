@@ -1,0 +1,13 @@
+inicio (s) | fin (s) | archivo | capítulo
+0.00 | 35.00 | completo/01.mp4 | Una jornada con Datapyme
+35.00 | 80.00 | completo/02.mp4 | Ingreso y primer uso
+80.00 | 131.44 | completo/03.mp4 | Información inicial e IVA
+131.44 | 191.44 | completo/04.mp4 | Catálogo, cantidades y ajustes
+191.44 | 256.44 | completo/05.mp4 | Venta completa y comprobante
+256.44 | 306.44 | completo/06.mp4 | Validaciones y correcciones
+306.44 | 376.44 | completo/07.mp4 | Importación con revisión
+376.44 | 436.44 | completo/08.mp4 | Indicadores para revisar el negocio
+436.44 | 491.44 | completo/09.mp4 | Proyección y datos insuficientes
+491.44 | 541.44 | completo/10.mp4 | Cuenta, permisos y copia de información
+541.44 | 576.68 | completo/11.mp4 | Uso desde móvil y rutina de revisión
+576.68 | 604.36 | completo/12.mp4 | Cierre

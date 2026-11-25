@@ -1,0 +1,179 @@
+{
+  "resolucion": "1920x1080",
+  "fps": 25,
+  "audio": false,
+  "subtitulos_incrustados": false,
+  "origen": "Capturas de Datapyme con datos sintéticos",
+  "clips": [
+    {
+      "archivo": "completo/01.mp4",
+      "titulo": "Una jornada con Datapyme",
+      "fotogramas": 875,
+      "duracion_segundos": 35.0,
+      "bytes": 948153,
+      "sha256": "8cae46b18a2041f28fc6792195cfae6e7aeeb8c682f868fca18037b579355552",
+      "inicio_segundos": 0,
+      "fin_segundos": 35.0
+    },
+    {
+      "archivo": "completo/02.mp4",
+      "titulo": "Ingreso y primer uso",
+      "fotogramas": 1125,
+      "duracion_segundos": 45.0,
+      "bytes": 1544995,
+      "sha256": "fd5df681fdb39bccc15a567913c8a43d499a06f02a30939a26e145066b2089ef",
+      "inicio_segundos": 35.0,
+      "fin_segundos": 80.0
+    },
+    {
+      "archivo": "completo/03.mp4",
+      "titulo": "Información inicial e IVA",
+      "fotogramas": 1286,
+      "duracion_segundos": 51.44,
+      "bytes": 1267852,
+      "sha256": "c2187a8e0042cdda3cdbad7b44853b1f452377d8c65a8fe40cf1b98aa75f0701",
+      "inicio_segundos": 80.0,
+      "fin_segundos": 131.44
+    },
+    {
+      "archivo": "completo/04.mp4",
+      "titulo": "Catálogo, cantidades y ajustes",
+      "fotogramas": 1500,
+      "duracion_segundos": 60.0,
+      "bytes": 2203196,
+      "sha256": "77313e234f1d43135050ca9ba3905cddc152c937a0288818adaf1d2ba324f780",
+      "inicio_segundos": 131.44,
+      "fin_segundos": 191.44
+    },
+    {
+      "archivo": "completo/05.mp4",
+      "titulo": "Venta completa y comprobante",
+      "fotogramas": 1625,
+      "duracion_segundos": 65.0,
+      "bytes": 1939823,
+      "sha256": "0a93297517f2a96ebbc41f2668552a5b7d4ba378b9f5392f5509f2b8f27ad849",
+      "inicio_segundos": 191.44,
+      "fin_segundos": 256.44
+    },
+    {
+      "archivo": "completo/06.mp4",
+      "titulo": "Validaciones y correcciones",
+      "fotogramas": 1250,
+      "duracion_segundos": 50.0,
+      "bytes": 2384263,
+      "sha256": "eba1c0f52af7f2eb5c7e122df227ef3cd2f92636a7deb70ecd18405c56e749fa",
+      "inicio_segundos": 256.44,
+      "fin_segundos": 306.44
+    },
+    {
+      "archivo": "completo/07.mp4",
+      "titulo": "Importación con revisión",
+      "fotogramas": 1750,
+      "duracion_segundos": 70.0,
+      "bytes": 1824904,
+      "sha256": "88677b3367999d0ff6211ee76fb8aa2c22c073244c45e3655a5a721dfc20389d",
+      "inicio_segundos": 306.44,
+      "fin_segundos": 376.44
+    },
+    {
+      "archivo": "completo/08.mp4",
+      "titulo": "Indicadores para revisar el negocio",
+      "fotogramas": 1500,
+      "duracion_segundos": 60.0,
+      "bytes": 1680438,
+      "sha256": "db8b104a995c8e1d32a130060cd85ed56fffaba70d31837bb1da66dc38b4b7c1",
+      "inicio_segundos": 376.44,
+      "fin_segundos": 436.44
+    },
+    {
+      "archivo": "completo/09.mp4",
+      "titulo": "Proyección y datos insuficientes",
+      "fotogramas": 1375,
+      "duracion_segundos": 55.0,
+      "bytes": 1375842,
+      "sha256": "2d713d1702d00d708e56919c2907078dfd5242cd016236235d9bf5464db8fa27",
+      "inicio_segundos": 436.44,
+      "fin_segundos": 491.44
+    },
+    {
+      "archivo": "completo/10.mp4",
+      "titulo": "Cuenta, permisos y copia de información",
+      "fotogramas": 1250,
+      "duracion_segundos": 50.0,
+      "bytes": 1014835,
+      "sha256": "aaf8094d83b38ddf3c31f7f7ebaabac5fc10b4c40e9676f606547bf539dd6129",
+      "inicio_segundos": 491.44,
+      "fin_segundos": 541.44
+    },
+    {
+      "archivo": "completo/11.mp4",
+      "titulo": "Uso desde móvil y rutina de revisión",
+      "fotogramas": 881,
+      "duracion_segundos": 35.24,
+      "bytes": 658143,
+      "sha256": "fde7f8b2cfd5b4247f161ef13c5c7eb1d0891a514200bfa9e9d8a253f9a4e3f0",
+      "inicio_segundos": 541.44,
+      "fin_segundos": 576.68
+    },
+    {
+      "archivo": "completo/12.mp4",
+      "titulo": "Cierre",
+      "fotogramas": 692,
+      "duracion_segundos": 27.68,
+      "bytes": 801778,
+      "sha256": "55cc282328a49e9b048d797da7059e9508a1bfef60c8a446250fc34e356edf3d",
+      "inicio_segundos": 576.68,
+      "fin_segundos": 604.36
+    },
+    {
+      "archivo": "breve/01.mp4",
+      "titulo": "El negocio en una pantalla",
+      "fotogramas": 375,
+      "duracion_segundos": 15.0,
+      "bytes": 566273,
+      "sha256": "7b90a5f8331225a521cb2255406784a72a47c3fbbdd95db48cabbce408daed31",
+      "inicio_segundos": 0,
+      "fin_segundos": 15.0
+    },
+    {
+      "archivo": "breve/02.mp4",
+      "titulo": "Inventario y ventas",
+      "fotogramas": 458,
+      "duracion_segundos": 18.32,
+      "bytes": 1348406,
+      "sha256": "0cd18d6c7e1ad0d0ae5eccfa3f36d0a8dcf858ba90d66011d4f2461391a420bb",
+      "inicio_segundos": 15.0,
+      "fin_segundos": 33.32
+    },
+    {
+      "archivo": "breve/03.mp4",
+      "titulo": "Información para decidir",
+      "fotogramas": 471,
+      "duracion_segundos": 18.84,
+      "bytes": 1061677,
+      "sha256": "e893a16c8e82915477b105ba41663640f57c2025483ad16d87ed8669f4972c2a",
+      "inicio_segundos": 33.32,
+      "fin_segundos": 52.16
+    },
+    {
+      "archivo": "breve/04.mp4",
+      "titulo": "Primeros pasos",
+      "fotogramas": 398,
+      "duracion_segundos": 15.92,
+      "bytes": 644173,
+      "sha256": "286f4b7dd8215379b950cdaccdb9c68aaf803fd1086e31639c5ee2c88d13e22b",
+      "inicio_segundos": 52.16,
+      "fin_segundos": 68.08
+    },
+    {
+      "archivo": "breve/05.mp4",
+      "titulo": "Cierre",
+      "fotogramas": 343,
+      "duracion_segundos": 13.72,
+      "bytes": 675657,
+      "sha256": "ecd6e10197fed750a7f7cedff6648d4d7adacda4950d1e7b6d5a2ed602177d61",
+      "inicio_segundos": 68.08,
+      "fin_segundos": 81.8
+    }
+  ]
+}
