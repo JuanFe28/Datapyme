@@ -1,0 +1,9 @@
+MUESTRAS DE NARRACIÓN — PENDIENTES DE ELECCIÓN POR ALVINO
+
+El usuario rechazó la voz Microsoft Helena de los MP4 anteriores.
+Estas dos muestras alternativas usan Kokoro-82M local, voces em_alex y ef_dora.
+No se usó una cuenta ni un servicio de generación pago. No se clonó ninguna voz.
+Modelo Apache-2.0: https://huggingface.co/hexgrad/Kokoro-82M
+Motor MIT: https://github.com/thewh1teagle/kokoro-onnx
+Antes de reemplazar los MP4, elegir una muestra o indicar qué estilo cambiar.
+Los MP4 de la carpeta superior todavía tienen la voz anterior.

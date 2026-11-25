@@ -1,0 +1,14 @@
+[
+  {
+    "voice": "em_alex",
+    "file": "MUESTRA_1_ALEX.wav",
+    "seconds": 16.75,
+    "generation_seconds": 89.06
+  },
+  {
+    "voice": "ef_dora",
+    "file": "MUESTRA_2_DORA.wav",
+    "seconds": 16.47,
+    "generation_seconds": 88.64
+  }
+]

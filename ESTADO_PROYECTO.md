@@ -1,9 +1,11 @@
-# Estado vigente — videos finales producidos y comprobados
+# Estado vigente — videos producidos; narración pendiente de reemplazo
 
 ## Fecha, hora y autor/agente
 
 24/11/2026, America/Bogota. Codex para Alvino. Hora exacta no registrada.
-El usuario reanudó el trabajo y pidió el video. Rama fix/precios-y-demo-20261124;
+El usuario reanudó el trabajo y pidió el video. Después rechazó la voz
+Microsoft Helena. Se prepararon dos muestras neuronales locales (Alex y Dora)
+para elegir antes de reemplazar la narración de los MP4. Rama fix/precios-y-demo-20261124;
 correcciones de software publicadas en 3897a79, conservando cambios de Juan Felipe.
 
 ## Fase y actividad del F-DC-124
@@ -41,7 +43,10 @@ Esta rama no se ha integrado en main ni desplegado en el servidor.
 
 ## Siguiente paso exacto
 
-Entregar los MP4 al profesor y revisar su reproducción. Antes de incorporar
+Elegir una muestra en material_demostracion/2026-11-24/MUESTRAS_VOZ, rehacer
+la narración y sincronización, comprobar los MP4 y entregar la versión aprobada.
+Los MP4 actuales conservan la voz rechazada; no presentarlos como aprobación
+audiovisual del usuario. Antes de incorporar
 empresas: comprobar PostgreSQL pendiente, revisar/integrar correcciones,
 respaldar y actualizar el servidor administrado por Juan Felipe; verificar
 acceso, flujo sintético, exportación, persistencia y recuperación remotos.
