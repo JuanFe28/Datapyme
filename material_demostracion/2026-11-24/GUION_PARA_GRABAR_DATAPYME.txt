@@ -1,0 +1,215 @@
+DATAPYME
+Guion de locución para el recorrido completo
+Video de referencia: DATAPYME_RECORRIDO_COMPLETO_SIN_VOZ_1080P.mp4
+Duración del montaje actual: diez minutos y cuatro segundos.
+
+ANTES DE GRABAR — ESTO NO SE LEE
+
+Graba, de preferencia, un audio por bloque. Llámalos 01, 02, 03 y así
+hasta el 12. Puedes usar la grabadora del celular y enviarlos en su
+formato original. Si te resulta más fácil grabar todo de una vez, deja
+dos segundos de silencio entre bloques.
+
+Lee solo el texto debajo de cada título. Los minutos sirven para ubicar
+la escena; no tienes que igualar el cronómetro. Habla como cuando le
+explicas algo a alguien que tienes al frente, con tu acento y tu ritmo.
+Haz una pausa breve en las comas y una un poco más larga en los puntos.
+Entre párrafos, toma aire y sigue. Pronuncia «IVA» como una sola palabra.
+
+Graba en un lugar sin música ni ruido de fondo. Deja uno o dos segundos
+de silencio al principio y al final de cada audio. Si te trabas, haz
+una pausa y repite la frase desde el comienzo. Puedes dejar el error
+grabado. Se corta en la edición. El montaje se ajustará a tu lectura.
+
+
+01 · Una jornada con Datapyme · 00:00 a 00:35
+
+Hola. Hoy quiero mostrarte cómo funciona Datapyme.
+
+Imagina que tienes un comercio y quieres saber qué te queda en
+inventario, qué vendiste hoy y qué productos conviene revisar. En
+Datapyme puedes consultar esa información, registrar ventas y ver
+cómo cambia el inventario después de cada operación.
+
+Vamos a recorrer la aplicación con una ferretería de ejemplo.
+Los productos, las ventas y las cifras de este video son de
+demostración.
+
+
+02 · Ingreso y primer uso · 00:35 a 01:20
+
+Para entrar, usa el usuario y la contraseña de tu cuenta. Si
+recibiste una clave temporal, en el primer ingreso verás la
+pantalla de activación. Ahí puedes crear tu contraseña privada.
+
+En el panel principal, el menú te lleva a Inventarios, Ventas,
+Proyección y Mis Datos. Si es tu primera vez, el recorrido guiado
+te ayuda a ubicar esas funciones.
+
+Antes de registrar operaciones, fíjate si estás en modo de
+práctica. Ahí puedes ensayar sin mezclar los ejemplos con la
+operación de tu negocio.
+
+
+03 · Información inicial e IVA · 01:20 a 02:11
+
+Antes de registrar la primera venta, conviene revisar el catálogo
+y la condición de IVA de la empresa.
+
+Prepara el código, el nombre, el costo, el precio y las existencias
+de cada producto. Usa la misma unidad al contar y al vender. Aquí,
+por ejemplo, registramos las botas por pares.
+
+En Mis Datos puedes revisar si la empresa figura como responsable de
+IVA, no responsable, o pendiente de confirmar. Confirma la condición
+que le corresponde antes de registrar ventas reales. Revisa también
+la tarifa de cada artículo, porque los dos datos afectan el cálculo.
+
+
+04 · Catálogo, cantidades y ajustes · 02:11 a 03:11
+
+Vamos a Inventarios. Aquí ves los artículos, las existencias y el
+mínimo que definiste para cada producto.
+
+Para crear un artículo, entra en Nuevo Producto. Completa el código,
+el nombre, la categoría,
+la unidad de medida, el costo, el precio y la cantidad inicial.
+Antes de guardar, revisa la vista previa. En este ejemplo, el precio
+base es de diez mil pesos. Con mil novecientos pesos de IVA,
+el precio final queda en once mil novecientos pesos.
+
+Después de guardar, buscamos el producto en el catálogo. Para cambiar
+la ficha, usamos Editar. Si cambió la cantidad física, hacemos un
+ajuste de inventario y escribimos el motivo. Al final, comprobamos
+las existencias.
+
+
+05 · Venta completa y comprobante · 03:11 a 04:16
+
+Veamos una venta de principio a fin. Agregamos un par de botas,
+revisamos la cantidad y elegimos el medio de pago.
+
+En pantalla aparece el desglose. El precio base es de ciento quince
+mil pesos. El IVA es de veintiún mil ochocientos cincuenta pesos.
+El total a cobrar es de ciento treinta y seis mil ochocientos
+cincuenta pesos. Cuando todo coincide, confirmamos la venta.
+
+En el historial abrimos el comprobante y verificamos los importes.
+En inventario había doce pares, y después de la venta quedan once.
+
+El par costó setenta y ocho mil pesos. Si restamos ese costo del
+precio sin IVA, la utilidad bruta es de treinta y siete mil pesos.
+El comprobante sirve como registro interno. No reemplaza una
+factura electrónica validada por la DIAN.
+
+
+06 · Validaciones y correcciones · 04:16 a 05:06
+
+Miremos qué pasa si intentamos vender una cantidad mayor a la
+disponible. La aplicación muestra una advertencia y bloquea la
+confirmación. Al corregir la cantidad, podemos revisar el total
+antes de seguir.
+
+Si la venta ya quedó registrada y hay que anularla, primero la
+buscamos en el historial y comprobamos que sea la correcta. En
+este ejemplo, al anularla, el par vuelve al inventario. Podemos
+revisar el estado de la venta y confirmar que volvemos a tener
+doce pares.
+
+Y si se pierde la conexión justo al confirmar, revisa el historial
+antes de repetir la operación. Así puedes saber si ya quedó guardada.
+
+
+07 · Importación con revisión · 05:06 a 06:16
+
+Si ya tienes una hoja de cálculo con tus productos, puedes empezar
+desde el botón Importar Excel. Para esta demostración vamos a cargar
+un catálogo pequeño. Primero elegimos revisar el archivo sin guardar.
+
+En la revisión puedes comprobar qué columnas reconoce la aplicación.
+Revisa los códigos, las unidades, los precios y las cantidades. En
+el primer archivo aparece un costo inválido. Corregimos el dato en
+la hoja, volvemos a cargarla y revisamos el resultado otra vez.
+Cuando todo coincide, confirmamos la carga y comprobamos qué
+productos quedaron en el catálogo.
+
+El tipo de importación importa. Las ventas actuales descuentan
+existencias. Si estás cargando ventas anteriores para consultar su
+historial, elige la opción de historial. Esa opción conserva las
+ventas anteriores sin cambiar el inventario de hoy. Para usarla,
+conserva la fecha, la referencia, el costo y el IVA de la operación
+original.
+
+
+08 · Indicadores para revisar el negocio · 06:16 a 07:16
+
+Con el catálogo y las ventas registrados, volvamos al panel.
+Aquí puedes cambiar el periodo y revisar los resultados de los
+últimos siete, treinta o noventa días.
+
+Los ingresos sin IVA muestran cuánto se vendió en el periodo.
+La utilidad bruta muestra cuánto queda al restar el costo de la
+mercancía vendida. Todavía faltan gastos como el arriendo o los
+servicios para saber cuánto ganó finalmente el negocio.
+
+El inventario al costo te ayuda a ver cuánto dinero tienes en
+mercancía. También puedes revisar las alertas y los artículos
+que llevan tiempo sin moverse. Eso te da un punto de partida
+para decidir qué revisar en el negocio, por ejemplo, si hace
+falta reponer un artículo o si conviene revisar una compra.
+
+
+09 · Proyección y datos insuficientes · 07:16 a 08:11
+
+En Proyección Estadística vemos otra forma de aprovechar el
+historial. El gráfico muestra las ventas registradas y una
+estimación de cómo podrían evolucionar.
+
+Para calcularla, la aplicación necesita al menos tres meses
+completos y consecutivos con registros suficientes. Por eso, en
+una cuenta nueva como la que aparece ahora, se muestra un aviso
+de datos insuficientes. La proyección aparecerá cuando exista
+el historial necesario.
+
+Si ves el indicador erre cuadrado, puedes leerlo como una medida
+de qué tan bien encaja la línea con los datos anteriores. Úsalo
+para entender el gráfico. La estimación puede orientar una
+revisión, pero tus ventas futuras pueden comportarse de otra manera.
+
+
+10 · Cuenta, permisos y copia de información · 08:11 a 09:01
+
+Para el día a día, la persona propietaria entra al espacio de su
+comercio. Puede darle prioridad en pantalla al inventario, a las
+ventas o a la proyección desde la misma cuenta. La administración
+de la plataforma es un acceso aparte, que usa el equipo para
+gestión y soporte.
+
+En Mis Datos también encuentras opciones de seguridad y de descarga
+de información. La descarga te permite guardar una copia de los
+datos exportados para revisarlos por fuera de la aplicación.
+
+Guarda esa copia con el mismo cuidado que cualquier archivo de
+tu negocio. Si entras desde un equipo compartido, recuerda cerrar
+la sesión al terminar.
+
+
+11 · Uso desde el celular · 09:01 a 09:37
+
+Ahora vemos Datapyme desde el navegador de un celular. El menú
+inferior te lleva a las secciones principales.
+
+Para empezar a usar la herramienta en tu negocio, puedes probar
+con unos pocos productos y una venta de prueba. Compara el precio,
+el total y el inventario con tus propios registros. Eso te permite
+familiarizarte con el proceso en el dispositivo que usarás cada día.
+
+
+12 · Cierre · 09:37 a 10:04
+
+Hoy vimos cómo organizar un catálogo, registrar una venta, revisar
+el inventario y consultar los resultados en el panel de Datapyme.
+
+Lo útil es que puedes seguir una operación desde el producto
+hasta el comprobante, y ver qué cambió en el negocio.
+Gracias por acompañarme en este recorrido.
