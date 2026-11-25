@@ -1,11 +1,10 @@
-# Estado vigente — videos producidos; narración pendiente de reemplazo
+# Estado vigente — demostraciones sin voz
 
 ## Fecha, hora y autor/agente
 
-24/11/2026, America/Bogota. Codex para Alvino. Hora exacta no registrada.
-El usuario reanudó el trabajo y pidió el video. Después rechazó la voz
-Microsoft Helena. Se prepararon dos muestras neuronales locales (Alex y Dora)
-para elegir antes de reemplazar la narración de los MP4. Rama fix/precios-y-demo-20261124;
+25/11/2026, America/Bogota. Codex para Alvino.
+El usuario pidió una alternativa sin voz tras revisar las muestras.
+Rama fix/precios-y-demo-20261124;
 correcciones de software publicadas en 3897a79, conservando cambios de Juan Felipe.
 
 ## Fase y actividad del F-DC-124
@@ -16,7 +15,12 @@ F-DC-125 y datos reales sin cambios. Jarvis continúa cancelado.
 
 ## Resumen técnico de cambios
 
-MP4 principal de 604,39 s y breve de 81,91 s, 1920×1080 a 25 fps, narración
+Se exportaron dos MP4 sin audio con el mismo video, capítulos y subtítulos
+de las versiones anteriores. Se verificó que la imagen es idéntica y que
+ambos archivos se decodifican completos. Informe: VERIFICACION_SIN_VOZ.json.
+Las grabaciones y pruebas de voz personales permanecen en el equipo.
+
+Versiones anteriores: MP4 principal de 604,39 s y breve de 81,91 s, 1920×1080 a 25 fps, narración
 en español y subtítulos incorporados; SRT, capítulos e informe técnico aparte.
 Ubicación versionada: material_demostracion/2026-11-24. Pantallas reales de la
 app local corregida, datos sintéticos y voz sintetizada local Microsoft Helena.
@@ -43,10 +47,8 @@ Esta rama no se ha integrado en main ni desplegado en el servidor.
 
 ## Siguiente paso exacto
 
-Elegir una muestra en material_demostracion/2026-11-24/MUESTRAS_VOZ, rehacer
-la narración y sincronización, comprobar los MP4 y entregar la versión aprobada.
-Los MP4 actuales conservan la voz rechazada; no presentarlos como aprobación
-audiovisual del usuario. Antes de incorporar
+Compartir los archivos SIN_VOZ para documentar y presentar el prototipo.
+Antes de incorporar
 empresas: comprobar PostgreSQL pendiente, revisar/integrar correcciones,
 respaldar y actualizar el servidor administrado por Juan Felipe; verificar
 acceso, flujo sintético, exportación, persistencia y recuperación remotos.

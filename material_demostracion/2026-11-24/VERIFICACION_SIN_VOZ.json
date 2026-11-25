@@ -1,0 +1,22 @@
+[
+  {
+    "archivo": "DATAPYME_RECORRIDO_COMPLETO_SIN_VOZ_1080P.mp4",
+    "segundos": 604.38,
+    "resolucion": "1920x1080",
+    "capitulos": 12,
+    "audio": false,
+    "subtitulos_visibles": true,
+    "video_identico_al_original": true,
+    "sha256": "40e0eb25a186d813d672c29ef996eb2898cdf08d924c868eca9b1fb60025dc0d"
+  },
+  {
+    "archivo": "DATAPYME_RESUMEN_CORTO_SIN_VOZ_1080P.mp4",
+    "segundos": 81.91,
+    "resolucion": "1920x1080",
+    "capitulos": 5,
+    "audio": false,
+    "subtitulos_visibles": true,
+    "video_identico_al_original": true,
+    "sha256": "54b8d93aa2e2045cb0a8b9e8eb1842776d398afa718835f15c6c1e4e6847de68"
+  }
+]
