@@ -1,0 +1,42 @@
+DATAPYME — VIDEOS PARA MOSTRAR A LAS EMPRESAS
+Entrega: 24 de noviembre de 2026
+
+1. DATAPYME_RECORRIDO_COMPLETO_1080P.mp4
+   Recorrido principal: 10 minutos y 4 segundos. Full HD, audio en español
+   y subtítulos incorporados. Es el archivo recomendado para el profesor.
+
+2. DATAPYME_RESUMEN_CORTO_1080P.mp4
+   Presentación breve: 1 minuto y 22 segundos. Full HD, audio y subtítulos.
+
+Abre los MP4 con tu reproductor habitual. Puedes enviar el MP4 directamente;
+no requiere instalar Datapyme ni tener cuenta. Si GitHub no ofrece reproducción,
+descarga el archivo con el botón de descarga del archivo original.
+CAPITULOS.txt permite localizar cada parte del recorrido completo.
+Los SRT son opcionales para edición: los subtítulos ya se ven en los MP4.
+
+CONTENIDO Y ALCANCE
+Pantallas reales de la versión local corregida, con datos exclusivamente
+sintéticos. Incluye acceso y tutorial, IVA, catálogo, ajuste de inventario,
+ventas y comprobante, validación de stock, anulación, importación con revisión,
+indicadores, proyección, permisos y navegación móvil.
+Hay dos roles: propietario del comercio y administrador de plataforma.
+Las prioridades de interfaz del propietario no son roles adicionales.
+
+No incluye datos de participantes, claves, contactos, precios del servicio,
+condiciones ni duración del piloto. La activación se muestra sin introducir
+una contraseña nueva. Las descargas finales no se muestran como verificadas.
+El comprobante mostrado no se presenta como factura electrónica DIAN.
+
+NOTA PARA LOS AUTORES
+La narración usa la voz sintética local Microsoft Helena; no se clonó una voz.
+La imagen procede de capturas reales con cortes, pausas y títulos de edición.
+No hubo contratación de servicios pagos para producir estos archivos.
+La comprobación técnica incluye decodificación completa de audio y video,
+resolución, duración, niveles de audio, tiempos de subtítulos y hashes SHA-256.
+Informe: VERIFICACION_TECNICA.json.
+
+El video es una demostración del prototipo, no evidencia de validación de campo.
+Las correcciones de la rama fix/precios-y-demo-20261124 no se han integrado
+en main ni instalado desde este equipo en el servidor. Antes del uso con
+empresas: revisar/integrar, actualizar servidor con respaldo y comprobar
+acceso, flujo sintético, persistencia y recuperación en el entorno remoto.

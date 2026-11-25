@@ -1,0 +1,26 @@
+[
+  {
+    "archivo": "DATAPYME_RECORRIDO_COMPLETO_1080P.mp4",
+    "duracion_segundos": 604.39,
+    "resolucion": "1920x1080",
+    "fps": 25.0,
+    "size_mib": 15.91,
+    "subtitulos": 103,
+    "audio_medio_db": -19.9,
+    "pico_db": -4.3,
+    "decodificacion_completa": "correcta",
+    "sha256": "a1502306a8dca0ed5fb25a4f4f1c7ca1e3cc4cb3663a055fa5a691d7299c34e8"
+  },
+  {
+    "archivo": "DATAPYME_RESUMEN_CORTO_1080P.mp4",
+    "duracion_segundos": 81.91,
+    "resolucion": "1920x1080",
+    "fps": 25.0,
+    "size_mib": 2.67,
+    "subtitulos": 15,
+    "audio_medio_db": -19.9,
+    "pico_db": -4.3,
+    "decodificacion_completa": "correcta",
+    "sha256": "23deac7ee9e48a96010d98e9332f0ae0cf849d7ef1ce06977d0be9c08aadd3a0"
+  }
+]

@@ -1,0 +1,12 @@
+﻿00:00:00 Una jornada con Datapyme
+00:00:35 Ingreso y primer uso
+00:01:20 Información inicial e IVA
+00:02:11 Catálogo, cantidades y ajustes
+00:03:11 Venta completa y comprobante
+00:04:16 Validaciones y correcciones
+00:05:06 Importación con revisión
+00:06:16 Indicadores para revisar el negocio
+00:07:16 Proyección y datos insuficientes
+00:08:11 Cuenta, permisos y copia de información
+00:09:01 Uso desde móvil y rutina de revisión
+00:09:36 Cierre

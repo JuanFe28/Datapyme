@@ -1,3 +1,13 @@
+ACTUALIZACIÓN VIGENTE — VIDEO ENTREGABLE PRODUCIDO (24/11/2026)
+El usuario pidió continuar. Ya existen los dos MP4 finales comprobados:
+material_demostracion/2026-11-24/DATAPYME_RECORRIDO_COMPLETO_1080P.mp4 (10:04)
+material_demostracion/2026-11-24/DATAPYME_RESUMEN_CORTO_1080P.mp4 (1:22).
+Consultar LEEME.txt y VERIFICACION_TECNICA.json de esa carpeta.
+El registro que sigue es histórico: sus frases «no hay MP4» y «esperar» ya no
+describen el estado actual. No se desplegó ni se integró esta rama en main.
+
+REGISTRO HISTÓRICO DE LA PAUSA
+-----------------------------
 PUNTO DE REANUDACIÓN — 24/11/2026, AMERICA/BOGOTA
 
 Trabajo detenido por petición expresa del usuario: parar y subir todo a GitHub para conservar créditos. No continuar desarrollo, pruebas o grabación automáticamente desde este archivo; esperar a que el usuario pida retomar.

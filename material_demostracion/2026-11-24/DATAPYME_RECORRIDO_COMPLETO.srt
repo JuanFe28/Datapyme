@@ -1,0 +1,507 @@
+﻿1
+00:00:00,604 --> 00:00:05,547
+Datapyme reúne el inventario, las ventas y
+los indicadores de un comercio en un
+
+2
+00:00:05,547 --> 00:00:11,503
+mismo lugar. La idea es que puedas revisar
+qué mercancía tienes, registrar lo que
+
+3
+00:00:11,503 --> 00:00:17,071
+vendes y consultar esa información para
+organizar mejor tu negocio. En este
+
+4
+00:00:17,071 --> 00:00:23,079
+recorrido veremos una ferretería de
+demostración, con datos sintéticos. Las
+
+5
+00:00:23,079 --> 00:00:28,205
+cantidades y ventas que aparecen son
+ejemplos para explicar el funcionamiento;
+
+6
+00:00:28,205 --> 00:00:30,567
+no son resultados de empresas
+participantes.
+
+7
+00:00:35,599 --> 00:00:41,429
+Para entrar, utilizas la cuenta de tu
+empresa y tu contraseña. Si el equipo te
+
+8
+00:00:41,429 --> 00:00:46,014
+entrega una clave temporal, el primer
+ingreso te lleva a activar la cuenta y
+
+9
+00:00:46,014 --> 00:00:51,865
+crear tu contraseña definitiva. Esa
+contraseña es privada: no necesitas
+
+10
+00:00:51,865 --> 00:00:57,479
+compartirla para recibir orientación.
+Dentro encuentras el panel principal y los
+
+11
+00:00:57,479 --> 00:01:04,226
+accesos a inventarios, ventas, proyección
+y mis datos. El recorrido guiado sirve
+
+12
+00:01:04,226 --> 00:01:10,319
+para conocer las pantallas. Antes de
+cargar información real, verifica si estás
+
+13
+00:01:10,319 --> 00:01:15,590
+usando datos de práctica: esos ejemplos
+deben mantenerse separados de la operación
+
+14
+00:01:15,590 --> 00:01:16,453
+de tu comercio.
+
+15
+00:01:20,599 --> 00:01:27,165
+Para empezar, prepara una lista pequeña y
+revisada de productos: código, nombre,
+
+16
+00:01:27,165 --> 00:01:33,671
+unidad de medida, costo, precio y
+existencias. Utiliza la misma unidad al
+
+17
+00:01:33,671 --> 00:01:40,278
+comprar, vender y contar inventario. Un
+kilogramo, una unidad o un par representan
+
+18
+00:01:40,278 --> 00:01:46,649
+cantidades diferentes. En Mis Datos
+revisas la condición de IVA de la empresa.
+
+19
+00:01:46,649 --> 00:01:52,652
+Puedes encontrarla pendiente de confirmar,
+responsable o no responsable. Esta
+
+20
+00:01:52,652 --> 00:01:57,081
+elección debe corresponder a la
+información tributaria del negocio, no a
+
+21
+00:01:57,081 --> 00:02:03,154
+una suposición. Si está pendiente, hay que
+confirmarla antes de registrar ventas
+
+22
+00:02:03,154 --> 00:02:08,464
+reales. La tarifa del artículo y la
+condición de la empresa cumplen funciones
+
+23
+00:02:08,464 --> 00:02:10,733
+diferentes: revisa ambas.
+
+24
+00:02:12,031 --> 00:02:16,841
+En Inventarios encuentras el catálogo, las
+cantidades disponibles y el mínimo
+
+25
+00:02:16,841 --> 00:02:22,764
+configurado para cada artículo. Para
+agregar uno, abre Nuevo Producto y asigna
+
+26
+00:02:22,764 --> 00:02:29,148
+un código que puedas reconocer y que no se
+repita. Completa nombre, categoría,
+
+27
+00:02:29,148 --> 00:02:36,823
+unidad, costo, precio, tarifa y cantidad
+inicial. Antes de guardar, confirma el
+
+28
+00:02:36,823 --> 00:02:40,877
+precio final y que el costo y el precio de
+venta se estén comparando sobre la
+
+29
+00:02:40,877 --> 00:02:48,141
+misma base. Una vez guardado, comprueba la
+fila del catálogo y sus existencias.
+
+30
+00:02:48,141 --> 00:02:54,131
+Cuando necesites corregir la ficha, entra
+en Editar. Para una entrada o salida de
+
+31
+00:02:54,131 --> 00:02:59,731
+mercancía, utiliza el ajuste disponible e
+indica el motivo. El mínimo de
+
+32
+00:02:59,731 --> 00:03:04,135
+inventario es una referencia que tú
+defines; debe tener sentido para tu
+
+33
+00:03:04,135 --> 00:03:04,744
+negocio.
+
+34
+00:03:12,034 --> 00:03:18,125
+Vamos a registrar una venta. Seleccionamos
+un par de botas, indicamos una unidad
+
+35
+00:03:18,125 --> 00:03:24,103
+de venta y elegimos el medio de pago. En
+este ejemplo, la base es de ciento quince
+
+36
+00:03:24,103 --> 00:03:29,043
+mil pesos y el IVA es de veintiún mil
+ochocientos cincuenta. El total que
+
+37
+00:03:29,043 --> 00:03:34,573
+aparece para cobrar es de ciento treinta y
+seis mil ochocientos cincuenta pesos.
+
+38
+00:03:34,573 --> 00:03:40,302
+Revisamos los artículos y confirmamos una
+sola vez. En el historial podemos abrir
+
+39
+00:03:40,302 --> 00:03:46,786
+el detalle y contrastar los importes. El
+inventario pasó de doce a once pares.
+
+40
+00:03:46,786 --> 00:03:51,573
+Como el costo era de setenta y ocho mil
+pesos, la utilidad bruta es de treinta y
+
+41
+00:03:51,573 --> 00:03:57,887
+siete mil. El IVA no se cuenta como
+ganancia. Este comprobante es un registro
+
+42
+00:03:57,887 --> 00:04:02,849
+interno de la aplicación; no es una
+factura electrónica validada por la DIAN.
+
+43
+00:04:17,032 --> 00:04:22,274
+Ahora intentamos vender más unidades de
+las que hay disponibles. La aplicación
+
+44
+00:04:22,274 --> 00:04:27,617
+muestra la advertencia y deshabilita la
+confirmación. Corregimos la cantidad y
+
+45
+00:04:27,617 --> 00:04:33,495
+volvemos a revisar el total. Si una
+operación ya guardada necesita anularse,
+
+46
+00:04:33,495 --> 00:04:38,608
+primero localízala en el historial y
+verifica cuál es. Una venta operativa
+
+47
+00:04:38,608 --> 00:04:43,508
+anulada devuelve sus existencias; un
+registro histórico no debe modificar el
+
+48
+00:04:43,508 --> 00:04:50,166
+inventario actual. Después de la acción,
+comprueba el estado y la cantidad. Si
+
+49
+00:04:50,166 --> 00:04:54,767
+aparece un error de conexión y no sabes si
+la venta se guardó, consulta el
+
+50
+00:04:54,767 --> 00:05:00,033
+historial antes de intentarla de nuevo.
+Así evitas duplicar una operación por
+
+51
+00:05:00,033 --> 00:05:01,237
+repetir el clic.
+
+52
+00:05:07,031 --> 00:05:13,018
+Si ya tienes información en una hoja de
+cálculo, puedes entrar en Importar Excel.
+
+53
+00:05:13,018 --> 00:05:18,452
+La aplicación ofrece carga de catálogo,
+ventas actuales e historial, además de
+
+54
+00:05:18,452 --> 00:05:25,737
+detección integral. No todas esas opciones
+producen el mismo efecto. Para comenzar,
+
+55
+00:05:25,737 --> 00:05:31,174
+usa un archivo pequeño y selecciona solo
+el tipo de información que vas a cargar.
+
+56
+00:05:31,174 --> 00:05:36,604
+Elige primero revisar sin guardar.
+Comprueba las columnas detectadas,
+
+57
+00:05:36,604 --> 00:05:43,723
+códigos, unidades, importes y cantidades.
+Si hay una fila inválida, corrige el
+
+58
+00:05:43,723 --> 00:05:49,395
+archivo y repite la revisión antes de
+confirmar. Después de guardar, revisa el
+
+59
+00:05:49,395 --> 00:05:55,159
+resumen y contrasta qué registros quedaron
+creados. Las ventas actuales descuentan
+
+60
+00:05:55,159 --> 00:06:00,736
+existencias. La opción específica de
+historial conserva información anterior
+
+61
+00:06:00,736 --> 00:06:06,735
+sin descontar el inventario actual, y
+requiere fecha, referencia, costo e IVA de
+
+62
+00:06:06,735 --> 00:06:12,165
+origen. No uses valores actuales para
+inventar los datos que faltan de una venta
+
+63
+00:06:12,165 --> 00:06:12,772
+pasada.
+
+64
+00:06:17,034 --> 00:06:23,278
+Con las operaciones registradas, el panel
+permite revisar el negocio por periodos.
+
+65
+00:06:23,278 --> 00:06:28,177
+Puedes comparar la información disponible
+de los últimos siete, treinta o noventa
+
+66
+00:06:28,177 --> 00:06:34,187
+días. Los ingresos sin IVA y la utilidad
+bruta responden preguntas diferentes:
+
+67
+00:06:34,187 --> 00:06:39,349
+cuánto se vendió y cuánto queda después
+del costo de la mercancía vendida. La
+
+68
+00:06:39,349 --> 00:06:44,968
+utilidad bruta todavía no descuenta todos
+los gastos del negocio. El inventario al
+
+69
+00:06:44,968 --> 00:06:50,346
+costo ayuda a ver cuánto dinero está
+representado en mercancía. Las alertas y
+
+70
+00:06:50,346 --> 00:06:54,563
+los artículos sin movimiento sirven como
+señales para revisar compras o
+
+71
+00:06:54,563 --> 00:07:01,001
+existencias. Una recomendación automática
+es un punto de partida para tu revisión;
+
+72
+00:07:01,001 --> 00:07:05,806
+no conoce todos los compromisos, gastos ni
+circunstancias de tu comercio.
+
+73
+00:07:17,034 --> 00:07:21,184
+La sección de Proyección Estadística
+utiliza el historial registrado para
+
+74
+00:07:21,184 --> 00:07:26,368
+estimar la evolución de las ventas. Aquí
+se muestran la serie observada y una
+
+75
+00:07:26,368 --> 00:07:31,684
+estimación calculada con métodos
+estadísticos. La aplicación necesita al
+
+76
+00:07:31,684 --> 00:07:37,631
+menos tres meses calendario completos y
+consecutivos con registros adecuados. Si
+
+77
+00:07:37,631 --> 00:07:42,508
+todavía no existen, no debe interpretarse
+la falta de una proyección como un
+
+78
+00:07:42,508 --> 00:07:47,878
+problema: primero hay que construir el
+historial. El indicador R cuadrado
+
+79
+00:07:47,878 --> 00:07:52,615
+describe qué tan bien se ajusta la línea a
+los datos anteriores; no garantiza
+
+80
+00:07:52,615 --> 00:07:58,812
+acertar el futuro. La serie de esta
+demostración es sintética y muy regular.
+
+81
+00:07:58,812 --> 00:08:03,094
+No representa un pronóstico validado con
+resultados de comercios reales.
+
+82
+00:08:12,032 --> 00:08:17,385
+Cada comercio utiliza su propio espacio y
+el acceso de su propietario. Los
+
+83
+00:08:17,385 --> 00:08:21,731
+enfoques de inventario, ventas y
+proyección cambian la prioridad de la
+
+84
+00:08:21,731 --> 00:08:27,339
+interfaz; no son tres roles de usuario
+distintos. El administrador de la
+
+85
+00:08:27,339 --> 00:08:31,873
+plataforma cumple funciones de gestión y
+soporte que no corresponden al usuario
+
+86
+00:08:31,873 --> 00:08:37,199
+del comercio. En Mis Datos encuentras las
+opciones disponibles de seguridad y
+
+87
+00:08:37,199 --> 00:08:43,177
+descarga en JSON o CSV. Una descarga
+permite revisar y conservar una copia de
+
+88
+00:08:43,177 --> 00:08:47,936
+la información exportada, pero no
+sustituye la comprobación de respaldos del
+
+89
+00:08:47,936 --> 00:08:53,406
+servicio. Protege el archivo descargado
+como cualquier documento comercial y
+
+90
+00:08:53,406 --> 00:08:56,219
+cierra la sesión al terminar en un equipo
+compartido.
+
+91
+00:09:02,034 --> 00:09:07,070
+También puedes consultar la interfaz desde
+el navegador de un teléfono. La
+
+92
+00:09:07,070 --> 00:09:12,459
+navegación inferior da acceso a las
+secciones principales. Antes de incorporar
+
+93
+00:09:12,459 --> 00:09:16,836
+la herramienta a tu rutina, prueba las
+tareas que vas a realizar desde ese
+
+94
+00:09:16,836 --> 00:09:22,544
+dispositivo. Una forma sencilla de
+comenzar es revisar pocos productos,
+
+95
+00:09:22,544 --> 00:09:27,450
+registrar una operación controlada y
+comparar precio, total e inventario con
+
+96
+00:09:27,450 --> 00:09:33,827
+tus propios soportes. Cuando esos datos
+coincidan, podrás evaluar con más claridad
+
+97
+00:09:33,827 --> 00:09:35,957
+qué información te resulta útil.
+
+98
+00:09:37,260 --> 00:09:42,766
+Datapyme permite reunir catálogo,
+existencias, ventas e indicadores para
+
+99
+00:09:42,766 --> 00:09:48,069
+revisar la actividad del comercio con
+información organizada. Su utilidad
+
+100
+00:09:48,069 --> 00:09:52,086
+depende de que los registros estén
+completos y correspondan a lo que ocurre
+
+101
+00:09:52,086 --> 00:09:58,695
+en el negocio. Ese es el propósito de esta
+demostración: mostrar las tareas, sus
+
+102
+00:09:58,695 --> 00:10:03,033
+resultados y sus límites para que puedas
+valorar cómo encajan en tu forma de
+
+103
+00:10:03,033 --> 00:10:03,645
+trabajar.

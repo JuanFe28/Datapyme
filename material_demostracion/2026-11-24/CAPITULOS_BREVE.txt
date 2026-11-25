@@ -1,0 +1,5 @@
+﻿00:00:00 El negocio en una pantalla
+00:00:15 Inventario y ventas
+00:00:33 Información para decidir
+00:00:52 Primeros pasos
+00:01:08 Cierre
