@@ -30,6 +30,13 @@ material_demostracion/2026-11-24/EDICION. Incluye doce clips del recorrido y
 cinco del resumen, sin audio ni subtítulos incrustados, con sus órdenes y
 listas de unión. Los clips se decodificaron completos a 1080p y 25 fps.
 
+El 27/11/2026 se añadió PROMPT_EDITAR_VIDEO_DATAPYME.txt. Integra las
+recomendaciones del profesor sobre tono casual, voz original y español
+cercano al público. Incluye acciones visibles, una escaleta y referencias
+a la edición profesional 8946f0a y las fuentes limpias. Se verificaron
+las rutas de las dos ramas y los capítulos de referencia. El encargo
+no modificó archivos de video ni de aplicación.
+
 Versiones anteriores: MP4 principal de 604,39 s y breve de 81,91 s, 1920×1080 a 25 fps, narración
 en español y subtítulos incorporados; SRT, capítulos e informe técnico aparte.
 Ubicación versionada: material_demostracion/2026-11-24. Pantallas reales de la
@@ -57,9 +64,10 @@ Esta rama no se ha integrado en main ni desplegado en el servidor.
 
 ## Siguiente paso exacto
 
-Alvino graba el guion en doce bloques. Juan Felipe puede usar las fuentes
-de EDICION para ajustar cortes, incorporar la locución y sincronizar
-subtítulos. Los MP4 sin voz están disponibles para presentar el prototipo.
+Juan Felipe o Alvino entregan el MP4 exacto a corregir al asistente junto
+al prompt actualizado. La primera prueba usa una escena de producto o
+venta con locución original, movimientos de cursor y confirmación visible.
+El video sin voz está disponible mientras se prepara la edición definitiva.
 Antes de incorporar
 empresas: comprobar PostgreSQL pendiente, revisar/integrar correcciones,
 respaldar y actualizar el servidor administrado por Juan Felipe; verificar

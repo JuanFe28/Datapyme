@@ -1,0 +1,235 @@
+PROMPT MAESTRO | EDITAR Y NARRAR EL VIDEO DE DATAPYME
+Para Juan Felipe y Alvino. Copia desde «EMPIEZA EL PROMPT» hasta «FIN DEL PROMPT».
+Adjunta el MP4 que quieren corregir o indica su ruta. Si ya tienen tomas de voz
+originales, usa el flujo local descrito dentro del prompt.
+
+EMPIEZA EL PROMPT
+
+Actúa como editor audiovisual y guionista de demostraciones de software. Tu
+trabajo es corregir el video de Datapyme que Juan Felipe le envió a Alvino y
+dejarlo listo para que el profesor lo muestre a comercios de Bucaramanga.
+La persona que lo vea debe entender qué le resuelve la aplicación, a dónde
+entrar, qué botón usar, qué datos necesita y cómo confirmar que la acción
+funcionó. Trabaja sobre la pantalla real y la versión que puedas verificar.
+
+1. PRIMERO IDENTIFICA QUÉ VIDEO Y QUÉ VERSIÓN ESTÁS EDITANDO
+
+- Usa el MP4 o el proyecto editable que te indiquemos como fuente principal.
+  Anota su nombre, duración y versión si se conoce. Si no lo encuentras,
+  adelanta el inventario, el guion y el plan de montaje a partir de las
+  referencias de abajo. Pide solo el archivo que te falta para editar la
+  versión exacta. Identifica cualquier prueba hecha con otro MP4.
+- Revisa el repositorio privado de Juan Felipe, JuanFe28/Datapyme, usando la
+  cuenta o la copia local autorizada. Comprueba las ramas y revisiones antes
+  de tomar un archivo como definitivo. Una revisión de código no demuestra
+  que ese código esté instalado en el servidor o que el video lo muestre.
+- Referencia profesional del 25 de noviembre, revisión 8946f0a. El recorrido
+  dura 6:10 y el resumen 1:35. Ambos MP4 tienen textos visibles y carecen
+  de audio. En la carpeta están también los SRT, los tiempos, los manifiestos
+  MONTAJE y los scripts editar_video.py y verificar_video.py.
+  https://github.com/JuanFe28/Datapyme/tree/codex/video-profesionales-20261125/material_demostracion/2026-11-25
+- Fuentes editables del 24 de noviembre. EDICION/completo tiene doce clips,
+  EDICION/breve tiene cinco. Conservan el encuadre y las cabeceras, con pistas
+  libres para una nueva locución y subtítulos. Usa GUION_PARA_GRABAR_DATAPYME.txt
+  como referencia de contenido. Sus tiempos pertenecen a un corte de 10:04.
+  https://github.com/JuanFe28/Datapyme/tree/fix/precios-y-demo-20261124/material_demostracion/2026-11-24
+- Si encuentras mejoras posteriores de aplicación, como las de la rama
+  codex/recorrido-historial-ventas, comprueba si afectan lo que se va a enseñar
+  y renueva solo las tomas necesarias. Usa una cuenta de práctica y datos
+  ficticios. Si los nombres de los botones cambiaron, escribe los que se
+  ven en la toma final. Indica las diferencias que afecten al recorrido.
+- Conserva el original y crea una versión de trabajo con otro nombre. No
+  hagas cambios en producción ni necesitas modificar la app para este encargo.
+
+2. VOZ Y TONO. PRIORIDAD A UNA GRABACIÓN HUMANA
+
+Aplica la recomendación del profesor de cambiar el tono, expresarse con
+naturalidad y usar un español cercano al público. La primera opción es que
+Juan Felipe narre con su propia voz, su acento colombiano y su ritmo habitual.
+Si Alvino decide narrar, usa su grabación original en el equipo autorizado.
+Grabar con el celular, en un lugar tranquilo, suele bastar para probarlo.
+
+- Escribe para hablar. Dirígete al comerciante de tú y usa frases de una sola
+  idea, verbos concretos, comas donde haya una pausa breve y un punto antes
+  de pasar al siguiente paso. Suena como alguien que conoce la aplicación y
+  la está mostrando en persona. Usa expresiones que el narrador diría, como
+  «vamos a», «mira», «aquí» o «fíjate», sin repetirlas en cada frase.
+- Evita voces que cambien el acento del narrador, modismos importados,
+  locución de comercial, énfasis exagerado y explicaciones llenas de jerga.
+  Si una frase suena escrita para un informe, léela y vuelve a redactarla.
+  Conserva los nombres de la interfaz. Escribe COP, valores, porcentajes
+  y siglas en la forma que se deben pronunciar en el guion de voz. En los
+  subtítulos y destacados pueden aparecer en su forma corta.
+- Antes de grabar todo, usa una prueba de entre veinte y treinta segundos de
+  la escena de hacer una venta o crear un producto. Reproduce voz y pantalla
+  juntas. Comprueba que el narrador se reconozca y que el botón se pueda ver.
+  Si no hay voz todavía, deja lista la versión sin narración, con rótulos o
+  subtítulos completos, el guion por bloques y una pista de audio disponible.
+  Prioriza esta opción frente a recrear una voz o usar un acento artificial.
+- En la toma completa, deja un audio por capítulo y nómbralos del 01 al 12,
+  o usa los números de la escaleta final. Al inicio y al final de cada toma,
+  deja un segundo de ambiente. Si el narrador se equivoca, que haga una
+  pausa y repita la frase completa. Corrige esos errores en el montaje.
+  Los tiempos son orientativos. Acomoda los cortes a la voz y a lo que
+  tarda la acción en pantalla. Evita obligar a leer de prisa.
+- Limpia el ruido con moderación, quita duplicaciones y ajusta el volumen
+  entre capítulos. Conserva respiraciones naturales y la pronunciación.
+  Escucha con audífonos y con el altavoz de un celular. Deja la música
+  fuera de la prueba inicial. Si se aprueba música después, que quede por
+  debajo de la explicación y tenga permiso de uso.
+- Mantén en local las voces personales de ambos por defecto. Nunca subas
+  a GitHub grabaciones de Alvino, imitaciones de su voz ni MP4 que las
+  contengan. La IA puede ajustar el texto, ayudar a cortar y editar
+  subtítulos. No le envíes tomas de voz a un servicio externo sin permiso
+  de quien grabó. No clones ni imites voces. No contrates servicios pagos.
+
+3. CONVIERTE CADA EXPLICACIÓN EN UNA ACCIÓN VISIBLE
+
+Haz una escaleta con estas columnas:
+  Tiempo en el video fuente | Tiempo estimado de salida | Pantalla y zona |
+  Texto exacto que se lee | Movimiento del cursor y clic | Resultado a
+  comprobar | Rótulo o subtítulo | Acción de edición.
+
+Para cada operación usa la misma secuencia.
+  a) Ubica a la persona, por ejemplo, «vamos a Inventarios».
+  b) Acerca o mueve el cursor al control, evitando tapar el texto.
+  c) Di el nombre visible, por ejemplo, «aquí, en Nuevo producto».
+  d) Haz clic en ese momento o coloca un destaque cuando se dice el nombre.
+  e) Espera a que la pantalla muestre la respuesta. Señala el cambio y
+     explica cómo reconocer que quedó bien.
+
+Evita decir solo «dale acá» o «selecciona ahí». Usa el nombre del control
+y, cuando haga falta, su ubicación en el encuadre. Si no se ve el puntero,
+marca el botón con un círculo discreto o vuelve a grabar la toma. El
+destacado debe señalar el control real. Los acercamientos deben conservar
+el contexto de la pantalla, los valores y la confirmación.
+
+Ejemplo de dirección para la escena de alta, sujeto al texto que se vea.
+  VOZ: «Si quieres agregar un artículo, entra a Inventarios. Aquí está
+  Nuevo producto. Al abrirlo, llenas el código, el nombre y la unidad.
+  Fíjate en esta parte. Este valor es el precio base, sin IVA. La vista
+  previa te muestra el precio final. Cuando todo coincida, guardas.
+  Y aquí, en el catálogo, aparece el producto que acabamos de crear».
+  PANTALLA: lleva el cursor a Inventarios y luego a Nuevo producto.
+  Mantén visible el título al abrir el formulario. Señala la vista previa
+  cuando se pronuncie. Después de guardar, busca el código en la tabla y
+  deja el resultado visible el tiempo suficiente para poder leerlo.
+  SUBTÍTULO: sincroniza la frase final con la aparición del producto.
+
+Ejemplo para ventas.
+  VOZ: «Para registrar una venta, abrimos Registrar venta. Buscamos las
+  botas y agregamos un par. Antes de confirmar, mira el desglose. Aquí
+  tienes el precio base, el IVA y el total que vas a cobrar. Confirmamos.
+  Ahora abrimos el comprobante y revisamos cuántos pares quedan».
+  PANTALLA: acompaña la selección del producto, la cantidad y el medio
+  de pago. Detén el cursor sobre cada cifra al mencionarla. Marca la
+  confirmación una sola vez y muestra la venta y el nuevo saldo cuando
+  aparezcan. No inventes un clic, un mensaje o una respuesta del sistema.
+
+4. ORDENA EL RECORRIDO Y AJUSTA LAS ESCENAS AL MATERIAL REAL
+
+Usa como orientación el montaje profesional de 6:10. Ajusta estos rangos
+si el video enviado es diferente o si la voz necesita más espacio.
+
+- 0:00–0:22 | Apertura y panel. Empieza con una pregunta concreta. «¿Te
+  ha pasado que vendes un producto y después tienes que revisar a mano
+  cuánto te queda? Te muestro cómo lo hacemos en Datapyme». Abre en el
+  panel real y explica que verán una ferretería con datos de ejemplo.
+- 0:22–0:46 | Acceso. Muestra dónde se inicia sesión, cómo se ve la
+  activación si hay clave temporal y dónde está el menú. Omite claves,
+  correos reales, tokens, códigos de segundo factor y notificaciones.
+- 0:46–1:16 | Preparar el negocio. Señala dónde se consulta la condición
+  de IVA y explica que se confirma para cada comercio. La condición de
+  la empresa y la tarifa del artículo son datos distintos. Muestra qué
+  necesita el dueño para comenzar, como código, unidad, costo, precio y
+  existencias.
+- 1:16–1:54 | Inventario. Abre Nuevo producto, muestra dónde se escribe
+  el precio base, revisa el precio final y confirma el registro. En la
+  toma de ejemplo, 10.000 pesos de base más 1.900 de IVA dan 11.900.
+  Muestra cuándo usar Editar y cuándo registrar un ajuste de existencias.
+- 1:54–2:44 | Venta y comprobante. Selecciona un par de botas. Si es la
+  misma toma, la base es 115.000 pesos, el IVA 21.850 y el total 136.850.
+  El costo de 78.000 deja 37.000 de utilidad bruta. Pasa de doce pares a
+  once. Lee las cifras completas. El comprobante es un registro interno.
+  Evita presentarlo como facturación electrónica ante la DIAN.
+- 2:44–3:14 | Errores y anulación. Intenta una cantidad mayor que las
+  existencias, muestra el aviso, corrige y revisa. Si la toma demuestra
+  anulación de una venta operativa, verifica que el saldo vuelve a doce
+  pares. No atribuyas ese efecto a la opción de historial.
+- 3:14–3:54 | Importación. Señala Importar Excel y la opción Solo catálogo
+  de productos, si esos son los rótulos visibles. Pon primero un archivo
+  pequeño en revisión sin guardar. Muestra el costo inválido, el archivo
+  corregido y la confirmación con el archivo válido. Si incluyes historial,
+  explica que los registros anteriores importados por su opción específica
+  no descuentan el stock de hoy. Distingue esto de registrar ventas actuales.
+- 3:54–4:26 | Indicadores. Mueve el cursor por los filtros que realmente
+  aparezcan. Explica ingresos sin IVA y utilidad bruta con palabras del día
+  a día. La utilidad bruta descuenta el costo de lo vendido. Quedan por
+  considerar gastos como el arriendo y los servicios.
+- 4:26–4:56 | Proyección. Muestra el gráfico y una cuenta con datos
+  insuficientes si tienes ambas tomas. Presenta la proyección como una
+  estimación basada en historial. Si explicas un requisito de meses o el
+  indicador erre cuadrado, verifícalo en la versión grabada.
+- 4:56–5:20 | Cuenta y permisos. Muestra Mis Datos y las opciones que
+  aparecen. El propietario opera su comercio. La administración de la
+  plataforma está a cargo del equipo. Inventario, ventas y proyección
+  son secciones o prioridades de la interfaz, no tres roles. Si no hay
+  toma de descarga efectiva, muestra dónde está la opción sin afirmar
+  que se descargó.
+- 5:20–5:44 | Celular. Muestra el menú móvil real, con un tamaño legible.
+  Usa el encuadre para acompañar la acción que se esté narrando.
+- 5:44–6:10 | Cierre. Por ejemplo, «Así puedes seguir una operación desde
+  el producto hasta el comprobante. Si quieres evaluar si te sirve,
+  empieza con unos pocos productos y compara una venta de prueba con
+  tus registros». Los contactos, el precio del servicio, los plazos y
+  las condiciones del piloto se conversan aparte.
+
+Si cambian las cifras porque grabaste una toma nueva, corrige el guion,
+los rótulos y los subtítulos con los valores de esa toma. No menciones
+funciones que no puedas mostrar o comprobar. Usa los datos sintéticos
+como ejemplos, sin simular resultados de empresas, garantías de ventas
+ni validación del despliegue. Si falta un paso importante, explica qué
+fuente hace falta y prepara una toma concreta para reemplazarlo.
+
+5. EDITA, REVISA Y ENTREGA
+
+1) Recorre el MP4 y registra qué conservar, qué recortar y qué volver a
+   grabar, con el minuto y la razón. Escribe la escaleta y el guion de
+   lectura en bloques. Mantén aparte el texto hablado y las instrucciones
+   para quien edita. Cada bloque debe poder grabarse sin leer códigos,
+   marcadores de edición ni cifras difíciles de pronunciar.
+2) Reutiliza el material existente cuando la interfaz coincide. Si trabajas
+   con el video profesional, sus textos ya están sobre la imagen. Para
+   sustituirlos, recompón desde EDICION o las tomas limpias. Evita duplicar
+   subtítulos con texto nuevo encima del anterior.
+3) Prueba primero un capítulo completo. Revisa si el clic coincide con
+   la frase, si se lee el resultado, si la voz se entiende y si el ritmo
+   permite seguir los pasos. Aplica lo aprendido al resto. Usa subtítulos
+   breves, hasta dos líneas, con buen contraste. Para una locución nueva
+   crea un SRT nuevo sincronizado al audio real.
+4) Entrega el MP4 principal en 1080p, el SRT, el guion definitivo, la
+   escaleta y el proyecto o los archivos que permitan retomar el montaje.
+   Conserva también una versión sin narración. Si se solicita el resumen
+   breve, condensa una venta y su beneficio en aproximadamente un minuto
+   y medio. No recortes los pasos esenciales del recorrido principal.
+5) Reproduce el resultado completo y comprueba varios puntos en un
+   celular. Verifica que la narración no se corte, los avisos y controles
+   sean legibles y el resultado de cada operación aparezca cuando se
+   explica. Anota qué comprobaste, qué limitación detectaste y qué archivos
+   entregaste.
+6) En GitHub se comparte el material autorizado, como guion, escaleta,
+   SRT y clips o MP4 sin voces personales. Trabaja en una rama de edición,
+   sin reemplazar la rama principal. Aparta grabaciones privadas,
+   documentos internos de empresas y cualquier versión que los incluya.
+   Registra la revisión y la ruta del material que sí se compartió.
+
+Este encargo funciona con cualquier asistente. Usa el editor, el
+reproductor o FFmpeg que esté disponible. Si puedes acceder al video y
+editar archivos, realiza el trabajo y entrega rutas a los resultados.
+Si solo puedes analizar texto, entrega la escaleta, la narración por
+bloques y las instrucciones de edición con los tiempos que puedas
+verificar. Marca los tiempos sin comprobar como estimados. Explica
+exactamente qué debes recibir para continuar. Nunca informes que viste,
+grabaste, exportaste o subiste un archivo sin haberlo comprobado.
+
+FIN DEL PROMPT
